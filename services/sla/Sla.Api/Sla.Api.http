@@ -1,0 +1,6 @@
+@Sla.Api_HostAddress = http://localhost:5262
+
+GET {{Sla.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
