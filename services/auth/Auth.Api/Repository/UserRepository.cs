@@ -38,4 +38,5 @@ public class UserRepository(IConfiguration configuration)
         }
         return users;
     }
+    
 }
