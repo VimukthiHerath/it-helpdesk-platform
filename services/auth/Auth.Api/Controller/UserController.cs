@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-
-using Auth.Api.Repository;
+using Microsoft.EntityFrameworkCore;
+using Auth.Api.Data;
+using Auth.Api.Model;
 
 namespace Auth.Api.Controller
 {
@@ -8,18 +9,17 @@ namespace Auth.Api.Controller
     [Route("api/[controller]")]
     public class UserController
     {
-        private readonly UserRepository _userRepository;
+        private readonly ApplicationDbContext _context;
 
-        public UserController(UserRepository userRepository)
+        public UserController(ApplicationDbContext context)
         {
-            _userRepository = userRepository;
+            _context = context;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers()
+        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
-            var users = await _userRepository.GetUsersAsync();
-            return new OkObjectResult(users);
+            return await _context.Users.ToListAsync();
         }
     }
 }
