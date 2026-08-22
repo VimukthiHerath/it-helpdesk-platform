@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './LoginForm.css';
@@ -7,6 +8,7 @@ const LoginForm = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [errors, setErrors] = useState({ email: '', password: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -71,6 +73,8 @@ const LoginForm = () => {
                 position: 'top-right',
                 autoClose: 1800,
             });
+
+            navigate('/', { replace: true });
 
             console.log('Login successful:', data);
         } catch (error) {
