@@ -1,44 +1,41 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import './LoginForm.css';
 
 const LoginForm = () => {
-    const [formdata, setFormdata] = useState({
-        email: '',
-        password: ''
-    });
-
-    const [errors, setErrors] = useState({
-        email: '',
-        password: ''
-    });
-
-    const [isloading, setIsloading] = useState(false);
-    
+    const [formData, setFormData] = useState({ email: '', password: '' });
+    const [errors, setErrors] = useState({ email: '', password: '' });
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e) => {
-        setFormdata({
-            ...formdata,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
 
-        if (errors[e.target.name]) {
-            setErrors({
-                ...errors,
-                [e.target.name]: ''
-            });
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+
+        if (errors[name]) {
+            setErrors((prev) => ({
+                ...prev,
+                [name]: '',
+            }));
         }
-    }
+    };
 
     const validateForm = () => {
         const newErrors = {};
-        if (!formdata.email) {
+
+        if (!formData.email.trim()) {
             newErrors.email = 'Email is required';
-        }else if (!/\S+@\S+\.\S+/.test(formdata.email)) {
-            newErrors.email = 'Email is invalid';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
         }
 
-        if (!formdata.password) {
+        if (!formData.password) {
             newErrors.password = 'Password is required';
-        }else if (formdata.password.length < 6) {
+        } else if (formData.password.length < 6) {
             newErrors.password = 'Password must be at least 6 characters';
         }
 
@@ -48,64 +45,91 @@ const LoginForm = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validateForm()) return;
 
-        setIsloading(true);
+        if(!validateForm()) return;
+
+        setIsLoading(true);
+
         try {
-            // Make API call to login endpoint
             const response = await fetch('http://localhost:5121/api/auth/login', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(formdata),
+                body: JSON.stringify(formData),
             });
 
+            const data = await response.json().catch(() => ({}));
+
             if (!response.ok) {
-                throw new Error('Login failed');
+                const message = data?.message || 'Login failed. Please try again.';
+                throw new Error(message);
             }
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Login successful:', data);
-            }
+            localStorage.setItem('token', data.token || '');
+            toast.success('Login successful! Redirecting...', {
+                position: 'top-right',
+                autoClose: 1800,
+            });
+
+            console.log('Login successful:', data);
         } catch (error) {
             console.error('Error logging in:', error);
+            toast.error(error.message || 'Something went wrong during login.', {
+                position: 'top-right',
+            });
         } finally {
-            setIsloading(false);
+            setIsLoading(false);
         }
     };
 
-
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label>Email:</label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formdata.email}
-                        onChange={handleChange}
-                    />
-                    {errors.email && <span>{errors.email}</span>}
+        <div className="auth-shell">
+            <ToastContainer />
+            <div className="auth-card">
+                <div className="auth-header">
+                    <p className="eyebrow">Welcome back</p>
+                    <h2>Sign in</h2>
                 </div>
-                <div>
-                    <label>Password:</label>
-                    <input
-                        type="password"
-                        name="password"
-                        value={formdata.password}
-                        onChange={handleChange}
-                    />
-                    {errors.password && <span>{errors.password}</span>}
-                </div>
-                <button type="submit" disabled={isloading}>
-                    {isloading ? 'Logging in...' : 'Login'}
-                </button>
-            </form>
+
+                <form onSubmit={handleSubmit} className="auth-form" noValidate>
+                    <div className="field-group">
+                        <label htmlFor="email">Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className={errors.email ? 'input-error' : ''}
+                            placeholder="you@example.com"
+                            autoComplete="email"
+                        />
+                        {errors.email && <span className="error-text">{errors.email}</span>}
+                    </div>
+
+                    <div className="field-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className={errors.password ? 'input-error' : ''}
+                            placeholder="Enter your password"
+                            autoComplete="current-password"
+                        />
+                        {errors.password && <span className="error-text">{errors.password}</span>}
+                    </div>
+
+                    <button type="submit" className="primary-btn" disabled={isLoading}>
+                        {isLoading ? 'Logging in...' : 'Login'}
+                    </button>
+                </form>
+            </div>
         </div>
     );
-}
+};
 
 export default LoginForm;
