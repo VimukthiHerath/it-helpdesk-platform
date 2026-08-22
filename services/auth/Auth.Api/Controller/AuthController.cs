@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Auth.Api.Data;
 using Auth.Api.DTO;
 using Auth.Api.Model;
@@ -13,15 +17,17 @@ namespace Auth.Api.Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AuthController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(ApplicationDbContext context, ILogger<AuthController> logger)
+        public AuthController(ApplicationDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
         {
             _context = context;
             _logger = logger;
+            _configuration = configuration;
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<User>> Register([FromBody] UserRegisterDTO request)
+        public async Task<ActionResult<UserRegisterResponseDTO>> Register([FromBody] UserRegisterDTO request)
         {
             if (!ModelState.IsValid)
             {
@@ -53,7 +59,15 @@ namespace Auth.Api.Controller
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                return StatusCode(StatusCodes.Status201Created, user);
+                var response = new UserRegisterResponseDTO
+                {
+                    Name = user.Name,
+                    Email = user.Email,
+                    Role = user.Role,
+                    CreatedAt = user.CreatedAt
+                };
+
+                return StatusCode(StatusCodes.Status201Created, response);
             }
             catch (Exception ex)
             {
@@ -63,7 +77,7 @@ namespace Auth.Api.Controller
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<User>> Login([FromBody] UserLoginDTO request)
+        public async Task<ActionResult<UserLoginResponseDTO>> Login([FromBody] UserLoginDTO request)
         {
             if (!ModelState.IsValid)
             {
@@ -80,10 +94,38 @@ namespace Auth.Api.Controller
                     return Unauthorized(new { message = "Invalid email or password." });
                 }
 
+                var jwtkey = _configuration["Jwt:Key"];
+                var jwtIssuer = _configuration["Jwt:Issuer"];
+                var jwtAudience = _configuration["Jwt:Audience"];
+                var expiryMinutes = int.Parse(_configuration["Jwt:ExpiryMinutes"]!);
+
+                var claims = new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role.ToString()),
+                };
+
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtkey!));
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+                var token = new JwtSecurityToken(
+                    issuer: jwtIssuer,
+                    audience: jwtAudience,
+                    claims: claims,
+                    expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+                    signingCredentials: creds);
+
+                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
                 user.LastLoginAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                return Ok(user);
+                return Ok(new 
+                { 
+                    token = tokenString,
+                    message = "Login successful"
+                });
             }
             catch (Exception ex)
             {
@@ -91,5 +133,20 @@ namespace Auth.Api.Controller
                 return Problem("Unable to login. Please try again later.");
             }
         }
-    }
-}
+
+        [Authorize]
+        [HttpGet("me")]
+        public IActionResult GetMe()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var email = User.FindFirstValue(ClaimTypes.Email);
+            var role = User.FindFirstValue(ClaimTypes.Role);
+
+            return Ok(new
+            {
+                userId,
+                email,
+                role
+            });
+        }
+}}
