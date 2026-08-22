@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BCrypt.Net;
 using Auth.Api.Data;
 using Auth.Api.DTO;
 using Auth.Api.Model;
@@ -41,7 +42,7 @@ namespace Auth.Api.Controller
                 {
                     Name = request.Name,
                     Email = request.Email,
-                    Password = request.Password,
+                    Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     Role = request.Role,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
