@@ -61,5 +61,35 @@ namespace Auth.Api.Controller
                 return Problem("Unable to register user. Please try again later.");
             }
         }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<User>> Login([FromBody] UserLoginDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            try
+            {
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+                if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+                {
+                    return Unauthorized(new { message = "Invalid email or password." });
+                }
+
+                user.LastLoginAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error logging in user");
+                return Problem("Unable to login. Please try again later.");
+            }
+        }
     }
 }
