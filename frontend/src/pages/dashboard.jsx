@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import TicketCreateForm from '../features/ticket/components/ticketCreateForm';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Dashboard = () => {
             </div>
 
             <p>Welcome to the dashboard.</p>
+            <TicketCreateForm />
         </div>
     );
 };
