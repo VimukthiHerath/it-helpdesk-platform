@@ -1,3 +1,4 @@
+using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
 using Ticket.Api.Data;
 
@@ -8,6 +9,17 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient("AuthApi", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["AuthApi:BaseUrl"]!);
+});
+
+builder.Services.AddSingleton<IProducer<string, string>>(_ =>
+{
+    var producerConfig = new ProducerConfig
+    {
+        BootstrapServers = builder.Configuration["Kafka:BootstrapServers"] ?? "localhost:9092",
+        Acks = Acks.All
+    };
+
+    return new ProducerBuilder<string, string>(producerConfig).Build();
 });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -55,6 +67,9 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+var kafkaProducer = app.Services.GetRequiredService<IProducer<string, string>>();
+app.Lifetime.ApplicationStopping.Register(() => kafkaProducer.Flush(TimeSpan.FromSeconds(10)));
 
 using (var scope = app.Services.CreateScope())
 {
