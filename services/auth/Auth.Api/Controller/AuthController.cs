@@ -138,7 +138,8 @@ namespace Auth.Api.Controller
         [HttpGet("me")]
         public IActionResult GetMe()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
             var email = User.FindFirstValue(ClaimTypes.Email);
             var role = User.FindFirstValue(ClaimTypes.Role);
 
