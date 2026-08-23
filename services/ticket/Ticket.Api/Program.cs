@@ -76,6 +76,8 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
+app.UseCors("FrontendPolicy");
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
