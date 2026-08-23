@@ -52,7 +52,7 @@ public class TicketController : ControllerBase
 
             _context.Tickets.Add(ticket);
             _context.SaveChanges();
-            return CreatedAtAction(nameof(GetTickets), new { id = ticket.Id }, ticket);
+            return StatusCode(StatusCodes.Status201Created, new { message = "Ticket created successfully", ticketId = ticket.Id });
         }
         catch (Exception ex)
         {
