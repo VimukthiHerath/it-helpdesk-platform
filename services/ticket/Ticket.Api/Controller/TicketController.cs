@@ -58,35 +58,10 @@ public class TicketController : ControllerBase
 
         try
         {
-            var authorizationHeader = Request.Headers.Authorization.ToString();
-            if (string.IsNullOrWhiteSpace(authorizationHeader))
+            var (userId, authenticationError) = await GetAuthenticatedUserIdAsync();
+            if (authenticationError is not null)
             {
-                return Unauthorized(new { message = "Bearer token is required." });
-            }
-
-            var authClient = _httpClientFactory.CreateClient("AuthApi");
-            using var authRequest = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
-            authRequest.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-
-            using var authResponse = await authClient.SendAsync(authRequest);
-            if (!authResponse.IsSuccessStatusCode)
-            {
-                if ((int)authResponse.StatusCode == StatusCodes.Status401Unauthorized)
-                {
-                    return Unauthorized(new { message = "Invalid or expired bearer token." });
-                }
-
-                _logger.LogWarning("Auth API rejected user validation with status code {StatusCode}", authResponse.StatusCode);
-                return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                    new { message = "Unable to validate the bearer token." });
-            }
-
-            var authUser = await authResponse.Content.ReadFromJsonAsync<AuthUserResponse>();
-            if (authUser?.UserId == null || !int.TryParse(authUser.UserId, out var userId))
-            {
-                _logger.LogWarning("Auth API returned an invalid user ID");
-                return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                    new { message = "Unable to identify the authenticated user." });
+                return authenticationError;
             }
 
             var ticket = new Tickets
@@ -94,7 +69,7 @@ public class TicketController : ControllerBase
                 Description = ticketDto.Description,
                 IssueType = ticketDto.IssueType,
                 Urgency = ticketDto.Urgency,
-                CreatedBy = userId,
+                CreatedBy = userId!.Value,
             };
 
             _context.Tickets.Add(ticket);
@@ -145,6 +120,48 @@ public class TicketController : ControllerBase
             _logger.LogError(ex, "Error creating ticket");
             return Problem("Unable to create ticket. Please try again later.");
         }
+    }
+
+    private async Task<(int? UserId, IActionResult? Error)> GetAuthenticatedUserIdAsync()
+    {
+        var authorizationHeader = Request.Headers.Authorization.ToString();
+        if (string.IsNullOrWhiteSpace(authorizationHeader))
+        {
+            return (null, Unauthorized(new { message = "Bearer token is required." }));
+        }
+
+        var authClient = _httpClientFactory.CreateClient("AuthApi");
+        using var authRequest = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
+        authRequest.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
+
+        using var authResponse = await authClient.SendAsync(authRequest);
+        if (!authResponse.IsSuccessStatusCode)
+        {
+            if ((int)authResponse.StatusCode == StatusCodes.Status401Unauthorized)
+            {
+                return (null, Unauthorized(new { message = "Invalid or expired bearer token." }));
+            }
+
+            _logger.LogWarning("Auth API rejected user validation with status code {StatusCode}", authResponse.StatusCode);
+            return (null, StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Unable to validate the bearer token." }));
+        }
+
+        var authUser = await authResponse.Content.ReadFromJsonAsync<AuthUserResponse>();
+        if (authUser?.UserId == null || !int.TryParse(authUser.UserId, out var userId))
+        {
+            _logger.LogWarning("Auth API returned an invalid user ID");
+            return (null, StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Unable to identify the authenticated user." }));
+        }
+
+        return (userId, null);
+    }
+
+    [HttpGet("/mine")]
+    public async Task<IActionResult> GetMyTickets()
+    {
+        
     }
 
     private sealed class AuthUserResponse
