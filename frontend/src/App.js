@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './features/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
+import MyTickets from './pages/myTickets';
 
 import './App.css';
 
@@ -81,6 +82,10 @@ function App() {
         <Route
           path="/"
           element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+        />
+        <Route
+          path="/my-tickets"
+          element={<ProtectedRoute><MyTickets /></ProtectedRoute>}
         />
         <Route
           path="*"
