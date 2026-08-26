@@ -158,10 +158,24 @@ public class TicketController : ControllerBase
         return (userId, null);
     }
 
-    [HttpGet("/mine")]
+    [HttpGet("mine")]
     public async Task<IActionResult> GetMyTickets()
     {
-        
+        try{
+            var (userId, authenticationError) = await GetAuthenticatedUserIdAsync();
+            if (authenticationError is not null)
+            {
+                return authenticationError;
+            }
+
+            var myTickets = _context.Tickets.Where(t => t.CreatedBy == userId).ToList();
+            return Ok(myTickets);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving my tickets");
+            return Problem("Unable to retrieve my tickets. Please try again later.");
+        }
     }
 
     private sealed class AuthUserResponse
