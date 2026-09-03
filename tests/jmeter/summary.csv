@@ -1,0 +1,6 @@
+Label,# Samples,Average,Min,Max,Std. Dev.,Error %,Throughput,Received KB/sec,Sent KB/sec,Avg. Bytes
+[TC-API-01] Auth - Bad Password (401),50,327,218,514,86.06,0.000%,36.65689,8.16,8.41,228.0
+[TC-API-02] Auth - Valid Login (200),50,427,254,693,113.91,0.000%,37.82148,19.35,8.35,524.0
+[TC-API-03] Ticket - Create Ticket (200/201),50,67,17,264,61.05,0.000%,47.98464,11.17,27.37,238.3
+[TC-API-04] Ticket - Fetch My Tickets (200),50,10,6,33,6.03,0.000%,61.12469,1045.67,29.07,17517.7
+TOTAL,200,208,6,693,190.52,0.000%,121.72855,550.04,45.53,4627.0

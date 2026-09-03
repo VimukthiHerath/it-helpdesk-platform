@@ -1,0 +1,201 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1788451394716,250,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-1,text,true,,228,235,13,13,http://localhost:5121/api/Auth/login,250,0,2
+1788451394736,241,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-2,text,true,,228,235,14,14,http://localhost:5121/api/Auth/login,241,0,1
+1788451394757,221,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-3,text,true,,228,235,14,14,http://localhost:5121/api/Auth/login,221,0,1
+1788451394777,221,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-4,text,true,,228,235,15,15,http://localhost:5121/api/Auth/login,220,0,1
+1788451394796,220,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-5,text,true,,228,235,16,16,http://localhost:5121/api/Auth/login,219,0,1
+1788451394816,215,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-6,text,true,,228,235,16,16,http://localhost:5121/api/Auth/login,215,0,1
+1788451394837,220,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-7,text,true,,228,235,17,17,http://localhost:5121/api/Auth/login,220,0,1
+1788451394856,221,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-8,text,true,,228,235,19,19,http://localhost:5121/api/Auth/login,221,0,1
+1788451394876,224,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-9,text,true,,228,235,20,20,http://localhost:5121/api/Auth/login,224,0,1
+1788451394896,228,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-10,text,true,,228,235,21,21,http://localhost:5121/api/Auth/login,228,0,1
+1788451394917,227,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-11,text,true,,228,235,22,22,http://localhost:5121/api/Auth/login,227,0,1
+1788451394936,236,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-12,text,true,,228,235,23,23,http://localhost:5121/api/Auth/login,236,0,1
+1788451394956,240,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-13,text,true,,228,235,24,24,http://localhost:5121/api/Auth/login,240,0,1
+1788451394976,240,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-14,text,true,,228,235,25,25,http://localhost:5121/api/Auth/login,240,0,1
+1788451394967,257,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-1,text,true,,524,226,26,26,http://localhost:5121/api/Auth/login,257,0,1
+1788451394997,246,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-15,text,true,,228,235,27,27,http://localhost:5121/api/Auth/login,246,0,1
+1788451394978,271,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-3,text,true,,524,226,27,27,http://localhost:5121/api/Auth/login,271,0,1
+1788451395016,253,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-16,text,true,,228,235,28,28,http://localhost:5121/api/Auth/login,253,0,1
+1788451394977,292,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-2,text,true,,524,226,28,28,http://localhost:5121/api/Auth/login,292,0,1
+1788451394998,284,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-4,text,true,,524,226,29,29,http://localhost:5121/api/Auth/login,283,0,1
+1788451395016,299,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-5,text,true,,524,226,30,30,http://localhost:5121/api/Auth/login,299,0,1
+1788451395057,259,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-18,text,true,,228,235,30,30,http://localhost:5121/api/Auth/login,258,0,1
+1788451395037,286,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-17,text,true,,228,235,31,31,http://localhost:5121/api/Auth/login,286,0,1
+1788451395031,309,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-6,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,309,0,1
+1788451395225,127,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-1,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,126,0,1
+1788451395250,102,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-3,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,101,0,1
+1788451395270,100,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-2,text,true,,239,584,33,33,http://localhost:5164/api/Ticket,99,0,1
+1788451395076,307,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-19,text,true,,228,235,34,34,http://localhost:5121/api/Auth/login,307,0,0
+1788451395317,70,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-5,text,true,,239,584,34,34,http://localhost:5164/api/Ticket,69,0,1
+1788451395352,43,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-3,text,true,,22935,487,34,34,http://localhost:5164/api/Ticket/mine,43,0,1
+1788451395352,43,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-1,text,true,,22935,487,34,34,http://localhost:5164/api/Ticket/mine,43,0,1
+1788451395370,25,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-2,text,true,,22935,487,32,32,http://localhost:5164/api/Ticket/mine,25,0,1
+1788451395314,84,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-4,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,84,0,1
+1788451395387,33,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-5,text,true,,23127,487,33,33,http://localhost:5164/api/Ticket/mine,32,0,0
+1788451395097,335,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-20,text,true,,228,235,32,32,http://localhost:5121/api/Auth/login,335,0,1
+1788451395057,375,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-7,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,375,0,1
+1788451395341,92,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-6,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,92,0,0
+1788451395077,357,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-8,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,357,0,1
+1788451395138,296,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-22,text,true,,228,235,32,32,http://localhost:5121/api/Auth/login,296,0,1
+1788451395398,42,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-4,text,true,,23127,487,33,33,http://localhost:5164/api/Ticket/mine,42,0,1
+1788451395100,344,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-9,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,344,0,1
+1788451395116,340,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-21,text,true,,228,235,33,33,http://localhost:5121/api/Auth/login,340,0,1
+1788451395145,311,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-11,text,true,,524,226,33,33,http://localhost:5121/api/Auth/login,311,0,1
+1788451395433,34,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-6,text,true,,23127,487,33,33,http://localhost:5164/api/Ticket/mine,34,0,0
+1788451395177,317,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-24,text,true,,228,235,33,33,http://localhost:5121/api/Auth/login,317,0,1
+1788451395159,336,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-23,text,true,,228,235,33,33,http://localhost:5121/api/Auth/login,336,0,1
+1788451395197,302,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-25,text,true,,228,235,34,34,http://localhost:5121/api/Auth/login,302,0,1
+1788451395435,133,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-8,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,133,0,0
+1788451395457,111,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-11,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,111,0,0
+1788451395433,138,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-7,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,138,0,0
+1788451395445,128,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-9,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,128,0,1
+1788451395257,321,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-28,text,true,,228,235,38,38,http://localhost:5121/api/Auth/login,321,0,1
+1788451395196,383,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-13,text,true,,524,226,38,38,http://localhost:5121/api/Auth/login,382,0,1
+1788451395125,454,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-10,text,true,,524,226,38,38,http://localhost:5121/api/Auth/login,453,0,0
+1788451395172,416,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-12,text,true,,524,226,38,38,http://localhost:5121/api/Auth/login,416,0,1
+1788451395278,319,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-29,text,true,,228,235,38,38,http://localhost:5121/api/Auth/login,319,0,1
+1788451395219,379,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-26,text,true,,228,235,39,39,http://localhost:5121/api/Auth/login,379,0,1
+1788451395217,383,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-14,text,true,,524,226,39,39,http://localhost:5121/api/Auth/login,383,0,0
+1788451395238,362,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-27,text,true,,228,235,39,39,http://localhost:5121/api/Auth/login,362,0,1
+1788451395569,36,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-8,text,true,,23895,487,39,39,http://localhost:5164/api/Ticket/mine,36,0,0
+1788451395569,38,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-11,text,true,,23895,487,38,38,http://localhost:5164/api/Ticket/mine,37,0,0
+1788451395571,37,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-7,text,true,,23895,487,37,37,http://localhost:5164/api/Ticket/mine,37,0,1
+1788451395573,36,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-9,text,true,,23895,487,36,36,http://localhost:5164/api/Ticket/mine,35,0,1
+1788451395244,430,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-15,text,true,,524,226,38,38,http://localhost:5121/api/Auth/login,430,0,1
+1788451395295,381,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-30,text,true,,228,235,39,39,http://localhost:5121/api/Auth/login,380,0,1
+1788451395397,279,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-35,text,true,,228,235,39,39,http://localhost:5121/api/Auth/login,278,0,1
+1788451395316,360,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-18,text,true,,524,226,39,39,http://localhost:5121/api/Auth/login,359,0,1
+1788451395323,353,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-17,text,true,,524,226,39,39,http://localhost:5121/api/Auth/login,352,0,1
+1788451395579,151,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-13,text,true,,239,584,40,40,http://localhost:5164/api/Ticket,151,0,1
+1788451395589,153,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-12,text,true,,239,584,40,40,http://localhost:5164/api/Ticket,152,0,1
+1788451395579,163,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-10,text,true,,239,584,40,40,http://localhost:5164/api/Ticket,162,0,1
+1788451395317,445,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-31,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,445,0,1
+1788451395269,493,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-16,text,true,,524,226,40,40,http://localhost:5121/api/Auth/login,493,0,2
+1788451395338,424,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-32,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,424,0,1
+1788451395476,290,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-39,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,290,0,1
+1788451395384,446,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-19,text,true,,524,226,40,40,http://localhost:5121/api/Auth/login,446,0,0
+1788451395497,319,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-40,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,318,0,0
+1788451395376,449,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-34,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,449,0,1
+1788451395432,362,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-20,text,true,,524,226,40,40,http://localhost:5121/api/Auth/login,362,0,1
+1788451395456,335,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-38,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,335,0,1
+1788451395601,225,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-14,text,true,,239,584,40,40,http://localhost:5164/api/Ticket,225,0,1
+1788451395456,356,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-21,text,true,,524,226,40,40,http://localhost:5121/api/Auth/login,356,0,1
+1788451395436,376,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-37,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,376,0,1
+1788451395416,378,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-36,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,378,0,1
+1788451395742,60,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-10,text,true,,24663,487,40,40,http://localhost:5164/api/Ticket/mine,60,0,1
+1788451395742,57,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-12,text,true,,24663,487,40,40,http://localhost:5164/api/Ticket/mine,56,0,1
+1788451395356,438,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-33,text,true,,228,235,40,40,http://localhost:5121/api/Auth/login,438,0,1
+1788451395731,67,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-13,text,true,,24663,487,40,40,http://localhost:5164/api/Ticket/mine,67,0,1
+1788451395675,167,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-15,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,167,0,1
+1788451395676,177,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-18,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,177,0,1
+1788451395677,176,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-17,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,176,0,1
+1788451395763,90,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-16,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,90,0,1
+1788451395535,343,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-42,text,true,,228,235,37,37,http://localhost:5121/api/Auth/login,343,0,1
+1788451395495,383,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-23,text,true,,524,226,37,37,http://localhost:5121/api/Auth/login,383,0,0
+1788451395577,301,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-44,text,true,,228,235,37,37,http://localhost:5121/api/Auth/login,301,0,0
+1788451395495,387,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-24,text,true,,524,226,37,37,http://localhost:5121/api/Auth/login,387,0,0
+1788451395831,53,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-14,text,true,,25623,487,37,37,http://localhost:5164/api/Ticket/mine,52,0,1
+1788451395853,31,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-16,text,true,,25623,487,37,37,http://localhost:5164/api/Ticket/mine,30,0,1
+1788451395831,53,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-19,text,true,,239,584,37,37,http://localhost:5164/api/Ticket,53,0,1
+1788451395853,31,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-18,text,true,,25623,487,37,37,http://localhost:5164/api/Ticket/mine,31,0,1
+1788451395842,48,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-15,text,true,,25623,487,34,34,http://localhost:5164/api/Ticket/mine,48,0,1
+1788451395853,42,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-17,text,true,,25623,487,33,33,http://localhost:5164/api/Ticket/mine,42,0,1
+1788451395831,92,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-20,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,92,0,1
+1788451395832,91,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-21,text,true,,239,584,32,32,http://localhost:5164/api/Ticket,91,0,0
+1788451395516,421,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-41,text,true,,228,235,32,32,http://localhost:5121/api/Auth/login,421,0,1
+1788451395500,438,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-25,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,438,0,0
+1788451395579,360,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-28,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,359,0,0
+1788451395435,503,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-22,text,true,,524,226,32,32,http://localhost:5121/api/Auth/login,503,0,0
+1788451395884,59,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-19,text,true,,26007,487,32,32,http://localhost:5164/api/Ticket/mine,58,0,1
+1788451395924,22,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-20,text,true,,26007,487,31,31,http://localhost:5164/api/Ticket/mine,22,0,0
+1788451395924,22,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-21,text,true,,26007,487,31,31,http://localhost:5164/api/Ticket/mine,22,0,0
+1788451395597,379,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-29,text,true,,524,226,29,29,http://localhost:5121/api/Auth/login,379,0,1
+1788451395638,343,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-47,text,true,,228,235,29,29,http://localhost:5121/api/Auth/login,343,0,1
+1788451395616,370,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-46,text,true,,228,235,29,29,http://localhost:5121/api/Auth/login,369,0,1
+1788451395883,105,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-24,text,true,,239,584,29,29,http://localhost:5164/api/Ticket,105,0,0
+1788451395939,49,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-25,text,true,,239,584,29,29,http://localhost:5164/api/Ticket,49,0,1
+1788451395879,109,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-23,text,true,,239,584,29,29,http://localhost:5164/api/Ticket,109,0,0
+1788451395939,49,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-28,text,true,,239,584,29,29,http://localhost:5164/api/Ticket,49,0,1
+1788451395940,48,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-22,text,true,,239,584,29,29,http://localhost:5164/api/Ticket,48,0,0
+1788451395988,12,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-23,text,true,,26967,487,29,29,http://localhost:5164/api/Ticket/mine,11,0,1
+1788451395988,14,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-24,text,true,,26967,487,28,28,http://localhost:5164/api/Ticket/mine,14,0,1
+1788451395988,15,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-22,text,true,,26967,487,27,27,http://localhost:5164/api/Ticket/mine,14,0,1
+1788451395555,456,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-43,text,true,,228,235,26,26,http://localhost:5121/api/Auth/login,456,0,1
+1788451395601,419,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-27,text,true,,524,226,26,26,http://localhost:5121/api/Auth/login,419,0,0
+1788451395988,33,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-25,text,true,,27159,487,26,26,http://localhost:5164/api/Ticket/mine,33,0,1
+1788451395977,47,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-29,text,true,,239,584,25,25,http://localhost:5164/api/Ticket,47,0,0
+1788451396024,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-29,text,true,,27159,487,25,25,http://localhost:5164/api/Ticket/mine,8,0,1
+1788451395988,47,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-28,text,true,,27159,487,24,24,http://localhost:5164/api/Ticket/mine,47,0,1
+1788451395599,445,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-45,text,true,,228,235,23,23,http://localhost:5121/api/Auth/login,445,0,1
+1788451395656,389,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-48,text,true,,228,235,23,23,http://localhost:5121/api/Auth/login,389,0,1
+1788451395676,373,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-49,text,true,,228,235,23,23,http://localhost:5121/api/Auth/login,373,0,1
+1788451395598,462,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-26,text,true,,524,226,23,23,http://localhost:5121/api/Auth/login,462,0,1
+1788451396021,41,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-27,text,true,,239,584,23,23,http://localhost:5164/api/Ticket,41,0,0
+1788451396062,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-27,text,true,,27351,487,23,23,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451395696,385,[TC-API-01] Auth - Bad Password (401),401,Unauthorized,Concurrent Users 1-50,text,true,,228,235,22,22,http://localhost:5121/api/Auth/login,385,0,0
+1788451395762,327,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-32,text,true,,524,226,22,22,http://localhost:5121/api/Auth/login,327,0,1
+1788451396061,29,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-26,text,true,,239,584,22,22,http://localhost:5164/api/Ticket,29,0,1
+1788451396091,9,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-26,text,true,,27543,487,22,22,http://localhost:5164/api/Ticket/mine,9,0,0
+1788451395676,431,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-35,text,true,,524,226,21,21,http://localhost:5121/api/Auth/login,430,0,1
+1788451395762,354,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-31,text,true,,524,226,21,21,http://localhost:5121/api/Auth/login,353,0,1
+1788451395767,355,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-39,text,true,,524,226,21,21,http://localhost:5121/api/Auth/login,355,0,0
+1788451396091,32,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-32,text,true,,239,584,21,21,http://localhost:5164/api/Ticket,31,0,1
+1788451395831,298,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-40,text,true,,524,226,21,21,http://localhost:5121/api/Auth/login,298,0,1
+1788451396123,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-32,text,true,,27927,487,21,21,http://localhost:5164/api/Ticket/mine,8,0,1
+1788451396116,18,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-31,text,true,,239,584,20,20,http://localhost:5164/api/Ticket,18,0,1
+1788451396107,27,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-35,text,true,,239,584,20,20,http://localhost:5164/api/Ticket,27,0,1
+1788451395831,307,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-37,text,true,,524,226,20,20,http://localhost:5121/api/Auth/login,307,0,1
+1788451396134,9,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-35,text,true,,28311,487,20,20,http://localhost:5164/api/Ticket/mine,9,0,1
+1788451396134,10,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-31,text,true,,28311,487,19,19,http://localhost:5164/api/Ticket/mine,10,0,1
+1788451395676,470,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-30,text,true,,524,226,18,18,http://localhost:5121/api/Auth/login,470,0,1
+1788451396123,28,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-39,text,true,,239,584,18,18,http://localhost:5164/api/Ticket,28,0,0
+1788451396130,21,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-40,text,true,,239,584,18,18,http://localhost:5164/api/Ticket,21,0,0
+1788451395831,323,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-34,text,true,,524,226,18,18,http://localhost:5121/api/Auth/login,323,0,1
+1788451396152,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-39,text,true,,28695,487,18,18,http://localhost:5164/api/Ticket/mine,8,0,0
+1788451396152,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-40,text,true,,28695,487,18,18,http://localhost:5164/api/Ticket/mine,8,0,0
+1788451395831,330,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-36,text,true,,524,226,16,16,http://localhost:5121/api/Auth/login,330,0,1
+1788451396147,19,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-30,text,true,,239,584,16,16,http://localhost:5164/api/Ticket,19,0,1
+1788451396139,27,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-37,text,true,,239,584,16,16,http://localhost:5164/api/Ticket,27,0,1
+1788451395831,337,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-38,text,true,,524,226,16,16,http://localhost:5121/api/Auth/login,337,0,1
+1788451395831,343,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-33,text,true,,524,226,16,16,http://localhost:5121/api/Auth/login,343,0,1
+1788451396167,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-37,text,true,,29079,487,16,16,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396167,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-30,text,true,,29079,487,16,16,http://localhost:5164/api/Ticket/mine,8,0,0
+1788451395878,304,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-42,text,true,,524,226,14,14,http://localhost:5121/api/Auth/login,304,0,1
+1788451396155,29,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-34,text,true,,239,584,14,14,http://localhost:5164/api/Ticket,28,0,1
+1788451395878,310,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-44,text,true,,524,226,14,14,http://localhost:5121/api/Auth/login,309,0,2
+1788451396169,19,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-38,text,true,,239,584,14,14,http://localhost:5164/api/Ticket,19,0,1
+1788451396162,26,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-36,text,true,,239,584,14,14,http://localhost:5164/api/Ticket,26,0,1
+1788451396184,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-34,text,true,,29463,487,14,14,http://localhost:5164/api/Ticket/mine,8,0,0
+1788451396189,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-38,text,true,,29655,487,13,13,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396189,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-36,text,true,,29655,487,13,13,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396183,18,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-42,text,true,,239,584,11,11,http://localhost:5164/api/Ticket,18,0,1
+1788451396175,26,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-33,text,true,,239,584,11,11,http://localhost:5164/api/Ticket,26,0,1
+1788451396201,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-33,text,true,,30046,487,11,11,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396201,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-42,text,true,,30046,487,11,11,http://localhost:5164/api/Ticket/mine,8,0,1
+1788451396189,24,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-44,text,true,,239,584,9,9,http://localhost:5164/api/Ticket,24,0,1
+1788451395937,279,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-41,text,true,,524,226,9,9,http://localhost:5121/api/Auth/login,279,0,1
+1788451396213,9,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-44,text,true,,30046,487,9,9,http://localhost:5164/api/Ticket/mine,8,0,2
+1788451395981,260,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-47,text,true,,524,226,8,8,http://localhost:5121/api/Auth/login,260,0,1
+1788451396217,27,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-41,text,true,,239,584,8,8,http://localhost:5164/api/Ticket,27,0,0
+1788451395986,264,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-46,text,true,,524,226,8,8,http://localhost:5121/api/Auth/login,264,0,0
+1788451396244,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-41,text,true,,30238,487,8,8,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396011,255,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-43,text,true,,524,226,7,7,http://localhost:5121/api/Auth/login,255,0,1
+1788451396251,15,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-46,text,true,,239,584,7,7,http://localhost:5164/api/Ticket,15,0,0
+1788451396242,24,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-47,text,true,,239,584,7,7,http://localhost:5164/api/Ticket,24,0,1
+1788451396267,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-46,text,true,,30622,487,7,7,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396267,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-47,text,true,,30622,487,7,7,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396044,241,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-45,text,true,,524,226,5,5,http://localhost:5121/api/Auth/login,241,0,1
+1788451396267,34,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-43,text,true,,239,584,5,5,http://localhost:5164/api/Ticket,34,0,1
+1788451396286,15,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-45,text,true,,239,584,5,5,http://localhost:5164/api/Ticket,15,0,1
+1788451396049,245,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-49,text,true,,524,226,5,5,http://localhost:5121/api/Auth/login,244,0,1
+1788451396046,243,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-48,text,true,,524,226,5,5,http://localhost:5121/api/Auth/login,243,0,0
+1788451396081,237,[TC-API-02] Auth - Valid Login (200),200,OK,Concurrent Users 1-50,text,true,,524,226,5,5,http://localhost:5121/api/Auth/login,237,0,1
+1788451396319,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-43,text,true,,31006,487,5,5,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396319,8,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-45,text,true,,31006,487,5,5,http://localhost:5164/api/Ticket/mine,8,0,1
+1788451396319,32,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-49,text,true,,239,584,3,3,http://localhost:5164/api/Ticket,32,0,1
+1788451396351,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-49,text,true,,31582,487,3,3,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396319,47,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-48,text,true,,239,584,2,2,http://localhost:5164/api/Ticket,47,0,1
+1788451396319,47,[TC-API-03] Ticket - Create Ticket (200/201),201,Created,Concurrent Users 1-50,text,true,,239,584,2,2,http://localhost:5164/api/Ticket,47,0,1
+1788451396367,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-50,text,true,,31582,487,2,2,http://localhost:5164/api/Ticket/mine,7,0,1
+1788451396367,7,[TC-API-04] Ticket - Fetch My Tickets (200),200,OK,Concurrent Users 1-48,text,true,,31582,487,2,2,http://localhost:5164/api/Ticket/mine,7,0,1
