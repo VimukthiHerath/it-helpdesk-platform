@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticketCreateForm.css';
 
-const TICKET_API_URL = 'http://localhost:5164/api/ticket';
+const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
 
 const initialForm = {
     issueType: '',

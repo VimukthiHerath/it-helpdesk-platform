@@ -6,7 +6,7 @@ import MyTickets from './pages/myTickets';
 
 import './App.css';
 
-const AUTH_API_URL = 'http://localhost:5121/api/auth/me';
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/me`;
 
 const isAuthenticated = async () => {
   const token = localStorage.getItem('token');
