@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ticketCreateForm.css';
 
-const TICKET_API_URL = 'http://localhost:5164/api/ticket';
+const TICKET_API_URL = 'https://ticket-service.gentlebeach-1f28fec1.southeastasia.azurecontainerapps.io/api/ticket';
 
 const initialForm = {
     issueType: '',
