@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import TicketCreateForm from '../features/ticket/components/ticketCreateForm';
+import './dashboard.css';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -9,16 +11,25 @@ const Dashboard = () => {
     };
 
     return (
-        <div style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Dashboard</h1>
-                <button onClick={handleLogout} style={{ padding: '10px 16px', cursor: 'pointer' }}>
-                    Logout
-                </button>
+        <main className="dashboard-shell">
+            <div className="dashboard-header">
+                <div>
+                    <p className="dashboard-kicker">IT helpdesk</p>
+                    <h1>Dashboard</h1>
+                    <p className="dashboard-welcome">Keep an eye on your requests and get support moving.</p>
+                </div>
+                <div className="dashboard-actions">
+                    <button type="button" className="dashboard-tickets-button" onClick={() => navigate('/my-tickets')}>
+                        View my tickets
+                    </button>
+                    <button type="button" className="dashboard-logout-button" onClick={handleLogout}>
+                        Log out
+                    </button>
+                </div>
             </div>
 
-            <p>Welcome to the dashboard.</p>
-        </div>
+            <TicketCreateForm />
+        </main>
     );
 };
 
