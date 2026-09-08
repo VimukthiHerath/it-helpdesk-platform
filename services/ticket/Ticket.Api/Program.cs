@@ -10,10 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
-builder.Services.AddHttpClient("AuthApi", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["AuthApi:BaseUrl"]!);
-});
 
 builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 {
