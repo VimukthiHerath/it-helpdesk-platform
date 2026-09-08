@@ -34,6 +34,8 @@ const TicketCreateForm = () => {
         setStatus({ type: '', message: '' });
     };
 
+    // SCRUM-50: description is trimmed before the empty check so whitespace-only
+    // input can't slip past validation and reach the API.
     const validate = () => {
         const nextErrors = {};
         const description = formData.description.trim();
