@@ -1,14 +1,14 @@
-name: SLA Service CI/CD
+name: Frontend CI/CD
 
 on:
   push:
     branches: [main, develop]
     paths:
-      - 'services/sla/**'
+      - 'frontend/**'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'services/sla/**'
+      - 'frontend/**'
 
 permissions:
   id-token: write
@@ -19,24 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: services/sla/Sla.Api
+        working-directory: frontend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
         with:
-          dotnet-version: '8.0.x'
+          node-version: '20'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      - name: Build React app
+        run: npm run build
 
       - name: Build Docker image
-        run: docker build -t ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }} .
+        run: docker build -t ithelpdeskacr01.azurecr.io/frontend:${{ github.sha }} .
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
@@ -50,8 +50,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
           az acr login --name ithelpdeskacr01
-          docker push ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }}
+          docker push ithelpdeskacr01.azurecr.io/frontend:${{ github.sha }}
 
       - name: Deploy to Container Apps
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: az containerapp update --name sla-service --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }}
+        run: az containerapp update --name it-helpdesk-frontend --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/frontend:${{ github.sha }}
