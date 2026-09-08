@@ -127,3 +127,5 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 app.MapControllers();
 app.Run();
+
+public partial class Program { }
