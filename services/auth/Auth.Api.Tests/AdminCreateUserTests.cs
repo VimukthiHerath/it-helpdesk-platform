@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Auth.Api.Tests;
 
-// AUTH-3: POST /api/auth/users is admin-only. Tokens are minted locally
+// AUTH-4: POST /api/auth/users is admin-only. Tokens are minted locally
 // with the same key/issuer/audience Auth signs with, so these tests never
 // go through /api/auth/login for the caller's own token.
 public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>>
