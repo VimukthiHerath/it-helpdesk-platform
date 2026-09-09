@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Personal dev notes/docs, not meant to be part of the tracked repo
+vimukthis-dev-docs/
