@@ -36,32 +36,15 @@ namespace Auth.Api.Controller
 
             try
             {
-                var userExists = await _context.Users
-                    .AnyAsync(u => u.Email == request.Email);
-
-                if (userExists)
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role);
+                if (error is not null)
                 {
-                    return Conflict(new { message = "Email already registered." });
+                    return error;
                 }
-
-                var user = new User
-                {
-                    Name = request.Name,
-                    Email = request.Email,
-                    Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                    Role = request.Role,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = null,
-                    LastLoginAt = null
-                };
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
 
                 var response = new UserRegisterResponseDTO
                 {
-                    Name = user.Name,
+                    Name = user!.Name,
                     Email = user.Email,
                     Role = user.Role,
                     CreatedAt = user.CreatedAt
@@ -74,6 +57,34 @@ namespace Auth.Api.Controller
                 _logger.LogError(ex, "Error registering user");
                 return Problem("Unable to register user. Please try again later.");
             }
+        }
+
+        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string password, UserRole role)
+        {
+            var userExists = await _context.Users
+                .AnyAsync(u => u.Email == email);
+
+            if (userExists)
+            {
+                return (null, Conflict(new { message = "Email already registered." }));
+            }
+
+            var user = new User
+            {
+                Name = name,
+                Email = email,
+                Password = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = role,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = null,
+                LastLoginAt = null
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return (user, null);
         }
 
         [HttpPost("login")]
