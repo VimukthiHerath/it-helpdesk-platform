@@ -1,0 +1,65 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.Tokens;
+using Xunit;
+
+namespace Auth.Api.Tests;
+
+// AUTH-3: POST /api/auth/users is admin-only. Tokens are minted locally
+// with the same key/issuer/audience Auth signs with, so these tests never
+// go through /api/auth/login for the caller's own token.
+public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private const string SigningKey = "IT24101503IT24100146IT24101500IT24101497";
+    private const string Issuer = "AuthApi";
+    private const string Audience = "ItHelpdeskClient";
+
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public AdminCreateUserTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task CreateUser_WithoutToken_Returns401()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email = $"no-token-{Guid.NewGuid():N}@example.com",
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private static string CreateToken(int userId, string role)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim(ClaimTypes.Role, role),
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: Issuer,
+            audience: Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
