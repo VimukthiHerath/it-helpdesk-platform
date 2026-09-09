@@ -60,6 +60,40 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task CreateUser_AsAdministrator_Returns201WithCreatedUser()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var email = $"admin-created-{Guid.NewGuid():N}@example.com";
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email,
+            password = "Password123!",
+            role = 2,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<CreatedUserResponse>();
+        Assert.NotNull(body);
+        Assert.True(body!.Id > 0);
+        Assert.Equal("New User", body.Name);
+        Assert.Equal(email, body.Email);
+        Assert.Equal(2, body.Role);
+    }
+
+    private sealed class CreatedUserResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int Role { get; set; }
+    }
+
     private static string CreateToken(int userId, string role)
     {
         var claims = new[]
