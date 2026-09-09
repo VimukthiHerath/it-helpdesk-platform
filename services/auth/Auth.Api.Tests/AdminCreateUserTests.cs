@@ -42,6 +42,24 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task CreateUser_WithNonAdminRole_Returns403()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Employee"));
+
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email = $"wrong-role-{Guid.NewGuid():N}@example.com",
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private static string CreateToken(int userId, string role)
     {
         var claims = new[]
