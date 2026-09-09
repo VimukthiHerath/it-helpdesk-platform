@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Auth.Api.Authorization;
 using Auth.Api.Data;
 using Auth.Api.DTO;
 using Auth.Api.Model;
@@ -85,6 +86,41 @@ namespace Auth.Api.Controller
             await _context.SaveChangesAsync();
 
             return (user, null);
+        }
+
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpPost("users")]
+        public async Task<ActionResult<AdminCreateUserResponseDTO>> CreateUser([FromBody] UserRegisterDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            try
+            {
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role);
+                if (error is not null)
+                {
+                    return error;
+                }
+
+                var response = new AdminCreateUserResponseDTO
+                {
+                    Id = user!.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Role = user.Role,
+                    CreatedAt = user.CreatedAt
+                };
+
+                return StatusCode(StatusCodes.Status201Created, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user");
+                return Problem("Unable to create user. Please try again later.");
+            }
         }
 
         [HttpPost("login")]
