@@ -86,6 +86,30 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(2, body.Role);
     }
 
+    [Fact]
+    public async Task CreateUser_WithDuplicateEmail_Returns409()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var email = $"duplicate-{Guid.NewGuid():N}@example.com";
+        var payload = new
+        {
+            name = "First Attempt",
+            email,
+            password = "Password123!",
+            role = 1,
+        };
+
+        var first = await client.PostAsJsonAsync("/api/auth/users", payload);
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+
+        var second = await client.PostAsJsonAsync("/api/auth/users", payload);
+
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+    }
+
     private sealed class CreatedUserResponse
     {
         public int Id { get; set; }
