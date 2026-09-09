@@ -4,7 +4,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using Auth.Api.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
@@ -136,6 +139,33 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         var body = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
         Assert.False(string.IsNullOrWhiteSpace(body?.Token));
+    }
+
+    [Fact]
+    public async Task CreateUser_StoresPasswordHashed_NeverPlaintext()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var email = $"hash-check-{Guid.NewGuid():N}@example.com";
+        const string password = "Password123!";
+
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email,
+            password,
+            role = 1,
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Users.FirstAsync(u => u.Email == email);
+
+        Assert.NotEqual(password, stored.Password);
+        Assert.True(BCrypt.Net.BCrypt.Verify(password, stored.Password));
     }
 
     private sealed class LoginResponse
