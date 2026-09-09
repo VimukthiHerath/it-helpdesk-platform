@@ -1,4 +1,4 @@
-# Admin user creation (AUTH-3)
+# Admin user creation (AUTH-4)
 
 ## Endpoint
 
