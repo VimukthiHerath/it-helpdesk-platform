@@ -110,6 +110,39 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
 
+    [Fact]
+    public async Task CreateUser_ThenLogin_Succeeds()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var email = $"login-after-create-{Guid.NewGuid():N}@example.com";
+        const string password = "Password123!";
+
+        var created = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email,
+            password,
+            role = 1,
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        // Login must not be authenticated as the admin who created the account.
+        var anonymousClient = _factory.CreateClient();
+        var loginResponse = await anonymousClient.PostAsJsonAsync("/api/auth/login", new { email, password });
+
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var body = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+        Assert.False(string.IsNullOrWhiteSpace(body?.Token));
+    }
+
+    private sealed class LoginResponse
+    {
+        public string? Token { get; set; }
+    }
+
     private sealed class CreatedUserResponse
     {
         public int Id { get; set; }
