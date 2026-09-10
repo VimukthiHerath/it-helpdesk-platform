@@ -9,4 +9,5 @@ public class AdminCreateUserResponseDTO
     public string Email { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.Employee;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int? CreatedBy { get; set; }
 }

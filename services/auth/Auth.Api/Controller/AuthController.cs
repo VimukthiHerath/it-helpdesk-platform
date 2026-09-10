@@ -60,7 +60,7 @@ namespace Auth.Api.Controller
             }
         }
 
-        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string password, UserRole role)
+        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string password, UserRole role, int? createdBy = null)
         {
             var userExists = await _context.Users
                 .AnyAsync(u => u.Email == email);
@@ -79,7 +79,8 @@ namespace Auth.Api.Controller
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = null,
-                LastLoginAt = null
+                LastLoginAt = null,
+                CreatedBy = createdBy
             };
 
             _context.Users.Add(user);
@@ -99,7 +100,11 @@ namespace Auth.Api.Controller
 
             try
             {
-                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role);
+                var adminIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                    ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var adminId = int.Parse(adminIdClaim!);
+
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role, adminId);
                 if (error is not null)
                 {
                     return error;
@@ -111,7 +116,8 @@ namespace Auth.Api.Controller
                     Name = user.Name,
                     Email = user.Email,
                     Role = user.Role,
-                    CreatedAt = user.CreatedAt
+                    CreatedAt = user.CreatedAt,
+                    CreatedBy = user.CreatedBy
                 };
 
                 return StatusCode(StatusCodes.Status201Created, response);
