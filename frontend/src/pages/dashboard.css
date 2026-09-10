@@ -1,79 +1,49 @@
 .dashboard-shell {
     min-height: 100vh;
     box-sizing: border-box;
-    padding: clamp(24px, 5vw, 64px);
-    background: #f5f8f6;
-    color: #183247;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    padding-bottom: 48px;
 }
 
 .dashboard-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
     width: min(100%, 1120px);
     margin: 0 auto;
-}
-
-.dashboard-kicker {
-    margin: 0 0 10px;
-    color: #007f82;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    padding: clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) 0;
 }
 
 .dashboard-header h1 {
-    margin: 0;
-    color: #163247;
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 1;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.1;
 }
 
 .dashboard-welcome {
     margin: 14px 0 0;
-    color: #587084;
+    color: var(--color-ink-muted);
+    font-family: var(--font-body);
     line-height: 1.5;
 }
-
-.dashboard-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.dashboard-actions button {
-    border-radius: 10px;
-    padding: 11px 16px;
-    font: inherit;
-    font-weight: 750;
-    cursor: pointer;
-}
-
-.dashboard-tickets-button {
-    border: 1px solid #007f82;
-    background: #007f82;
-    color: #ffffff;
-}
-
-.dashboard-tickets-button:hover { background: #00696b; }
-
-.dashboard-logout-button {
-    border: 1px solid #c9d8e3;
-    background: transparent;
-    color: #29475d;
-}
-
-.dashboard-logout-button:hover { background: #e9f0f0; }
 
 .dashboard-shell .ticket-panel {
     margin-right: auto;
     margin-left: auto;
 }
 
-@media (max-width: 650px) {
-    .dashboard-header { flex-direction: column; }
-    .dashboard-actions { justify-content: flex-start; }
+.dashboard-empty {
+    width: min(100%, 760px);
+    margin: 32px auto 0;
+}
+
+.dashboard-empty .panel__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.dashboard-empty p {
+    margin: 0;
+    color: var(--color-ink-muted);
+    line-height: 1.5;
 }
