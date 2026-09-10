@@ -92,12 +92,8 @@ const LoginForm = () => {
     return (
         <div className="auth-shell">
             <ToastContainer />
+            <h1 className="auth-brand">IT Helpdesk</h1>
             <div className="auth-card panel">
-                <div className="panel__titlebar">
-                    <span>IT Helpdesk</span>
-                    <span>Sign in</span>
-                </div>
-
                 <div className="panel__body">
                     <p className="eyebrow">Authorized users only</p>
                     <h2>Employee login</h2>

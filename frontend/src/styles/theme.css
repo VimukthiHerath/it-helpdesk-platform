@@ -23,7 +23,7 @@
   --font-body: 'IBM Plex Sans', 'Segoe UI', Tahoma, Arial, sans-serif;
 
   --border-width: 1px;
-  --shadow-offset: 4px;
+  --border-width-thick: 2px;
   --radius: 0;
 }
 
@@ -78,7 +78,7 @@ button {
   color: var(--color-sage-deep);
 }
 
-/* Buttons: flat, square, hard offset shadow that collapses on press */
+/* Buttons: flat, square, no elevation - feedback comes from color only */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -95,25 +95,12 @@ button {
   text-transform: uppercase;
   padding: 12px 20px;
   cursor: pointer;
-  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink);
-  transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
-}
-
-.btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 0 var(--color-ink);
-}
-
-.btn:active:not(:disabled) {
-  transform: translate(var(--shadow-offset), var(--shadow-offset));
-  box-shadow: 0 0 0 0 var(--color-ink);
+  transition: background 80ms ease, color 80ms ease;
 }
 
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: 2px 2px 0 0 var(--color-ink);
 }
 
 .btn--primary {
@@ -125,6 +112,10 @@ button {
   background: var(--color-sage-deep);
 }
 
+.btn--primary:active:not(:disabled) {
+  background: var(--color-ink);
+}
+
 .btn--secondary {
   background: var(--color-white);
   color: var(--color-ink);
@@ -134,16 +125,18 @@ button {
   background: var(--color-sage-pale);
 }
 
+.btn--secondary:active:not(:disabled) {
+  background: var(--color-sage);
+  color: var(--color-white);
+}
+
 .btn--ghost {
   border-color: var(--color-ink);
   background: transparent;
-  box-shadow: none;
 }
 
 .btn--ghost:hover:not(:disabled) {
-  transform: none;
   background: var(--color-sage-pale);
-  box-shadow: none;
 }
 
 /* Form fields */
@@ -174,7 +167,7 @@ select.input {
   font-family: var(--font-body);
   font-size: 1rem;
   padding: 11px 12px;
-  transition: box-shadow 100ms ease, border-color 100ms ease;
+  transition: border-color 100ms ease;
 }
 
 textarea.input {
@@ -189,8 +182,9 @@ textarea.input {
 .input:focus,
 select.input:focus {
   outline: none;
+  border-width: var(--border-width-thick);
   border-color: var(--color-sage);
-  box-shadow: 3px 3px 0 0 var(--color-sage);
+  padding: 10px 11px;
 }
 
 .input--error {
@@ -198,7 +192,7 @@ select.input:focus {
 }
 
 .input--error:focus {
-  box-shadow: 3px 3px 0 0 var(--color-error);
+  border-color: var(--color-error);
 }
 
 .error-text {
@@ -207,12 +201,11 @@ select.input:focus {
   font-size: 0.8rem;
 }
 
-/* Panels: a bordered "window" with a title bar, echoing a classic app dialog */
+/* Panels: a flat bordered "window" with a title bar, echoing a classic app dialog */
 .panel {
   background: var(--color-white);
   border: var(--border-width) solid var(--color-ink);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink);
 }
 
 .panel__titlebar {
@@ -309,11 +302,11 @@ select.input:focus {
   border-color: var(--color-white);
 }
 
-/* react-toastify overrides: square corners, hard shadow, our palette */
+/* react-toastify overrides: square corners, flat border, our palette */
 .Toastify__toast {
   border: var(--border-width) solid var(--color-ink) !important;
   border-radius: var(--radius) !important;
-  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink) !important;
+  box-shadow: none !important;
   font-family: var(--font-body) !important;
   color: var(--color-ink) !important;
   background: var(--color-white) !important;
