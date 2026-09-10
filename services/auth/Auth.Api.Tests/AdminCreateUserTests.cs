@@ -142,6 +142,55 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task CreateUser_AsAdministrator_RecordsWhichAdminCreatedIt()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 7, role: "Administrator"));
+
+        var email = $"audit-trail-{Guid.NewGuid():N}@example.com";
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email,
+            password = "Password123!",
+            role = 2,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<CreatedUserResponse>();
+        Assert.Equal(7, body?.CreatedBy);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Users.FirstAsync(u => u.Email == email);
+        Assert.Equal(7, stored.CreatedBy);
+    }
+
+    [Fact]
+    public async Task Register_SelfSignup_LeavesCreatedByNull()
+    {
+        var client = _factory.CreateClient();
+
+        var email = $"self-signup-{Guid.NewGuid():N}@example.com";
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            name = "Self Signup",
+            email,
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Users.FirstAsync(u => u.Email == email);
+        Assert.Null(stored.CreatedBy);
+    }
+
+    [Fact]
     public async Task CreateUser_StoresPasswordHashed_NeverPlaintext()
     {
         var client = _factory.CreateClient();
@@ -179,6 +228,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public int Role { get; set; }
+        public int? CreatedBy { get; set; }
     }
 
     private static string CreateToken(int userId, string role)

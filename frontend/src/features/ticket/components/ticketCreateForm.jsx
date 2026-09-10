@@ -98,68 +98,71 @@ const TicketCreateForm = () => {
     };
 
     return (
-        <section className="ticket-panel" aria-labelledby="create-ticket-title">
-            <div className="ticket-panel__intro">
-                <p className="ticket-panel__eyebrow">Support desk</p>
-                <h2 id="create-ticket-title">Open a new ticket</h2>
-                <p>Give us the context we need to get the right person on it.</p>
+        <section className="ticket-panel panel" aria-labelledby="create-ticket-title">
+            <div className="panel__titlebar">
+                <span id="create-ticket-title">New ticket</span>
+                <span>Support desk</span>
             </div>
 
-            <form className="ticket-form" onSubmit={handleSubmit} noValidate>
-                <div className="ticket-form__row">
-                    <div className="ticket-field">
-                        <label htmlFor="issueType">Issue type</label>
-                        <input
-                            id="issueType"
-                            name="issueType"
-                            value={formData.issueType}
+            <div className="panel__body">
+                <p className="ticket-panel__intro">Give us the context we need to get the right person on it.</p>
+
+                <form className="ticket-form" onSubmit={handleSubmit} noValidate>
+                    <div className="ticket-form__row">
+                        <div className="field">
+                            <label htmlFor="issueType">Issue type</label>
+                            <input
+                                id="issueType"
+                                name="issueType"
+                                value={formData.issueType}
+                                onChange={handleChange}
+                                placeholder="Issue type"
+                                maxLength={100}
+                                className={errors.issueType ? 'input input--error' : 'input'}
+                                aria-invalid={Boolean(errors.issueType)}
+                            />
+                            {errors.issueType && <span className="error-text">{errors.issueType}</span>}
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="urgency">Required by</label>
+                            <select id="urgency" name="urgency" value={formData.urgency} onChange={handleChange} className="input">
+                                {urgencyOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="field">
+                        <div className="ticket-label-row">
+                            <label htmlFor="description">What is happening?</label>
+                            <span>{formData.description.length}/255</span>
+                        </div>
+                        <textarea
+                            id="description"
+                            name="description"
+                            value={formData.description}
                             onChange={handleChange}
-                            placeholder="Issue type"
-                            maxLength={100}
-                            className={errors.issueType ? 'ticket-input ticket-input--error' : 'ticket-input'}
-                            aria-invalid={Boolean(errors.issueType)}
+                            placeholder="Tell us what you were trying to do, what happened, and any error message you saw."
+                            maxLength={255}
+                            rows={6}
+                            className={errors.description ? 'input input--error' : 'input'}
+                            aria-invalid={Boolean(errors.description)}
                         />
-                        {errors.issueType && <span className="ticket-error">{errors.issueType}</span>}
+                        {errors.description && <span className="error-text">{errors.description}</span>}
                     </div>
 
-                    <div className="ticket-field">
-                        <label htmlFor="urgency">Required by</label>
-                        <select id="urgency" name="urgency" value={formData.urgency} onChange={handleChange} className="ticket-input">
-                            {urgencyOptions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
+                    <div className="ticket-form__footer">
+                        <div aria-live="polite" className={`ticket-status ticket-status--${status.type}`}>
+                            {status.message}
+                        </div>
+                        <button type="submit" className="btn btn--primary" disabled={isSubmitting}>
+                            {isSubmitting ? 'Creating ticket...' : 'Create ticket'}
+                        </button>
                     </div>
-                </div>
-
-                <div className="ticket-field">
-                    <div className="ticket-label-row">
-                        <label htmlFor="description">What is happening?</label>
-                        <span>{formData.description.length}/255</span>
-                    </div>
-                    <textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        placeholder="Tell us what you were trying to do, what happened, and any error message you saw."
-                        maxLength={255}
-                        rows={6}
-                        className={errors.description ? 'ticket-input ticket-input--error' : 'ticket-input'}
-                        aria-invalid={Boolean(errors.description)}
-                    />
-                    {errors.description && <span className="ticket-error">{errors.description}</span>}
-                </div>
-
-                <div className="ticket-form__footer">
-                    <div aria-live="polite" className={`ticket-status ticket-status--${status.type}`}>
-                        {status.message}
-                    </div>
-                    <button type="submit" className="ticket-submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Creating ticket...' : 'Create ticket'}
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </section>
     );
 };

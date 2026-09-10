@@ -1,4 +1,4 @@
-.dashboard-shell {
+.admin-shell {
     min-height: 100vh;
     box-sizing: border-box;
     background: var(--color-bg);
@@ -6,44 +6,25 @@
     padding-bottom: 48px;
 }
 
-.dashboard-header {
+.admin-header {
     width: min(100%, 1120px);
     margin: 0 auto;
     padding: clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) 0;
 }
 
-.dashboard-header h1 {
+.admin-header h1 {
     font-size: clamp(1.8rem, 4vw, 2.6rem);
     line-height: 1.1;
 }
 
-.dashboard-welcome {
+.admin-welcome {
     margin: 14px 0 0;
     color: var(--color-ink-muted);
     font-family: var(--font-body);
     line-height: 1.5;
 }
 
-.dashboard-shell .ticket-panel {
+.admin-shell .admin-create-panel {
     margin-right: auto;
     margin-left: auto;
-}
-
-.dashboard-empty {
-    width: min(100%, 760px);
-    margin: 32px auto 0;
-}
-
-.dashboard-empty .panel__body {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.dashboard-empty p {
-    margin: 0;
-    color: var(--color-ink-muted);
-    line-height: 1.5;
 }
