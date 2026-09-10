@@ -1,0 +1,337 @@
+/*
+ * Design tokens + shared primitives for the helpdesk frontend.
+ * Aesthetic: white canvas, sage green, hard edges, no blur/glow -
+ * an old-school line-of-business application, not a modern SaaS look.
+ */
+
+:root {
+  --color-bg: #f5f7f0;
+  --color-surface: #ffffff;
+  --color-white: #ffffff;
+
+  --color-sage: #6e7f5c;
+  --color-sage-deep: #54614a;
+  --color-sage-pale: #e3e9d9;
+
+  --color-ink: #23261e;
+  --color-ink-muted: #5b6152;
+
+  --color-error: #8c3b2e;
+  --color-error-bg: #f1e1da;
+
+  --font-display: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', Tahoma, Arial, sans-serif;
+
+  --border-width: 1px;
+  --shadow-offset: 4px;
+  --radius: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+a {
+  color: var(--color-sage-deep);
+}
+
+a:hover {
+  color: var(--color-ink);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Small mono caption used above headings ("SUPPORT DESK", "IT HELPDESK") */
+.eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-sage-deep);
+}
+
+/* Buttons: flat, square, hard offset shadow that collapses on press */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: var(--border-width) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 12px 20px;
+  cursor: pointer;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink);
+  transition: transform 80ms ease, box-shadow 80ms ease, background 80ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(var(--shadow-offset), var(--shadow-offset));
+  box-shadow: 0 0 0 0 var(--color-ink);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0 0 var(--color-ink);
+}
+
+.btn--primary {
+  background: var(--color-sage);
+  color: var(--color-white);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-sage-deep);
+}
+
+.btn--secondary {
+  background: var(--color-white);
+  color: var(--color-ink);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-sage-pale);
+}
+
+.btn--ghost {
+  border-color: var(--color-ink);
+  background: transparent;
+  box-shadow: none;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  transform: none;
+  background: var(--color-sage-pale);
+  box-shadow: none;
+}
+
+/* Form fields */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > label,
+.field-label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.input,
+textarea.input,
+select.input {
+  width: 100%;
+  border: var(--border-width) solid var(--color-ink);
+  border-radius: var(--radius);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 11px 12px;
+  transition: box-shadow 100ms ease, border-color 100ms ease;
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 132px;
+}
+
+.input::placeholder {
+  color: var(--color-ink-muted);
+}
+
+.input:focus,
+select.input:focus {
+  outline: none;
+  border-color: var(--color-sage);
+  box-shadow: 3px 3px 0 0 var(--color-sage);
+}
+
+.input--error {
+  border-color: var(--color-error);
+}
+
+.input--error:focus {
+  box-shadow: 3px 3px 0 0 var(--color-error);
+}
+
+.error-text {
+  color: var(--color-error);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+}
+
+/* Panels: a bordered "window" with a title bar, echoing a classic app dialog */
+.panel {
+  background: var(--color-white);
+  border: var(--border-width) solid var(--color-ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink);
+}
+
+.panel__titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-sage);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  border-bottom: var(--border-width) solid var(--color-ink);
+}
+
+.panel__body {
+  padding: 28px;
+}
+
+/* Badges: square tags, not pills */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border: var(--border-width) solid var(--color-ink);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge--sage {
+  background: var(--color-sage-pale);
+  color: var(--color-sage-deep);
+  border-color: var(--color-sage-deep);
+}
+
+.badge--error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.badge--neutral {
+  background: var(--color-bg);
+  color: var(--color-ink-muted);
+}
+
+/* App bar: a solid title-bar strip at the top of every screen inside the app */
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--color-sage);
+  border-bottom: var(--border-width) solid var(--color-ink);
+  padding: 14px clamp(20px, 5vw, 48px);
+}
+
+.app-bar__brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-white);
+}
+
+.app-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.app-bar .btn--secondary,
+.app-bar .btn--ghost {
+  background: var(--color-white);
+}
+
+.app-bar .btn--ghost {
+  border-color: var(--color-white);
+  color: var(--color-white);
+  background: transparent;
+}
+
+.app-bar .btn--ghost:hover:not(:disabled) {
+  background: var(--color-sage-deep);
+  border-color: var(--color-white);
+}
+
+/* react-toastify overrides: square corners, hard shadow, our palette */
+.Toastify__toast {
+  border: var(--border-width) solid var(--color-ink) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--color-ink) !important;
+  font-family: var(--font-body) !important;
+  color: var(--color-ink) !important;
+  background: var(--color-white) !important;
+}
+
+.Toastify__toast--success {
+  background: var(--color-sage-pale) !important;
+}
+
+.Toastify__toast--error {
+  background: var(--color-error-bg) !important;
+}
+
+.Toastify__progress-bar {
+  background: var(--color-sage) !important;
+}
+
+.Toastify__close-button {
+  color: var(--color-ink) !important;
+  opacity: 0.6 !important;
+}
