@@ -489,3 +489,5 @@ vimukthis-dev-docs/
 # Local Azure cost-control scripts (contain resource-group/subscription-specific commands)
 start-all*.bat
 stop-all*.bat
+
+.claude
