@@ -56,7 +56,8 @@
     width: 100%;
     border: 0;
     border-bottom: 1px solid var(--color-ink);
-    padding: 16px 18px;
+    border-left: 5px solid transparent;
+    padding: 16px 18px 16px 13px;
     background: var(--color-white);
     color: var(--color-ink);
     text-align: left;
@@ -74,7 +75,7 @@
 }
 
 .ticket-list-item--selected {
-    box-shadow: inset 5px 0 var(--color-sage);
+    border-left-color: var(--color-sage);
 }
 
 .ticket-list-item strong {
@@ -148,7 +149,6 @@
 
 .tickets-message--error {
     border-color: var(--color-error);
-    box-shadow: 4px 4px 0 0 var(--color-error);
     color: var(--color-error);
 }
 
