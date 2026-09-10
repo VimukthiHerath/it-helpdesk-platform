@@ -28,3 +28,22 @@
     margin-right: auto;
     margin-left: auto;
 }
+
+.dashboard-empty {
+    width: min(100%, 760px);
+    margin: 32px auto 0;
+}
+
+.dashboard-empty .panel__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.dashboard-empty p {
+    margin: 0;
+    color: var(--color-ink-muted);
+    line-height: 1.5;
+}
