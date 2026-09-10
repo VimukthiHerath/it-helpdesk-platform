@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import TicketCreateForm from '../features/ticket/components/ticketCreateForm';
+import { isAdmin } from '../shared/authToken';
 import './dashboard.css';
 
 const Dashboard = () => {
@@ -15,6 +16,11 @@ const Dashboard = () => {
             <div className="app-bar">
                 <span className="app-bar__brand">IT Helpdesk</span>
                 <div className="app-bar__actions">
+                    {isAdmin() && (
+                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/users')}>
+                            Manage users
+                        </button>
+                    )}
                     <button type="button" className="btn btn--secondary" onClick={() => navigate('/my-tickets')}>
                         My tickets
                     </button>
