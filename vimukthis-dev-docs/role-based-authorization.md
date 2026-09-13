@@ -42,7 +42,7 @@ that wasn't part of this ticket.
 | Auth | `GET /api/auth/me` | `[Authorize]` only — any authenticated user needs to be able to look up their own identity, so it's intentionally not role-restricted. `register`/`login` stay public by design. |
 | Ticket | `POST /api/ticket` (submit), `GET /api/ticket/mine` (view own) | `Employee` |
 | Ticket | `GET /api/ticket` (list all, unfiltered) | `Agent`, `Administrator` — this endpoint predates AUTH-2 and had no role check at all, which meant any employee could enumerate every other employee's tickets. Restricted to staff as part of this work since AC1 requires every non-public endpoint to check a role, and there's no dedicated queue/resolve endpoint (TICKET-4) yet to carry that responsibility instead. |
-| Assignment | none beyond `/health` | n/a — the queue-view endpoint (ASSIGN-4) doesn't exist on this branch yet. Add `[Authorize(Roles = Roles.Agent)]` to it when it lands. |
+| Assignment | `GET /api/assignments/queue` | `Agent` — added in `[[agent-assignment-queue]]` (ASSIGN-4), which also gave Assignment.Api its first JWT/controller wiring (it previously had none). |
 | Notification | none beyond `/health` | n/a — no protected endpoints exist yet. |
 | SLA | none beyond `/health` | n/a — no protected endpoints exist yet. |
 
@@ -79,11 +79,10 @@ in this repo yet.
 
 ## What's intentionally not done here
 
-- Assignment/Notification/SLA got no code changes because they have no
-  protected endpoints to attach roles to on this branch. When ASSIGN-4
-  (queue view) and TICKET-4 (resolve) land, apply
-  `[Authorize(Roles = Roles.Agent)]` and
-  `[Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]`
-  respectively, following the same pattern as Ticket's other endpoints.
+- Notification/SLA got no code changes because they have no protected
+  endpoints to attach roles to on this branch. When TICKET-4 (resolve)
+  lands, apply `[Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]`,
+  following the same pattern as Ticket's other endpoints. Assignment's own
+  ASSIGN-4 gap was closed in `[[agent-assignment-queue]]`.
 - No shared `Roles`/JWT-validation library was introduced — see "`Roles`
   constants" above for why.
