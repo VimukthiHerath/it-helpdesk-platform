@@ -3,8 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './features/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
+import AgentQueue from './pages/agentQueue';
 import AdminUsersPage from './features/admin/pages/AdminUsersPage';
-import { decodeToken, isAdmin } from './shared/authToken';
+import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
 
@@ -86,6 +87,24 @@ const AdminRoute = ({ children }) => {
   return isAdmin() ? children : <Navigate to="/" replace />;
 };
 
+const AgentRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return isAgent() ? children : <Navigate to="/" replace />;
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -101,6 +120,10 @@ function App() {
         <Route
           path="/my-tickets"
           element={<ProtectedRoute><MyTickets /></ProtectedRoute>}
+        />
+        <Route
+          path="/agent/queue"
+          element={<AgentRoute><AgentQueue /></AgentRoute>}
         />
         <Route
           path="/admin/users"

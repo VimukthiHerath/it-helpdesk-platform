@@ -24,6 +24,8 @@ export const getUserRole = () => {
 
 export const isAdmin = () => getUserRole() === 'Administrator';
 
+export const isAgent = () => getUserRole() === 'Agent';
+
 export const getUserEmail = () => {
     const payload = decodeToken(getStoredToken());
     return payload?.email ?? null;
