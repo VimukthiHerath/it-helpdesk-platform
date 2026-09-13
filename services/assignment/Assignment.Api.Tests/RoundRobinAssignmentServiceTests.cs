@@ -140,6 +140,23 @@ public class RoundRobinAssignmentServiceTests
     }
 
     [Fact]
+    public async Task AssignAsync_PersistsTicketUrgencyOnAssignmentRecord()
+    {
+        await using var context = CreateContext();
+        context.Agents.Add(new Agent { UserId = 100, DisplayOrder = 0 });
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context, CreateProducerMock().Object);
+        var urgentEvent = CreateTicketEvent(1);
+        urgentEvent.Urgency = 2;
+
+        await service.AssignAsync(urgentEvent, CancellationToken.None);
+
+        var assignment = Assert.Single(context.Assignments);
+        Assert.Equal(2, assignment.Urgency);
+    }
+
+    [Fact]
     public async Task AssignAsync_NoAgentsConfigured_SkipsAssignmentWithoutThrowing()
     {
         await using var context = CreateContext();

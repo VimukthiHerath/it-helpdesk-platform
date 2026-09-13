@@ -58,6 +58,7 @@ public class RoundRobinAssignmentService
             TicketId = ticketEvent.TicketId,
             AgentId = nextAgent.Id,
             AssignedAtUtc = DateTime.UtcNow,
+            Urgency = ticketEvent.Urgency,
         };
 
         _context.Assignments.Add(assignment);

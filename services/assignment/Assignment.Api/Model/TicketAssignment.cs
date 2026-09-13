@@ -19,4 +19,11 @@ public class TicketAssignment
 
     [Column("assigned_at")]
     public DateTime AssignedAtUtc { get; set; } = DateTime.UtcNow;
+
+    // Copied from the TicketCreated event at assignment time (ASSIGN-4's queue
+    // view needs to sort by urgency without calling back into Ticket.Api).
+    // Same numeric semantics as Ticket.Api's TicketUrgency enum: LOWER value
+    // means MORE urgent (shorter SLA window) - 0 = one_hour, 3 = twenty_four_hours.
+    [Required]
+    public int Urgency { get; set; }
 }
