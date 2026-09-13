@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import CreateUserForm from '../components/CreateUserForm';
+import AgentRotationPanel from '../components/AgentRotationPanel';
 import './AdminUsersPage.css';
 
 const AdminUsersPage = () => {
@@ -31,6 +32,7 @@ const AdminUsersPage = () => {
             </div>
 
             <CreateUserForm />
+            <AgentRotationPanel />
         </main>
     );
 };
