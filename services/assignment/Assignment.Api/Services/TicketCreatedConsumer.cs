@@ -10,13 +10,16 @@ public sealed class TicketCreatedConsumer : BackgroundService
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketCreatedConsumer> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public TicketCreatedConsumer(
         IConfiguration configuration,
-        ILogger<TicketCreatedConsumer> logger)
+        ILogger<TicketCreatedConsumer> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     // Confluent.Kafka's Consume() is a blocking call, and this method never awaits,
@@ -27,10 +30,10 @@ public sealed class TicketCreatedConsumer : BackgroundService
     // immediately regardless of Kafka's availability.
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() => RunConsumerLoop(stoppingToken), stoppingToken);
+        return Task.Run(() => RunConsumerLoopAsync(stoppingToken), stoppingToken);
     }
 
-    private void RunConsumerLoop(CancellationToken stoppingToken)
+    private async Task RunConsumerLoopAsync(CancellationToken stoppingToken)
     {
         var bootstrapServers =
             _configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -106,6 +109,21 @@ public sealed class TicketCreatedConsumer : BackgroundService
                         ticketEvent.CreatedAtUtc,
                         result.Partition,
                         result.Offset);
+
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var assignmentService = scope.ServiceProvider
+                            .GetRequiredService<RoundRobinAssignmentService>();
+                        await assignmentService.AssignAsync(ticketEvent, stoppingToken);
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        _logger.LogError(
+                            exception,
+                            "Failed to assign ticket {TicketId}",
+                            ticketEvent.TicketId);
+                    }
                 }
                 catch (ConsumeException exception)
                 {
