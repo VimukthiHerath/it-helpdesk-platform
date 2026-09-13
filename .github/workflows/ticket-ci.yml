@@ -1,4 +1,4 @@
-name: Ticket Service CI
+name: Ticket Service CI/CD
 
 on:
   push:
@@ -9,6 +9,10 @@ on:
     branches: [main, develop]
     paths:
       - 'services/ticket/**'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build-and-test:
@@ -32,4 +36,22 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Build Docker image
-        run: docker build -t ticket-service .
+        run: docker build -t ithelpdeskacr01.azurecr.io/ticket-service:${{ github.sha }} .
+
+      - name: Log in to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push image to ACR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: |
+          az acr login --name ithelpdeskacr01
+          docker push ithelpdeskacr01.azurecr.io/ticket-service:${{ github.sha }}
+
+      - name: Deploy to Container Apps
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: az containerapp update --name ticket-service --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/ticket-service:${{ github.sha }}
