@@ -285,6 +285,55 @@ namespace Auth.Api.Controller
             }
         }
 
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpPatch("users/{id}/deactivate")]
+        public async Task<IActionResult> DeactivateUser(int id)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                var callerId = GetAuthenticatedUserId();
+                if (callerId == id)
+                {
+                    return Conflict(new { message = "You cannot deactivate your own account." });
+                }
+
+                // Idempotent: deactivating an already-inactive account is a
+                // no-op success rather than an error.
+                if (!user.IsActive)
+                {
+                    return Ok(ToUserListItemDto(user));
+                }
+
+                // Same rotation guard as UpdateUser - see there and
+                // AssignmentRotationClient for the full reasoning.
+                if (user.Role == UserRole.Agent)
+                {
+                    var blocked = await BlockIfAgentStillInRotationAsync(user.Id);
+                    if (blocked is not null)
+                    {
+                        return blocked;
+                    }
+                }
+
+                user.IsActive = false;
+                user.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return Ok(ToUserListItemDto(user));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deactivating user {UserId}", id);
+                return Problem("Unable to deactivate user. Please try again later.");
+            }
+        }
+
         private int GetAuthenticatedUserId()
         {
             var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
