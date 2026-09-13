@@ -187,6 +187,36 @@ namespace Auth.Api.Controller
             }
         }
 
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            try
+            {
+                var users = await _context.Users
+                    .OrderBy(u => u.Id)
+                    .ToListAsync();
+
+                return Ok(users.Select(ToUserListItemDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error listing users");
+                return Problem("Unable to load users. Please try again later.");
+            }
+        }
+
+        private static AdminUserListItemDTO ToUserListItemDto(User user) => new()
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt,
+            CreatedBy = user.CreatedBy,
+        };
+
         [Authorize]
         [HttpGet("me")]
         public IActionResult GetMe()
