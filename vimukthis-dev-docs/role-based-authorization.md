@@ -44,7 +44,9 @@ that wasn't part of this ticket.
 | Ticket | `POST /api/ticket` (submit), `GET /api/ticket/mine` (view own) | `Employee` |
 | Ticket | `GET /api/ticket` (list all, unfiltered) | `Agent`, `Administrator` — this endpoint predates AUTH-2 and had no role check at all, which meant any employee could enumerate every other employee's tickets. Restricted to staff as part of this work since AC1 requires every non-public endpoint to check a role, and there's no dedicated queue/resolve endpoint (TICKET-4) yet to carry that responsibility instead. |
 | Assignment | `GET /api/assignments/queue` | `Agent` — added in `[[agent-assignment-queue]]` (ASSIGN-4), which also gave Assignment.Api its first JWT/controller wiring (it previously had none). |
-| Assignment | `GET/POST /api/assignments/agents` (view/manage the round-robin rotation) | `Administrator` — added in `[[agent-rotation-management]]`. |
+| Assignment | `GET /api/assignments/agents` (view the rotation) | `Agent`, `Administrator` — added Administrator-only in `[[agent-rotation-management]]`, relaxed to include Agent in `[[manual-ticket-reassignment]]` since agents need it to pick a reassignment target. |
+| Assignment | `POST /api/assignments/agents` (manage the rotation) | `Administrator` — unchanged, still management-only. |
+| Assignment | `GET /api/assignments` (list all current assignments), `PATCH /api/assignments/{ticketId}/reassign` | `Agent`, `Administrator` — added in `[[manual-ticket-reassignment]]` (ASSIGN-5 / SCRUM-20). |
 | Notification | none beyond `/health` | n/a — no protected endpoints exist yet. |
 | SLA | none beyond `/health` | n/a — no protected endpoints exist yet. |
 
