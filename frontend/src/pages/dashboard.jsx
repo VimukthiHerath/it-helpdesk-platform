@@ -33,6 +33,11 @@ const Dashboard = () => {
                             My queue
                         </button>
                     )}
+                    {(isAgentUser || isAdmin()) && (
+                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
+                            All tickets
+                        </button>
+                    )}
                     <button type="button" className="btn btn--ghost" onClick={handleLogout}>
                         Log out
                     </button>
@@ -55,9 +60,14 @@ const Dashboard = () => {
                 <section className="dashboard-empty panel">
                     <div className="panel__body">
                         <p>Nothing to submit here — head to My queue to see your assigned tickets.</p>
-                        <button type="button" className="btn btn--primary" onClick={() => navigate('/agent/queue')}>
-                            My queue
-                        </button>
+                        <div className="dashboard-empty__actions">
+                            <button type="button" className="btn btn--primary" onClick={() => navigate('/agent/queue')}>
+                                My queue
+                            </button>
+                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
+                                All tickets
+                            </button>
+                        </div>
                     </div>
                 </section>
             )}
@@ -66,9 +76,14 @@ const Dashboard = () => {
                 <section className="dashboard-empty panel">
                     <div className="panel__body">
                         <p>Nothing to submit here — use Manage users to onboard new accounts.</p>
-                        <button type="button" className="btn btn--primary" onClick={() => navigate('/admin/users')}>
-                            Manage users
-                        </button>
+                        <div className="dashboard-empty__actions">
+                            <button type="button" className="btn btn--primary" onClick={() => navigate('/admin/users')}>
+                                Manage users
+                            </button>
+                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
+                                All tickets
+                            </button>
+                        </div>
                     </div>
                 </section>
             )}

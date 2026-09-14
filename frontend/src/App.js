@@ -4,6 +4,7 @@ import LoginPage from './features/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
 import AgentQueue from './pages/agentQueue';
+import TicketAssignments from './pages/ticketAssignments';
 import AdminUsersPage from './features/admin/pages/AdminUsersPage';
 import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
@@ -105,6 +106,25 @@ const AgentRoute = ({ children }) => {
   return isAgent() ? children : <Navigate to="/" replace />;
 };
 
+// Reassignment (SCRUM-20) is usable by either role, unlike AgentRoute/AdminRoute.
+const StaffRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (isAgent() || isAdmin()) ? children : <Navigate to="/" replace />;
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -124,6 +144,10 @@ function App() {
         <Route
           path="/agent/queue"
           element={<AgentRoute><AgentQueue /></AgentRoute>}
+        />
+        <Route
+          path="/tickets"
+          element={<StaffRoute><TicketAssignments /></StaffRoute>}
         />
         <Route
           path="/admin/users"

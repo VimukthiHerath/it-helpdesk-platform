@@ -47,3 +47,9 @@
     color: var(--color-ink-muted);
     line-height: 1.5;
 }
+
+.dashboard-empty__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
