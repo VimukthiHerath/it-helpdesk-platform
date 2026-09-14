@@ -2,11 +2,13 @@ using Assignment.Api.Authorization;
 using Assignment.Api.Data;
 using Assignment.Api.DTO;
 using Assignment.Api.Model;
+using Confluent.Kafka;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Assignment.Api.Controller;
 
@@ -17,11 +19,19 @@ public class AssignmentsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<AssignmentsController> _logger;
+    private readonly IProducer<string, string> _kafkaProducer;
+    private readonly IConfiguration _configuration;
 
-    public AssignmentsController(ApplicationDbContext context, ILogger<AssignmentsController> logger)
+    public AssignmentsController(
+        ApplicationDbContext context,
+        ILogger<AssignmentsController> logger,
+        IProducer<string, string> kafkaProducer,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _kafkaProducer = kafkaProducer;
+        _configuration = configuration;
     }
 
     // AC1: only tickets assigned to the caller. AC2: most urgent first - lower
@@ -141,6 +151,91 @@ public class AssignmentsController : ControllerBase
             _logger.LogError(ex, "Error adding agent to rotation");
             return Problem("Unable to add the agent to the rotation. Please try again later.");
         }
+    }
+
+    // ASSIGN-5 (SCRUM-20): manual override for a wrong or stale round-robin
+    // assignment. AC1: takes a new agent (by Auth user id, same identity
+    // convention as AddAgentToRotationDTO - not this service's internal
+    // Agent.Id). AC2: updates the *existing* TicketAssignment row in place
+    // (no new row, no history table - not asked for) and republishes
+    // TicketAssigned so any future consumer of that topic sees the new
+    // owner. AC3 falls out of AC2 for free: GetQueue filters by AgentId, so
+    // once this row's AgentId changes, the old agent's query stops
+    // returning it and the new agent's starts - no separate code needed.
+    [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
+    [HttpPatch("{ticketId}/reassign")]
+    public async Task<IActionResult> ReassignTicket(int ticketId, [FromBody] ReassignTicketDTO request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        try
+        {
+            var assignment = await _context.Assignments.FirstOrDefaultAsync(a => a.TicketId == ticketId);
+            if (assignment is null)
+            {
+                return NotFound(new { message = "No assignment found for that ticket." });
+            }
+
+            var newAgent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == request.NewAgentUserId);
+            if (newAgent is null)
+            {
+                return BadRequest(new { message = "That user is not in the agent rotation." });
+            }
+
+            if (newAgent.Id == assignment.AgentId)
+            {
+                return Conflict(new { message = "Ticket is already assigned to that agent." });
+            }
+
+            var previousAgentId = assignment.AgentId;
+            assignment.AgentId = newAgent.Id;
+            // Reflects when the new agent actually received it - keeps their
+            // queue's oldest-first tiebreak (see GetQueue) meaningful instead
+            // of the ticket jumping in ahead of tickets they've had longer.
+            assignment.AssignedAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            await PublishTicketAssignedAsync(assignment.TicketId, newAgent.UserId, assignment.AssignedAtUtc);
+
+            _logger.LogInformation(
+                "Reassigned ticket {TicketId} from agent row {PreviousAgentId} to agent user {NewAgentUserId}",
+                ticketId, previousAgentId, newAgent.UserId);
+
+            return Ok(new ReassignTicketResponseDTO
+            {
+                TicketId = assignment.TicketId,
+                AgentUserId = newAgent.UserId,
+                Urgency = assignment.Urgency,
+                AssignedAtUtc = assignment.AssignedAtUtc,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reassigning ticket {TicketId}", ticketId);
+            return Problem("Unable to reassign the ticket. Please try again later.");
+        }
+    }
+
+    private async Task PublishTicketAssignedAsync(int ticketId, int agentUserId, DateTime assignedAtUtc)
+    {
+        var ticketAssignedEvent = new TicketAssignedEvent
+        {
+            TicketId = ticketId,
+            AgentUserId = agentUserId,
+            AssignedAtUtc = assignedAtUtc,
+        };
+
+        var topic = _configuration["Kafka:TicketAssignedTopic"] ?? "ticket-assigned";
+        var payload = JsonSerializer.Serialize(ticketAssignedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        await _kafkaProducer.ProduceAsync(topic, new Message<string, string>
+        {
+            Key = ticketId.ToString(),
+            Value = payload,
+        });
     }
 
     private int GetAuthenticatedUserId()
