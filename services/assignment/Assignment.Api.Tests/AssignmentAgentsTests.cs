@@ -43,11 +43,11 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
-    public async Task GetAgents_WithNonAdminRole_Returns403()
+    public async Task GetAgents_WithEmployeeRole_Returns403()
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Agent"));
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Employee"));
 
         var response = await client.GetAsync("/api/assignments/agents");
 
@@ -60,6 +60,21 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var response = await client.GetAsync("/api/assignments/agents");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    // SCRUM-20: agents need to see the rotation to know who they can
+    // reassign a ticket to, so this endpoint (unlike POST below) is no
+    // longer Administrator-only.
+    [Fact]
+    public async Task GetAgents_AsAgent_Returns200()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Agent"));
 
         var response = await client.GetAsync("/api/assignments/agents");
 

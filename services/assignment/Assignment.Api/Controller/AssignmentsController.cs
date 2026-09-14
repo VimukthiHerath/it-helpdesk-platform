@@ -75,11 +75,13 @@ public class AssignmentsController : ControllerBase
         }
     }
 
-    // Administrator manages who's in the round-robin rotation. Assignment.Api
-    // takes the raw Auth user id on trust (no cross-service call to verify the
-    // user exists or is Agent-role) - same "no cross-service calls" convention
-    // as everywhere else in this service.
-    [Authorize(Roles = Roles.Administrator)]
+    // Viewing the rotation is Agent+Administrator (SCRUM-20 needs agents to
+    // see who they can reassign a ticket to, not just admins) - but managing
+    // it (below) stays Administrator-only. Assignment.Api takes the raw Auth
+    // user id on trust (no cross-service call to verify the user exists or
+    // is Agent-role) - same "no cross-service calls" convention as
+    // everywhere else in this service.
+    [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
     [HttpGet("agents")]
     public IActionResult GetAgents()
     {
