@@ -153,6 +153,37 @@ public class AssignmentsController : ControllerBase
         }
     }
 
+    // Supports the admin/agent "all tickets" reassignment view - there was
+    // previously no way to see assignments across every agent, only your
+    // own (GetQueue). Not one of SCRUM-20's three ACs directly, but the
+    // reassign feature is unusable without a way to see who currently has
+    // what first.
+    [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
+    [HttpGet]
+    public IActionResult GetAllAssignments()
+    {
+        try
+        {
+            var assignments = _context.Assignments
+                .Join(_context.Agents, a => a.AgentId, ag => ag.Id, (a, ag) => new AssignmentListItemDTO
+                {
+                    TicketId = a.TicketId,
+                    AgentUserId = ag.UserId,
+                    Urgency = a.Urgency,
+                    AssignedAtUtc = a.AssignedAtUtc,
+                })
+                .OrderBy(a => a.TicketId)
+                .ToList();
+
+            return Ok(assignments);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error listing all assignments");
+            return Problem("Unable to load assignments. Please try again later.");
+        }
+    }
+
     // ASSIGN-5 (SCRUM-20): manual override for a wrong or stale round-robin
     // assignment. AC1: takes a new agent (by Auth user id, same identity
     // convention as AddAgentToRotationDTO - not this service's internal
