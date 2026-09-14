@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
 using Auth.Api.Configuration;
 using Auth.Api.Data;
+using Auth.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddHttpClient("AssignmentApi", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AssignmentApi:BaseUrl"]!);
+});
+builder.Services.AddScoped<IAssignmentRotationClient, AssignmentRotationClient>();
 
 builder.Services.AddCors(options =>
 {
@@ -107,3 +114,5 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
 
 app.Run();
+
+public partial class Program { }

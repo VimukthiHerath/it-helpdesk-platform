@@ -38,4 +38,9 @@ public class User
     
     [Column("last_login_at")]
     public DateTime? LastLoginAt { get; set; }
+
+    // Id of the administrator who created this account via POST /api/auth/users.
+    // Null for accounts created through public self-registration.
+    [Column("created_by")]
+    public int? CreatedBy { get; set; }
 }
