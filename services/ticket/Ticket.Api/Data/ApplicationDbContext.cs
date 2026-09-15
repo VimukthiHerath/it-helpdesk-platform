@@ -10,4 +10,5 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Tickets> Tickets { get; set; }
+    public DbSet<TicketStatusHistory> StatusHistory { get; set; }
 }
