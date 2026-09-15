@@ -60,8 +60,14 @@ const TicketCreateForm = () => {
         setIsSubmitting(true);
         setStatus({ type: '', message: '' });
 
+        // AC2: fetch() itself failing (offline, DNS, CORS, server down)
+        // means the request never reached the backend at all - a different
+        // situation from the backend responding with an error, so it gets
+        // its own network-specific message rather than falling through to
+        // the same generic wording.
+        let response;
         try {
-            const response = await fetch(TICKET_API_URL, {
+            response = await fetch(TICKET_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -73,28 +79,36 @@ const TicketCreateForm = () => {
                     description: formData.description.trim(),
                 }),
             });
-            const data = await response.json().catch(() => ({}));
-
-            if (response.status === 401) {
-                localStorage.removeItem('token');
-                navigate('/login', { replace: true });
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error(data?.message || 'Unable to create the ticket.');
-            }
-
-            setFormData(initialForm);
-            setStatus({
-                type: 'success',
-                message: `Ticket #${data.ticketId} created successfully.`,
-            });
-        } catch (error) {
-            setStatus({ type: 'error', message: error.message });
-        } finally {
+        } catch {
+            setStatus({ type: 'error', message: 'Unable to reach the server. Check your connection and try again.' });
             setIsSubmitting(false);
+            return;
         }
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        if (!response.ok) {
+            // AC1: on a validation failure (400) this is TicketController's
+            // specific, field-named message. On anything else (500) it's
+            // the distinct "something went wrong on our end" wording -
+            // either way, shown exactly as the backend phrased it.
+            setStatus({ type: 'error', message: data?.message || 'Unable to create the ticket. Please try again.' });
+            setIsSubmitting(false);
+            return;
+        }
+
+        setFormData(initialForm);
+        setStatus({
+            type: 'success',
+            message: `Ticket #${data.ticketId} created successfully.`,
+        });
+        setIsSubmitting(false);
     };
 
     return (
