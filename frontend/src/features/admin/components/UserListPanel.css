@@ -6,6 +6,8 @@
 .accounts-panel {
     width: min(100%, 1400px);
     margin-top: 32px;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .user-table-wrap {
