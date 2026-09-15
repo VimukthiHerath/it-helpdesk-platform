@@ -155,6 +155,7 @@ const UserListPanel = () => {
                         <table className="user-table">
                             <thead>
                                 <tr>
+                                    <th className="user-table__id">ID</th>
                                     <th className="user-table__name">Name</th>
                                     <th className="user-table__email">Email</th>
                                     <th>Role</th>
@@ -169,6 +170,7 @@ const UserListPanel = () => {
 
                                     return (
                                         <tr key={user.id} data-user-id={user.id} className={roleRowClass[user.role] || ''}>
+                                            <td className="user-table__id">{user.id}</td>
                                             <td className="user-table__name">
                                                 {isEditing ? (
                                                     <input

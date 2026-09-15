@@ -21,12 +21,24 @@
     font-family: var(--font-body);
 }
 
+.user-table__id {
+    width: 6%;
+}
+
 .user-table__name {
-    width: 16%;
+    width: 15%;
 }
 
 .user-table__email {
-    width: 30%;
+    width: 28%;
+}
+
+.user-table td.user-table__id {
+    /* Monospace, same treatment as the app's other identifiers - this is
+       the number an admin needs to copy into Agent rotation's "user ID to
+       add" field, so it should read like an ID, not blend into prose. */
+    font-family: var(--font-display);
+    color: var(--color-ink-muted);
 }
 
 .user-table th {
