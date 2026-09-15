@@ -86,6 +86,20 @@ public class AssignmentReassignTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // Administrator-only by explicit request - reassigning is no longer
+    // something any agent can do, even to their own tickets.
+    [Fact]
+    public async Task ReassignTicket_WithAgentRole_Returns403()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: SeededAgentUserId, role: "Agent"));
+
+        var response = await client.PatchAsJsonAsync("/api/assignments/1/reassign", new { newAgentUserId = OtherSeededAgentUserId });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     [Fact]
     public async Task ReassignTicket_NonExistentTicket_Returns404()
     {

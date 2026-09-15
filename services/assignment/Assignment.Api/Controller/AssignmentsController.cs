@@ -195,7 +195,12 @@ public class AssignmentsController : ControllerBase
     // owner. AC3 falls out of AC2 for free: GetQueue filters by AgentId, so
     // once this row's AgentId changes, the old agent's query stops
     // returning it and the new agent's starts - no separate code needed.
-    [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
+    //
+    // Administrator-only by explicit request: the original story's "agent
+    // or admin" framing was narrowed after the fact - reassigning someone
+    // else's ticket away from them is an admin call, not something any
+    // agent should be able to do to any other agent.
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPatch("{ticketId}/reassign")]
     public async Task<IActionResult> ReassignTicket(int ticketId, [FromBody] ReassignTicketDTO request)
     {
