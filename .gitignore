@@ -482,3 +482,12 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Personal dev notes/docs, not meant to be part of the tracked repo
+vimukthis-dev-docs/
+
+# Local Azure cost-control scripts (contain resource-group/subscription-specific commands)
+start-all*.bat
+stop-all*.bat
+
+.claude
