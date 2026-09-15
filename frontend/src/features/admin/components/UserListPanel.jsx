@@ -17,6 +17,11 @@ const roleLabel = (value) => roleOptions.find((option) => option.value === value
 // recognizable at a glance down a long list, not just legible on close read.
 const roleBadgeClass = { 1: 'badge--neutral', 2: 'badge--amber', 3: 'badge--sage' };
 
+// Row tint by role - Employees are the common case and stay plain; Agent and
+// Administrator rows get their own tone so staff accounts stand out from the
+// crowd, not just an alternating stripe with no meaning behind it.
+const roleRowClass = { 2: 'user-table__row--agent', 3: 'user-table__row--admin' };
+
 const UserListPanel = () => {
     const [users, setUsers] = useState([]);
     const [state, setState] = useState({ loading: true, error: '' });
@@ -163,7 +168,7 @@ const UserListPanel = () => {
                                     const isBusy = busyId === user.id;
 
                                     return (
-                                        <tr key={user.id} data-user-id={user.id}>
+                                        <tr key={user.id} data-user-id={user.id} className={roleRowClass[user.role] || ''}>
                                             <td className="user-table__name">
                                                 {isEditing ? (
                                                     <input

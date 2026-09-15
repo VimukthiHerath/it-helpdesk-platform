@@ -62,12 +62,12 @@
     overflow-wrap: anywhere;
 }
 
-.user-table tbody tr:nth-child(even) td {
-    background: var(--color-bg);
+.user-table__row--admin td {
+    background: var(--color-sage-pale);
 }
 
-.user-table tbody tr:hover td {
-    background: var(--color-sage-pale);
+.user-table__row--agent td {
+    background: var(--color-amber-bg);
 }
 
 .user-table tr:last-child td {
