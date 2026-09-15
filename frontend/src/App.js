@@ -5,7 +5,9 @@ import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
 import AgentQueue from './pages/agentQueue';
 import TicketAssignments from './pages/ticketAssignments';
-import AdminUsersPage from './features/admin/pages/AdminUsersPage';
+import AdminAccountsPage from './features/admin/pages/AdminAccountsPage';
+import AdminCreateUserPage from './features/admin/pages/AdminCreateUserPage';
+import AdminRotationPage from './features/admin/pages/AdminRotationPage';
 import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
@@ -151,8 +153,16 @@ function App() {
           element={<StaffRoute><TicketAssignments /></StaffRoute>}
         />
         <Route
-          path="/admin/users"
-          element={<AdminRoute><AdminUsersPage /></AdminRoute>}
+          path="/admin/accounts"
+          element={<AdminRoute><AdminAccountsPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/users/new"
+          element={<AdminRoute><AdminCreateUserPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/rotation"
+          element={<AdminRoute><AdminRotationPage /></AdminRoute>}
         />
         <Route
           path="*"

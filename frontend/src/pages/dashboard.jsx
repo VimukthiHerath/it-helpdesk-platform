@@ -19,8 +19,8 @@ const Dashboard = () => {
                 <span className="app-bar__brand">IT Helpdesk</span>
                 <div className="app-bar__actions">
                     {isAdmin() && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/users')}>
-                            Manage users
+                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/accounts')}>
+                            All accounts
                         </button>
                     )}
                     {isEmployee && (
@@ -75,10 +75,16 @@ const Dashboard = () => {
             {!isEmployee && !isAgentUser && isAdmin() && (
                 <section className="dashboard-empty panel">
                     <div className="panel__body">
-                        <p>Nothing to submit here — use Manage users to onboard new accounts.</p>
+                        <p>Nothing to submit here — manage accounts or check on tickets instead.</p>
                         <div className="dashboard-empty__actions">
-                            <button type="button" className="btn btn--primary" onClick={() => navigate('/admin/users')}>
-                                Manage users
+                            <button type="button" className="btn btn--primary" onClick={() => navigate('/admin/accounts')}>
+                                All accounts
+                            </button>
+                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/users/new')}>
+                                Create user
+                            </button>
+                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/rotation')}>
+                                Agent rotation
                             </button>
                             <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
                                 All tickets
