@@ -12,6 +12,11 @@ const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Wi
 // Display only here - no control to change it, unlike the queue page.
 const statusLabels = ['Unassigned', 'Assigned', 'Resolved', 'In Progress', 'Closed'];
 
+// Row tint by status, requested so resolved/closed/assigned tickets are
+// visually distinguishable at a glance. Unassigned/In progress have no
+// specific color asked for, so they stay untinted.
+const statusRowClass = ['', 'assignments-table__row--assigned', 'assignments-table__row--resolved', '', 'assignments-table__row--closed'];
+
 const formatLabel = (value, labels) => (typeof value === 'number' && labels[value]) ? labels[value] : 'Unknown';
 
 // Read-only overview by design: no status changes, no reassignment here -
@@ -112,7 +117,7 @@ const TicketAssignments = () => {
                                     const assignment = assignmentFor(ticket.id);
 
                                     return (
-                                        <tr key={ticket.id} data-ticket-id={ticket.id}>
+                                        <tr key={ticket.id} data-ticket-id={ticket.id} className={statusRowClass[ticket.status] || ''}>
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>

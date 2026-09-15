@@ -94,6 +94,18 @@
     border-bottom: 0;
 }
 
+.assignments-table__row--resolved {
+    background: var(--color-sage-pale);
+}
+
+.assignments-table__row--closed {
+    background: var(--color-error-bg);
+}
+
+.assignments-table__row--assigned {
+    background: var(--color-amber-bg);
+}
+
 @media (max-width: 700px) {
     .assignments-table {
         min-width: 560px;
