@@ -130,6 +130,17 @@ button {
   color: var(--color-white);
 }
 
+.btn--danger {
+  background: var(--color-error);
+  color: var(--color-white);
+  border-color: var(--color-error);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+
 .btn--ghost {
   border-color: var(--color-ink);
   background: transparent;
