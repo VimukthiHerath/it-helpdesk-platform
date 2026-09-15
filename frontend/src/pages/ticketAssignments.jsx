@@ -8,12 +8,16 @@ const ASSIGNMENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignm
 
 const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Within 24 hours'];
 
+// Indexed by TicketStatus's raw int value (Ticket.Api/Model/TicketStatus.cs).
+// Display only here - no control to change it, unlike the queue page.
+const statusLabels = ['Unassigned', 'Assigned', 'Resolved', 'In Progress', 'Closed'];
+
 const formatLabel = (value, labels) => (typeof value === 'number' && labels[value]) ? labels[value] : 'Unknown';
 
 // Read-only overview by design: no status changes, no reassignment here -
 // an agent should only be able to see who currently has each ticket, and an
 // admin's reassignment tool lives elsewhere. Just Ticket / Issue / Urgency /
-// Assigned to, one plain line per row.
+// Status / Assigned to, one plain line per row.
 const TicketAssignments = () => {
     const [tickets, setTickets] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -99,6 +103,7 @@ const TicketAssignments = () => {
                                     <th>Ticket</th>
                                     <th>Issue</th>
                                     <th>Urgency</th>
+                                    <th>Status</th>
                                     <th>Assigned to</th>
                                 </tr>
                             </thead>
@@ -111,6 +116,7 @@ const TicketAssignments = () => {
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
+                                            <td>{formatLabel(ticket.status, statusLabels)}</td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
                                         </tr>
                                     );
