@@ -22,6 +22,14 @@ export const getUserRole = () => {
     return payload?.[ROLE_CLAIM] ?? null;
 };
 
+// The "sub" claim is a registered JWT claim, written under its short name
+// as-is (unlike the role claim above, which gets expanded to a long URI).
+export const getUserId = () => {
+    const payload = decodeToken(getStoredToken());
+    const sub = payload?.sub;
+    return sub ? Number(sub) : null;
+};
+
 export const isAdmin = () => getUserRole() === 'Administrator';
 
 export const isAgent = () => getUserRole() === 'Agent';

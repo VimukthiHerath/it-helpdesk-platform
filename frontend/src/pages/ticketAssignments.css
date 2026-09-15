@@ -106,6 +106,14 @@
     font-size: 0.78rem;
 }
 
+.assignments-table__current-status {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+}
+
 .assignments-table__unassigned-note {
     color: var(--color-ink-muted);
     font-size: 0.85rem;

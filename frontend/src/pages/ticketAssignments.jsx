@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStoredToken } from '../shared/authToken';
+import { getStoredToken, getUserId, isAdmin } from '../shared/authToken';
 import './ticketAssignments.css';
 
 const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
@@ -8,7 +8,16 @@ const ASSIGNMENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignm
 const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/agents`;
 
 const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Within 24 hours'];
-const statusLabels = ['Unassigned', 'Assigned', 'Resolved'];
+
+// Indexed by TicketStatus's raw int value - unassigned/assigned are
+// system-managed (round-robin, reassignment); in_progress/resolved/closed
+// are the three an agent or admin can set through this page (SCRUM-17 AC1).
+const statusLabels = ['Unassigned', 'Assigned', 'Resolved', 'In Progress', 'Closed'];
+const statusOptions = [
+    { value: 3, label: 'In Progress' },
+    { value: 2, label: 'Resolved' },
+    { value: 4, label: 'Closed' },
+];
 
 const formatLabel = (value, labels) => (typeof value === 'number' && labels[value]) ? labels[value] : 'Unknown';
 
@@ -20,7 +29,11 @@ const TicketAssignments = () => {
     const [selectedAgent, setSelectedAgent] = useState({});
     const [rowErrors, setRowErrors] = useState({});
     const [busyTicketId, setBusyTicketId] = useState(null);
+    const [selectedStatus, setSelectedStatus] = useState({});
+    const [statusRowErrors, setStatusRowErrors] = useState({});
+    const [busyStatusTicketId, setBusyStatusTicketId] = useState(null);
     const navigate = useNavigate();
+    const myUserId = getUserId();
 
     const loadAll = async () => {
         const token = getStoredToken();
@@ -108,6 +121,52 @@ const TicketAssignments = () => {
         }
     };
 
+    const setStatusRowError = (ticketId, message) => setStatusRowErrors((current) => ({ ...current, [ticketId]: message }));
+
+    // SCRUM-17 AC2: mirrors the backend's own ownership check exactly -
+    // an admin can always act, an agent only on a ticket currently
+    // assigned to them (Ticket.Api's own AssignedTo, not Assignment.Api's
+    // copy - same field the backend checks against).
+    const canChangeStatus = (ticket) => isAdmin() || ticket.assignedTo === myUserId;
+
+    const updateStatus = async (ticketId) => {
+        const newStatus = Number(selectedStatus[ticketId]);
+        if (!newStatus) {
+            setStatusRowError(ticketId, 'Choose a status first.');
+            return;
+        }
+
+        const token = getStoredToken();
+        if (!token) {
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        setBusyStatusTicketId(ticketId);
+        setStatusRowError(ticketId, '');
+        try {
+            const response = await fetch(`${TICKETS_URL}/${ticketId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ newStatus }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (response.status === 401) {
+                navigate('/login', { replace: true });
+                return;
+            }
+            if (!response.ok) throw new Error(data?.message || 'Unable to update this ticket\'s status.');
+
+            setTickets((current) => current.map((ticket) => (ticket.id === ticketId ? { ...ticket, status: data.status } : ticket)));
+            setSelectedStatus((current) => ({ ...current, [ticketId]: '' }));
+        } catch (error) {
+            setStatusRowError(ticketId, error.message || 'Unable to update this ticket\'s status.');
+        } finally {
+            setBusyStatusTicketId(null);
+        }
+    };
+
     return (
         <main className="assignments-page">
             <div className="app-bar">
@@ -160,7 +219,33 @@ const TicketAssignments = () => {
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
-                                            <td>{formatLabel(ticket.status, statusLabels)}</td>
+                                            <td className="assignments-table__actions">
+                                                {canChangeStatus(ticket) ? (
+                                                    <>
+                                                        <span className="assignments-table__current-status">{formatLabel(ticket.status, statusLabels)}</span>
+                                                        <div className="assignments-table__actions-row">
+                                                            <select
+                                                                className="input"
+                                                                value={selectedStatus[ticket.id] || ''}
+                                                                onChange={(event) => setSelectedStatus((current) => ({ ...current, [ticket.id]: event.target.value }))}
+                                                            >
+                                                                <option value="">Change to...</option>
+                                                                {statusOptions
+                                                                    .filter((option) => option.value !== ticket.status)
+                                                                    .map((option) => (
+                                                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                                                    ))}
+                                                            </select>
+                                                            <button type="button" className="btn btn--secondary" disabled={busyStatusTicketId === ticket.id} onClick={() => updateStatus(ticket.id)}>
+                                                                {busyStatusTicketId === ticket.id ? 'Updating...' : 'Update'}
+                                                            </button>
+                                                        </div>
+                                                        {statusRowErrors[ticket.id] && <span className="error-text">{statusRowErrors[ticket.id]}</span>}
+                                                    </>
+                                                ) : (
+                                                    formatLabel(ticket.status, statusLabels)
+                                                )}
+                                            </td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
                                             <td className="assignments-table__actions">
                                                 {assignment ? (
