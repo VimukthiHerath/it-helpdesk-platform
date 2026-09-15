@@ -64,9 +64,21 @@
     font-family: var(--font-body);
 }
 
-.assignments-table th,
-.assignments-table td {
+/* Five equal columns for the read-only (agent) view; the admin view adds a
+   sixth (Reassign) that needs more room than an even split would give it. */
+.assignments-table:not(.assignments-table--admin) th,
+.assignments-table:not(.assignments-table--admin) td {
     width: 20%;
+}
+
+.assignments-table--admin th,
+.assignments-table--admin td {
+    width: 15%;
+}
+
+.assignments-table--admin th:last-child,
+.assignments-table--admin td:last-child {
+    width: 25%;
 }
 
 .assignments-table th {
@@ -83,15 +95,51 @@
 .assignments-table td {
     padding: 16px 12px;
     border-bottom: 1px solid var(--color-ink);
-    /* Every cell is now a single line of plain text (no more multi-line
-       status/reassign controls), so a shared vertical center is what makes
-       rows read as evenly spaced. */
+    /* Every plain-text cell shares a vertical center, which is what makes
+       rows read as evenly spaced (the Reassign cell below is the one
+       exception - it holds a multi-line control, not a line of text). */
     vertical-align: middle;
     line-height: 1.4;
 }
 
 .assignments-table tr:last-child td {
     border-bottom: 0;
+}
+
+/* Reassign cell only (admin view): holds a select + button + possible error
+   text, so it top-aligns instead of centering like every other cell. This
+   doesn't break row alignment - a <td>'s border-bottom sits at the bottom of
+   its own box, and every td in a row is stretched to the same height by the
+   table itself, so borders still line up regardless of vertical-align. */
+.assignments-table--admin td:last-child {
+    vertical-align: top;
+}
+
+.assignments-table__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.assignments-table__actions-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.assignments-table__actions .input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+}
+
+.assignments-table__actions .btn {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+}
+
+.assignments-table__unassigned-note {
+    color: var(--color-ink-muted);
+    font-size: 0.85rem;
 }
 
 .assignments-table__row--resolved {
@@ -109,5 +157,9 @@
 @media (max-width: 700px) {
     .assignments-table {
         min-width: 560px;
+    }
+
+    .assignments-table--admin {
+        min-width: 760px;
     }
 }
