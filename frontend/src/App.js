@@ -106,7 +106,8 @@ const AgentRoute = ({ children }) => {
   return isAgent() ? children : <Navigate to="/" replace />;
 };
 
-// Reassignment (SCRUM-20) is usable by either role, unlike AgentRoute/AdminRoute.
+// The read-only "all tickets" overview is viewable by either role, unlike
+// AgentRoute/AdminRoute.
 const StaffRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 

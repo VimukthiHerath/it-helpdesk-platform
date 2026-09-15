@@ -60,7 +60,13 @@
 .assignments-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-family: var(--font-body);
+}
+
+.assignments-table th,
+.assignments-table td {
+    width: 25%;
 }
 
 .assignments-table th {
@@ -70,61 +76,26 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-ink-muted);
-    padding: 0 12px 10px 0;
+    padding: 0 12px 10px;
     border-bottom: 1px solid var(--color-ink);
 }
 
 .assignments-table td {
-    padding: 16px 12px 16px 0;
+    padding: 16px 12px;
     border-bottom: 1px solid var(--color-ink);
-    /* Top-aligned, not centered: rows mix plain single-line cells with
-       multi-line status/reassign controls, so a shared top edge is what
-       actually reads as "one row" rather than each cell centering on its
-       own and drifting out of line with its neighbors. */
-    vertical-align: top;
+    /* Every cell is now a single line of plain text (no more multi-line
+       status/reassign controls), so a shared vertical center is what makes
+       rows read as evenly spaced. */
+    vertical-align: middle;
+    line-height: 1.4;
 }
 
 .assignments-table tr:last-child td {
     border-bottom: 0;
 }
 
-.assignments-table td .input {
-    padding: 6px 8px;
-    font-size: 0.9rem;
-}
-
-.assignments-table__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    white-space: nowrap;
-}
-
-.assignments-table__actions-row {
-    display: flex;
-    gap: 8px;
-}
-
-.assignments-table__actions .btn {
-    padding: 8px 12px;
-    font-size: 0.78rem;
-}
-
-.assignments-table__current-status {
-    font-family: var(--font-display);
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-}
-
-.assignments-table__unassigned-note {
-    color: var(--color-ink-muted);
-    font-size: 0.85rem;
-}
-
 @media (max-width: 700px) {
     .assignments-table {
-        min-width: 640px;
+        min-width: 480px;
     }
 }
