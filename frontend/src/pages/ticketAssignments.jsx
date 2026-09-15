@@ -248,7 +248,9 @@ const TicketAssignments = () => {
                                             </td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
                                             <td>
-                                                {assignment ? (
+                                                {/* Reassign is Administrator-only - agents can see who has a
+                                                    ticket but can no longer move it off themselves or anyone else. */}
+                                                {isAdmin() && assignment && (
                                                     <div className="assignments-table__actions">
                                                         <div className="assignments-table__actions-row">
                                                             <select
@@ -269,7 +271,8 @@ const TicketAssignments = () => {
                                                         </div>
                                                         {rowErrors[ticket.id] && <span className="error-text">{rowErrors[ticket.id]}</span>}
                                                     </div>
-                                                ) : (
+                                                )}
+                                                {isAdmin() && !assignment && (
                                                     <span className="assignments-table__unassigned-note">Not yet assigned</span>
                                                 )}
                                             </td>
