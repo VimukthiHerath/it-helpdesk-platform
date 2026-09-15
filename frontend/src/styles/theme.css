@@ -273,6 +273,12 @@ select.input:focus {
   color: var(--color-ink-muted);
 }
 
+.badge--amber {
+  background: var(--color-amber-bg);
+  color: var(--color-amber);
+  border-color: var(--color-amber);
+}
+
 /* App bar: a solid title-bar strip at the top of every screen inside the app */
 .app-bar {
   display: flex;

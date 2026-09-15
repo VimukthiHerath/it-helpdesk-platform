@@ -1,3 +1,13 @@
+/* This panel gets its own (wider) container instead of the ~760px
+   .admin-create-panel the create-user form uses - that width was forced
+   for a table with five columns, including a dropdown+two-button actions
+   cell, and was exactly why the table needed a horizontal scrollbar to
+   show everything. */
+.accounts-panel {
+    width: min(100%, 1400px);
+    margin-top: 32px;
+}
+
 .user-table-wrap {
     overflow-x: auto;
 }
@@ -5,7 +15,16 @@
 .user-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-family: var(--font-body);
+}
+
+.user-table__name {
+    width: 16%;
+}
+
+.user-table__email {
+    width: 30%;
 }
 
 .user-table th {
@@ -30,6 +49,23 @@
        cell fixes that; top-aligning keeps rows with an inline error
        message lining up the same as rows without one. */
     vertical-align: top;
+}
+
+.user-table td.user-table__name,
+.user-table td.user-table__email {
+    /* Generated test emails run long - wrapping them here is what lets the
+       table fit its container instead of forcing the whole row wider (and
+       the page into a horizontal scrollbar) to keep one long email on a
+       single line. */
+    overflow-wrap: anywhere;
+}
+
+.user-table tbody tr:nth-child(even) td {
+    background: var(--color-bg);
+}
+
+.user-table tbody tr:hover td {
+    background: var(--color-sage-pale);
 }
 
 .user-table tr:last-child td {

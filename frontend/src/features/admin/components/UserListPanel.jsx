@@ -13,6 +13,10 @@ const roleOptions = [
 
 const roleLabel = (value) => roleOptions.find((option) => option.value === value)?.label || value;
 
+// Employee/Agent/Administrator each get a distinct badge color so a role is
+// recognizable at a glance down a long list, not just legible on close read.
+const roleBadgeClass = { 1: 'badge--neutral', 2: 'badge--amber', 3: 'badge--sage' };
+
 const UserListPanel = () => {
     const [users, setUsers] = useState([]);
     const [state, setState] = useState({ loading: true, error: '' });
@@ -131,7 +135,7 @@ const UserListPanel = () => {
     };
 
     return (
-        <section className="admin-create-panel panel" aria-labelledby="user-list-title">
+        <section className="accounts-panel panel" aria-labelledby="user-list-title">
             <div className="panel__titlebar">
                 <span id="user-list-title">All accounts</span>
                 <span>{users.length}</span>
@@ -146,8 +150,8 @@ const UserListPanel = () => {
                         <table className="user-table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
+                                    <th className="user-table__name">Name</th>
+                                    <th className="user-table__email">Email</th>
                                     <th>Role</th>
                                     <th>Status</th>
                                     <th />
@@ -160,7 +164,7 @@ const UserListPanel = () => {
 
                                     return (
                                         <tr key={user.id} data-user-id={user.id}>
-                                            <td>
+                                            <td className="user-table__name">
                                                 {isEditing ? (
                                                     <input
                                                         className="input"
@@ -169,7 +173,7 @@ const UserListPanel = () => {
                                                     />
                                                 ) : user.name}
                                             </td>
-                                            <td>
+                                            <td className="user-table__email">
                                                 {isEditing ? (
                                                     <input
                                                         className="input"
@@ -190,7 +194,11 @@ const UserListPanel = () => {
                                                             <option key={option.value} value={option.value}>{option.label}</option>
                                                         ))}
                                                     </select>
-                                                ) : roleLabel(user.role)}
+                                                ) : (
+                                                    <span className={`badge ${roleBadgeClass[user.role] || 'badge--neutral'}`}>
+                                                        {roleLabel(user.role)}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td>
                                                 <span className={`badge ${user.isActive ? 'badge--sage' : 'badge--neutral'}`}>
