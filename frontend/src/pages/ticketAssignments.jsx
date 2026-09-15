@@ -219,9 +219,9 @@ const TicketAssignments = () => {
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
-                                            <td className="assignments-table__actions">
+                                            <td>
                                                 {canChangeStatus(ticket) ? (
-                                                    <>
+                                                    <div className="assignments-table__actions">
                                                         <span className="assignments-table__current-status">{formatLabel(ticket.status, statusLabels)}</span>
                                                         <div className="assignments-table__actions-row">
                                                             <select
@@ -241,15 +241,15 @@ const TicketAssignments = () => {
                                                             </button>
                                                         </div>
                                                         {statusRowErrors[ticket.id] && <span className="error-text">{statusRowErrors[ticket.id]}</span>}
-                                                    </>
+                                                    </div>
                                                 ) : (
                                                     formatLabel(ticket.status, statusLabels)
                                                 )}
                                             </td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
-                                            <td className="assignments-table__actions">
+                                            <td>
                                                 {assignment ? (
-                                                    <>
+                                                    <div className="assignments-table__actions">
                                                         <div className="assignments-table__actions-row">
                                                             <select
                                                                 className="input"
@@ -268,7 +268,7 @@ const TicketAssignments = () => {
                                                             </button>
                                                         </div>
                                                         {rowErrors[ticket.id] && <span className="error-text">{rowErrors[ticket.id]}</span>}
-                                                    </>
+                                                    </div>
                                                 ) : (
                                                     <span className="assignments-table__unassigned-note">Not yet assigned</span>
                                                 )}

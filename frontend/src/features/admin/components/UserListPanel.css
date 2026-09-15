@@ -20,9 +20,16 @@
 }
 
 .user-table td {
-    padding: 12px 12px 12px 0;
+    padding: 16px 12px 16px 0;
     border-bottom: 1px solid var(--color-ink);
-    vertical-align: middle;
+    /* Top-aligned, not centered - matches the fix in ticketAssignments.css:
+       a <td> with display:flex on it directly doesn't stretch to the row's
+       full height the way a normal table cell does, so its border-bottom
+       ends up short of the row's real boundary. Moving the flex styling
+       onto an inner <div> (see JSX) and keeping the <td> itself a plain
+       cell fixes that; top-aligning keeps rows with an inline error
+       message lining up the same as rows without one. */
+    vertical-align: top;
 }
 
 .user-table tr:last-child td {

@@ -197,31 +197,33 @@ const UserListPanel = () => {
                                                     {user.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
-                                            <td className="user-table__actions">
-                                                <div className="user-table__actions-row">
-                                                    {isEditing ? (
-                                                        <>
-                                                            <button type="button" className="btn btn--primary" disabled={isBusy} onClick={() => saveEdit(user.id)}>
-                                                                {isBusy ? 'Saving...' : 'Save'}
-                                                            </button>
-                                                            <button type="button" className="btn btn--ghost" onClick={() => cancelEdit(user.id)}>
-                                                                Cancel
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button type="button" className="btn btn--secondary" onClick={() => startEdit(user)}>
-                                                                Edit
-                                                            </button>
-                                                            {user.isActive && (
-                                                                <button type="button" className="btn btn--ghost" disabled={isBusy} onClick={() => deactivate(user)}>
-                                                                    {isBusy ? 'Working...' : 'Deactivate'}
+                                            <td>
+                                                <div className="user-table__actions">
+                                                    <div className="user-table__actions-row">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button type="button" className="btn btn--primary" disabled={isBusy} onClick={() => saveEdit(user.id)}>
+                                                                    {isBusy ? 'Saving...' : 'Save'}
                                                                 </button>
-                                                            )}
-                                                        </>
-                                                    )}
+                                                                <button type="button" className="btn btn--ghost" onClick={() => cancelEdit(user.id)}>
+                                                                    Cancel
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button type="button" className="btn btn--secondary" onClick={() => startEdit(user)}>
+                                                                    Edit
+                                                                </button>
+                                                                {user.isActive && (
+                                                                    <button type="button" className="btn btn--ghost" disabled={isBusy} onClick={() => deactivate(user)}>
+                                                                        {isBusy ? 'Working...' : 'Deactivate'}
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {rowErrors[user.id] && <span className="error-text">{rowErrors[user.id]}</span>}
                                                 </div>
-                                                {rowErrors[user.id] && <span className="error-text">{rowErrors[user.id]}</span>}
                                             </td>
                                         </tr>
                                     );
