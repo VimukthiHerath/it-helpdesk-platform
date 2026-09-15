@@ -12,6 +12,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
+// [ApiController] auto-returns its own ValidationProblem shape (an "errors"
+// dictionary, no top-level "message") the instant ModelState is invalid -
+// before the action body ever runs. Suppressing that lets CreateTicket's own
+// ModelState check below actually execute and shape the response itself.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
+
 builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 {
     var producerConfig = new ProducerConfig

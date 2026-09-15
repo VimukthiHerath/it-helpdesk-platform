@@ -55,9 +55,20 @@ public class TicketController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateTicket([FromBody] TicketCreateDTO ticketDto)
     {
+        // AC1: ValidationProblem()'s default shape (an "errors" dictionary,
+        // no top-level "message") doesn't match this API's convention
+        // elsewhere of a plain { message } the frontend can show directly.
+        // Surface the first failing field's own message instead - it
+        // already names the field per TicketCreateDTO's ErrorMessage text.
         if (!ModelState.IsValid)
         {
-            return ValidationProblem(ModelState);
+            var firstError = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m))
+                ?? "Please check the ticket details and try again.";
+
+            return BadRequest(new { message = firstError });
         }
 
         int? createdTicketId = null;
@@ -114,7 +125,11 @@ public class TicketController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating ticket");
-            return Problem("Unable to create ticket. Please try again later.");
+            // AC2: deliberately different wording from a validation message -
+            // this tells the user it's not something they typed wrong, it's
+            // safe/expected to just retry.
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { message = "Something went wrong on our end. Please try again in a moment." });
         }
     }
 
