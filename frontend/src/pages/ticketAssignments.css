@@ -64,21 +64,32 @@
     font-family: var(--font-body);
 }
 
-/* Five equal columns for the read-only (agent) view; the admin view adds a
-   sixth (Reassign) that needs more room than an even split would give it. */
+/* Plain columns share the leftover space evenly; Description gets the
+   biggest share since it's free text, and the admin view's Reassign column
+   (last-child) needs its own room on top of that for the select + button. */
 .assignments-table:not(.assignments-table--admin) th,
 .assignments-table:not(.assignments-table--admin) td {
-    width: 20%;
+    width: 13%;
 }
 
 .assignments-table--admin th,
 .assignments-table--admin td {
-    width: 15%;
+    width: 11%;
+}
+
+.assignments-table:not(.assignments-table--admin) th.assignments-table__description,
+.assignments-table:not(.assignments-table--admin) td.assignments-table__description {
+    width: 35%;
+}
+
+.assignments-table--admin th.assignments-table__description,
+.assignments-table--admin td.assignments-table__description {
+    width: 25%;
 }
 
 .assignments-table--admin th:last-child,
 .assignments-table--admin td:last-child {
-    width: 25%;
+    width: 20%;
 }
 
 .assignments-table th {
@@ -156,10 +167,10 @@
 
 @media (max-width: 700px) {
     .assignments-table {
-        min-width: 560px;
+        min-width: 720px;
     }
 
     .assignments-table--admin {
-        min-width: 760px;
+        min-width: 900px;
     }
 }
