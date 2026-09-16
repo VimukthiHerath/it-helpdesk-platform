@@ -56,9 +56,8 @@
 
 .queue-list-item {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 6px;
     width: 100%;
     border-bottom: 1px solid var(--color-ink);
     padding: 16px clamp(20px, 5vw, 48px);
@@ -69,6 +68,14 @@
     border-bottom: 0;
 }
 
+.queue-list-item__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
 .queue-list-item__id {
     font-family: var(--font-display);
     font-weight: 600;
@@ -76,17 +83,31 @@
 }
 
 .queue-list-item__date {
-    margin-left: auto;
     color: var(--color-ink-muted);
     font-size: 0.85rem;
 }
 
+.queue-list-item__actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.queue-list-item__actions .btn {
+    padding: 8px 14px;
+    font-size: 0.78rem;
+}
+
 @media (max-width: 700px) {
-    .queue-list-item {
+    .queue-list-item__row {
         gap: 10px;
     }
 
     .queue-list-item__date {
+        width: 100%;
+    }
+
+    .queue-list-item__actions {
         margin-left: 0;
         width: 100%;
     }

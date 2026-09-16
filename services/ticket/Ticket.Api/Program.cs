@@ -39,6 +39,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<TicketAssignmentSyncService>();
 builder.Services.AddHostedService<TicketAssignedConsumer>();
+builder.Services.AddScoped<TicketStatusService>();
 
 builder.Services.AddCors(options =>
 {

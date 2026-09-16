@@ -13,6 +13,15 @@ const roleOptions = [
 
 const roleLabel = (value) => roleOptions.find((option) => option.value === value)?.label || value;
 
+// Employee/Agent/Administrator each get a distinct badge color so a role is
+// recognizable at a glance down a long list, not just legible on close read.
+const roleBadgeClass = { 1: 'badge--neutral', 2: 'badge--amber', 3: 'badge--sage' };
+
+// Row tint by role - Employees are the common case and stay plain; Agent and
+// Administrator rows get their own tone so staff accounts stand out from the
+// crowd, not just an alternating stripe with no meaning behind it.
+const roleRowClass = { 2: 'user-table__row--agent', 3: 'user-table__row--admin' };
+
 const UserListPanel = () => {
     const [users, setUsers] = useState([]);
     const [state, setState] = useState({ loading: true, error: '' });
@@ -131,7 +140,7 @@ const UserListPanel = () => {
     };
 
     return (
-        <section className="admin-create-panel panel" aria-labelledby="user-list-title">
+        <section className="accounts-panel panel" aria-labelledby="user-list-title">
             <div className="panel__titlebar">
                 <span id="user-list-title">All accounts</span>
                 <span>{users.length}</span>
@@ -146,8 +155,9 @@ const UserListPanel = () => {
                         <table className="user-table">
                             <thead>
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
+                                    <th className="user-table__id">ID</th>
+                                    <th className="user-table__name">Name</th>
+                                    <th className="user-table__email">Email</th>
                                     <th>Role</th>
                                     <th>Status</th>
                                     <th />
@@ -159,8 +169,9 @@ const UserListPanel = () => {
                                     const isBusy = busyId === user.id;
 
                                     return (
-                                        <tr key={user.id} data-user-id={user.id}>
-                                            <td>
+                                        <tr key={user.id} data-user-id={user.id} className={roleRowClass[user.role] || ''}>
+                                            <td className="user-table__id">{user.id}</td>
+                                            <td className="user-table__name">
                                                 {isEditing ? (
                                                     <input
                                                         className="input"
@@ -169,7 +180,7 @@ const UserListPanel = () => {
                                                     />
                                                 ) : user.name}
                                             </td>
-                                            <td>
+                                            <td className="user-table__email">
                                                 {isEditing ? (
                                                     <input
                                                         className="input"
@@ -190,38 +201,44 @@ const UserListPanel = () => {
                                                             <option key={option.value} value={option.value}>{option.label}</option>
                                                         ))}
                                                     </select>
-                                                ) : roleLabel(user.role)}
+                                                ) : (
+                                                    <span className={`badge ${roleBadgeClass[user.role] || 'badge--neutral'}`}>
+                                                        {roleLabel(user.role)}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td>
                                                 <span className={`badge ${user.isActive ? 'badge--sage' : 'badge--neutral'}`}>
                                                     {user.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
-                                            <td className="user-table__actions">
-                                                <div className="user-table__actions-row">
-                                                    {isEditing ? (
-                                                        <>
-                                                            <button type="button" className="btn btn--primary" disabled={isBusy} onClick={() => saveEdit(user.id)}>
-                                                                {isBusy ? 'Saving...' : 'Save'}
-                                                            </button>
-                                                            <button type="button" className="btn btn--ghost" onClick={() => cancelEdit(user.id)}>
-                                                                Cancel
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button type="button" className="btn btn--secondary" onClick={() => startEdit(user)}>
-                                                                Edit
-                                                            </button>
-                                                            {user.isActive && (
-                                                                <button type="button" className="btn btn--ghost" disabled={isBusy} onClick={() => deactivate(user)}>
-                                                                    {isBusy ? 'Working...' : 'Deactivate'}
+                                            <td>
+                                                <div className="user-table__actions">
+                                                    <div className="user-table__actions-row">
+                                                        {isEditing ? (
+                                                            <>
+                                                                <button type="button" className="btn btn--primary" disabled={isBusy} onClick={() => saveEdit(user.id)}>
+                                                                    {isBusy ? 'Saving...' : 'Save'}
                                                                 </button>
-                                                            )}
-                                                        </>
-                                                    )}
+                                                                <button type="button" className="btn btn--ghost" onClick={() => cancelEdit(user.id)}>
+                                                                    Cancel
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button type="button" className="btn btn--secondary" onClick={() => startEdit(user)}>
+                                                                    Edit
+                                                                </button>
+                                                                {user.isActive && (
+                                                                    <button type="button" className="btn btn--ghost" disabled={isBusy} onClick={() => deactivate(user)}>
+                                                                        {isBusy ? 'Working...' : 'Deactivate'}
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {rowErrors[user.id] && <span className="error-text">{rowErrors[user.id]}</span>}
                                                 </div>
-                                                {rowErrors[user.id] && <span className="error-text">{rowErrors[user.id]}</span>}
                                             </td>
                                         </tr>
                                     );

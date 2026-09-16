@@ -60,7 +60,25 @@
 .assignments-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-family: var(--font-body);
+}
+
+/* Five equal columns for the read-only (agent) view; the admin view adds a
+   sixth (Reassign) that needs more room than an even split would give it. */
+.assignments-table:not(.assignments-table--admin) th,
+.assignments-table:not(.assignments-table--admin) td {
+    width: 20%;
+}
+
+.assignments-table--admin th,
+.assignments-table--admin td {
+    width: 15%;
+}
+
+.assignments-table--admin th:last-child,
+.assignments-table--admin td:last-child {
+    width: 25%;
 }
 
 .assignments-table th {
@@ -70,35 +88,48 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-ink-muted);
-    padding: 0 12px 10px 0;
+    padding: 0 12px 10px;
     border-bottom: 1px solid var(--color-ink);
 }
 
 .assignments-table td {
-    padding: 12px 12px 12px 0;
+    padding: 16px 12px;
     border-bottom: 1px solid var(--color-ink);
+    /* Every plain-text cell shares a vertical center, which is what makes
+       rows read as evenly spaced (the Reassign cell below is the one
+       exception - it holds a multi-line control, not a line of text). */
     vertical-align: middle;
+    line-height: 1.4;
 }
 
 .assignments-table tr:last-child td {
     border-bottom: 0;
 }
 
-.assignments-table td .input {
-    padding: 6px 8px;
-    font-size: 0.9rem;
+/* Reassign cell only (admin view): holds a select + button + possible error
+   text, so it top-aligns instead of centering like every other cell. This
+   doesn't break row alignment - a <td>'s border-bottom sits at the bottom of
+   its own box, and every td in a row is stretched to the same height by the
+   table itself, so borders still line up regardless of vertical-align. */
+.assignments-table--admin td:last-child {
+    vertical-align: top;
 }
 
 .assignments-table__actions {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    white-space: nowrap;
 }
 
 .assignments-table__actions-row {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+.assignments-table__actions .input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
 }
 
 .assignments-table__actions .btn {
@@ -111,8 +142,24 @@
     font-size: 0.85rem;
 }
 
+.assignments-table__row--resolved {
+    background: var(--color-sage-pale);
+}
+
+.assignments-table__row--closed {
+    background: var(--color-error-bg);
+}
+
+.assignments-table__row--assigned {
+    background: var(--color-amber-bg);
+}
+
 @media (max-width: 700px) {
     .assignments-table {
-        min-width: 640px;
+        min-width: 560px;
+    }
+
+    .assignments-table--admin {
+        min-width: 760px;
     }
 }

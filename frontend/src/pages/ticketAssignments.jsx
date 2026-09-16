@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStoredToken } from '../shared/authToken';
+import { getStoredToken, isAdmin } from '../shared/authToken';
 import './ticketAssignments.css';
 
 const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
@@ -8,10 +8,21 @@ const ASSIGNMENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignm
 const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/agents`;
 
 const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Within 24 hours'];
-const statusLabels = ['Unassigned', 'Assigned', 'Resolved'];
+
+// Indexed by TicketStatus's raw int value (Ticket.Api/Model/TicketStatus.cs).
+// Display only here - no control to change it, unlike the queue page.
+const statusLabels = ['Unassigned', 'Assigned', 'Resolved', 'In Progress', 'Closed'];
+
+// Row tint by status, requested so resolved/closed/assigned tickets are
+// visually distinguishable at a glance. Unassigned/In progress have no
+// specific color asked for, so they stay untinted.
+const statusRowClass = ['', 'assignments-table__row--assigned', 'assignments-table__row--resolved', '', 'assignments-table__row--closed'];
 
 const formatLabel = (value, labels) => (typeof value === 'number' && labels[value]) ? labels[value] : 'Unknown';
 
+// Read-only for everyone except the Reassign column, which only an
+// Administrator sees and can act on - reassigning is Administrator-only at
+// the API too (see role-based-authorization.md), agents just view here.
 const TicketAssignments = () => {
     const [tickets, setTickets] = useState([]);
     const [assignments, setAssignments] = useState([]);
@@ -21,6 +32,7 @@ const TicketAssignments = () => {
     const [rowErrors, setRowErrors] = useState({});
     const [busyTicketId, setBusyTicketId] = useState(null);
     const navigate = useNavigate();
+    const admin = isAdmin();
 
     const loadAll = async () => {
         const token = getStoredToken();
@@ -31,30 +43,31 @@ const TicketAssignments = () => {
 
         try {
             const headers = { Authorization: `Bearer ${token}` };
-            const [ticketsRes, assignmentsRes, agentsRes] = await Promise.all([
+            const requests = [
                 fetch(TICKETS_URL, { headers }),
                 fetch(ASSIGNMENTS_URL, { headers }),
-                fetch(AGENTS_URL, { headers }),
-            ]);
+            ];
+            // Only an admin can reassign, so only an admin needs the rotation list.
+            if (admin) requests.push(fetch(AGENTS_URL, { headers }));
 
-            if ([ticketsRes.status, assignmentsRes.status, agentsRes.status].includes(401)) {
+            const responses = await Promise.all(requests);
+            const [ticketsRes, assignmentsRes, agentsRes] = responses;
+
+            if (responses.some((res) => res.status === 401)) {
                 navigate('/login', { replace: true });
                 return;
             }
 
-            const [ticketsData, assignmentsData, agentsData] = await Promise.all([
-                ticketsRes.json().catch(() => ([])),
-                assignmentsRes.json().catch(() => ([])),
-                agentsRes.json().catch(() => ([])),
-            ]);
+            const bodies = await Promise.all(responses.map((res) => res.json().catch(() => ([]))));
+            const [ticketsData, assignmentsData, agentsData] = bodies;
 
             if (!ticketsRes.ok) throw new Error(ticketsData?.message || 'Unable to load tickets.');
             if (!assignmentsRes.ok) throw new Error(assignmentsData?.message || 'Unable to load assignments.');
-            if (!agentsRes.ok) throw new Error(agentsData?.message || 'Unable to load the agent rotation.');
+            if (admin && !agentsRes.ok) throw new Error(agentsData?.message || 'Unable to load the agent rotation.');
 
             setTickets(Array.isArray(ticketsData) ? ticketsData : []);
             setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
-            setAgents(Array.isArray(agentsData) ? agentsData : []);
+            if (admin) setAgents(Array.isArray(agentsData) ? agentsData : []);
             setState({ loading: false, error: '' });
         } catch (error) {
             setState({ loading: false, error: error.message || 'Unable to load tickets.' });
@@ -122,7 +135,9 @@ const TicketAssignments = () => {
             <header className="assignments-page__header">
                 <p className="eyebrow">Support desk / All tickets</p>
                 <h1>Ticket assignments</h1>
-                <p className="assignments-page__summary">See every ticket's current agent and reassign it if needed.</p>
+                <p className="assignments-page__summary">
+                    {admin ? 'See every ticket, who has it, and reassign it if needed.' : 'See every ticket and who currently has it.'}
+                </p>
             </header>
 
             {state.loading && <div className="assignments-message panel">Loading tickets...</div>}
@@ -139,7 +154,7 @@ const TicketAssignments = () => {
             {!state.loading && !state.error && tickets.length > 0 && (
                 <section className="assignments-list panel" aria-label="All tickets">
                     <div className="assignments-table-wrap">
-                        <table className="assignments-table">
+                        <table className={`assignments-table${admin ? ' assignments-table--admin' : ''}`}>
                             <thead>
                                 <tr>
                                     <th>Ticket</th>
@@ -147,7 +162,7 @@ const TicketAssignments = () => {
                                     <th>Urgency</th>
                                     <th>Status</th>
                                     <th>Assigned to</th>
-                                    <th />
+                                    {admin && <th>Reassign</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -156,38 +171,40 @@ const TicketAssignments = () => {
                                     const isBusy = busyTicketId === ticket.id;
 
                                     return (
-                                        <tr key={ticket.id} data-ticket-id={ticket.id}>
+                                        <tr key={ticket.id} data-ticket-id={ticket.id} className={statusRowClass[ticket.status] || ''}>
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
                                             <td>{formatLabel(ticket.status, statusLabels)}</td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
-                                            <td className="assignments-table__actions">
-                                                {assignment ? (
-                                                    <>
-                                                        <div className="assignments-table__actions-row">
-                                                            <select
-                                                                className="input"
-                                                                value={selectedAgent[ticket.id] || ''}
-                                                                onChange={(event) => setSelectedAgent((current) => ({ ...current, [ticket.id]: event.target.value }))}
-                                                            >
-                                                                <option value="">Choose agent...</option>
-                                                                {agents
-                                                                    .filter((agent) => agent.userId !== assignment.agentUserId)
-                                                                    .map((agent) => (
-                                                                        <option key={agent.id} value={agent.userId}>User ID {agent.userId}</option>
-                                                                    ))}
-                                                            </select>
-                                                            <button type="button" className="btn btn--secondary" disabled={isBusy} onClick={() => reassign(ticket.id)}>
-                                                                {isBusy ? 'Reassigning...' : 'Reassign'}
-                                                            </button>
+                                            {admin && (
+                                                <td>
+                                                    {assignment ? (
+                                                        <div className="assignments-table__actions">
+                                                            <div className="assignments-table__actions-row">
+                                                                <select
+                                                                    className="input"
+                                                                    value={selectedAgent[ticket.id] || ''}
+                                                                    onChange={(event) => setSelectedAgent((current) => ({ ...current, [ticket.id]: event.target.value }))}
+                                                                >
+                                                                    <option value="">Choose agent...</option>
+                                                                    {agents
+                                                                        .filter((agent) => agent.userId !== assignment.agentUserId)
+                                                                        .map((agent) => (
+                                                                            <option key={agent.id} value={agent.userId}>User ID {agent.userId}</option>
+                                                                        ))}
+                                                                </select>
+                                                                <button type="button" className="btn btn--secondary" disabled={isBusy} onClick={() => reassign(ticket.id)}>
+                                                                    {isBusy ? 'Reassigning...' : 'Reassign'}
+                                                                </button>
+                                                            </div>
+                                                            {rowErrors[ticket.id] && <span className="error-text">{rowErrors[ticket.id]}</span>}
                                                         </div>
-                                                        {rowErrors[ticket.id] && <span className="error-text">{rowErrors[ticket.id]}</span>}
-                                                    </>
-                                                ) : (
-                                                    <span className="assignments-table__unassigned-note">Not yet assigned</span>
-                                                )}
-                                            </td>
+                                                    ) : (
+                                                        <span className="assignments-table__unassigned-note">Not yet assigned</span>
+                                                    )}
+                                                </td>
+                                            )}
                                         </tr>
                                     );
                                 })}
