@@ -35,4 +35,4 @@ docker compose up --build -d
 **Solution:** Ensure you are using the latest `docker-compose.yml` which includes the `kafka_data` volume mapping to `/tmp/kraft-combined-logs`.
 
 ## 4. Viewing Kafka Messages Locally
-To monitor your topics, see active messages, and confirm broker health locally, visit **http://localhost:8080** to access the Kafka UI dashboard.
+To monitor your topics, see active messages, and confirm broker health locally, visit **http://localhost:8081** to access the Kafka UI dashboard.
