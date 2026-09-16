@@ -1,15 +1,15 @@
 using Confluent.Kafka;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Ticket.Api.Configuration;
 using Ticket.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
-builder.Services.AddHttpClient("AuthApi", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["AuthApi:BaseUrl"]!);
-});
 
 builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 {
@@ -37,6 +37,30 @@ builder.Services.AddCors(options =>
     });
 });
 
+var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        RequireExpirationTime = true,
+        ClockSkew = TimeSpan.Zero,
+        ValidIssuer = jwtSetting?.Issuer,
+        ValidAudience = jwtSetting?.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+    };
+});
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -92,6 +116,8 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseCors("FrontendPolicy");
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -101,3 +127,5 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 app.MapControllers();
 app.Run();
+
+public partial class Program { }

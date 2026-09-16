@@ -3,10 +3,13 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './features/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
+import AgentQueue from './pages/agentQueue';
+import AdminUsersPage from './features/admin/pages/AdminUsersPage';
+import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
 
-const AUTH_API_URL = 'http://localhost:5121/api/auth/me';
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/me`;
 
 const isAuthenticated = async () => {
   const token = localStorage.getItem('token');
@@ -16,14 +19,9 @@ const isAuthenticated = async () => {
   }
 
   try {
-    const tokenParts = token.split('.');
-    if (tokenParts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
-
-    const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    if (typeof payload.exp !== 'number' || payload.exp <= Date.now() / 1000) {
-      throw new Error('Token expired');
+    const payload = decodeToken(token);
+    if (!payload || typeof payload.exp !== 'number' || payload.exp <= Date.now() / 1000) {
+      throw new Error('Invalid or expired token');
     }
 
     const response = await fetch(AUTH_API_URL, {
@@ -71,6 +69,42 @@ const PublicRoute = ({ children }) => {
   return authenticated ? <Navigate to="/" replace /> : children;
 };
 
+const AdminRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return isAdmin() ? children : <Navigate to="/" replace />;
+};
+
+const AgentRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return isAgent() ? children : <Navigate to="/" replace />;
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -86,6 +120,14 @@ function App() {
         <Route
           path="/my-tickets"
           element={<ProtectedRoute><MyTickets /></ProtectedRoute>}
+        />
+        <Route
+          path="/agent/queue"
+          element={<AgentRoute><AgentQueue /></AgentRoute>}
+        />
+        <Route
+          path="/admin/users"
+          element={<AdminRoute><AdminUsersPage /></AdminRoute>}
         />
         <Route
           path="*"

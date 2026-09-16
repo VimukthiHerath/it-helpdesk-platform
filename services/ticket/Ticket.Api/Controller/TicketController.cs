@@ -1,6 +1,10 @@
 using Confluent.Kafka;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
+using Ticket.Api.Authorization;
 using Ticket.Api.Data;
 using Ticket.Api.Model;
 
@@ -8,29 +12,30 @@ namespace Ticket.Api.Controller;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TicketController : ControllerBase
 {
 
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TicketController> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IProducer<string, string> _kafkaProducer;
     private readonly IConfiguration _configuration;
-    
+
     public TicketController(
         ApplicationDbContext context,
         ILogger<TicketController> logger,
-        IHttpClientFactory httpClientFactory,
         IProducer<string, string> kafkaProducer,
         IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
-        _httpClientFactory = httpClientFactory;
         _kafkaProducer = kafkaProducer;
         _configuration = configuration;
     }
 
+    // Cross-user visibility: only staff who triage/resolve tickets need to see
+    // every user's tickets, not the employees who file them.
+    [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
     [HttpGet]
     public IActionResult GetTickets()
     {
@@ -46,6 +51,7 @@ public class TicketController : ControllerBase
         }
     }
 
+    [Authorize(Roles = Roles.Employee)]
     [HttpPost]
     public async Task<IActionResult> CreateTicket([FromBody] TicketCreateDTO ticketDto)
     {
@@ -58,18 +64,14 @@ public class TicketController : ControllerBase
 
         try
         {
-            var (userId, authenticationError) = await GetAuthenticatedUserIdAsync();
-            if (authenticationError is not null)
-            {
-                return authenticationError;
-            }
+            var userId = GetAuthenticatedUserId();
 
             var ticket = new Tickets
             {
                 Description = ticketDto.Description,
                 IssueType = ticketDto.IssueType,
                 Urgency = ticketDto.Urgency,
-                CreatedBy = userId!.Value,
+                CreatedBy = userId,
             };
 
             _context.Tickets.Add(ticket);
@@ -109,12 +111,6 @@ public class TicketController : ControllerBase
                     ticketId = createdTicketId
                 });
         }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "Error communicating with Auth API while creating ticket");
-            return StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new { message = "Unable to validate the bearer token." });
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating ticket");
@@ -122,52 +118,21 @@ public class TicketController : ControllerBase
         }
     }
 
-    private async Task<(int? UserId, IActionResult? Error)> GetAuthenticatedUserIdAsync()
+    private int GetAuthenticatedUserId()
     {
-        var authorizationHeader = Request.Headers.Authorization.ToString();
-        if (string.IsNullOrWhiteSpace(authorizationHeader))
-        {
-            return (null, Unauthorized(new { message = "Bearer token is required." }));
-        }
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var authClient = _httpClientFactory.CreateClient("AuthApi");
-        using var authRequest = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
-        authRequest.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
-
-        using var authResponse = await authClient.SendAsync(authRequest);
-        if (!authResponse.IsSuccessStatusCode)
-        {
-            if ((int)authResponse.StatusCode == StatusCodes.Status401Unauthorized)
-            {
-                return (null, Unauthorized(new { message = "Invalid or expired bearer token." }));
-            }
-
-            _logger.LogWarning("Auth API rejected user validation with status code {StatusCode}", authResponse.StatusCode);
-            return (null, StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new { message = "Unable to validate the bearer token." }));
-        }
-
-        var authUser = await authResponse.Content.ReadFromJsonAsync<AuthUserResponse>();
-        if (authUser?.UserId == null || !int.TryParse(authUser.UserId, out var userId))
-        {
-            _logger.LogWarning("Auth API returned an invalid user ID");
-            return (null, StatusCode(StatusCodes.Status503ServiceUnavailable,
-                new { message = "Unable to identify the authenticated user." }));
-        }
-
-        return (userId, null);
+        return int.Parse(userId!);
     }
 
+    [Authorize(Roles = Roles.Employee)]
     [HttpGet("mine")]
-    public async Task<IActionResult> GetMyTickets()
+    public IActionResult GetMyTickets()
     {
-        try{
-            var (userId, authenticationError) = await GetAuthenticatedUserIdAsync();
-            if (authenticationError is not null)
-            {
-                return authenticationError;
-            }
-
+        try
+        {
+            var userId = GetAuthenticatedUserId();
             var myTickets = _context.Tickets.Where(t => t.CreatedBy == userId).ToList();
             return Ok(myTickets);
         }
@@ -176,10 +141,5 @@ public class TicketController : ControllerBase
             _logger.LogError(ex, "Error retrieving my tickets");
             return Problem("Unable to retrieve my tickets. Please try again later.");
         }
-    }
-
-    private sealed class AuthUserResponse
-    {
-        public string? UserId { get; set; }
     }
 }
