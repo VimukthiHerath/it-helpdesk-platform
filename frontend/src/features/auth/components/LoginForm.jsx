@@ -92,47 +92,48 @@ const LoginForm = () => {
     return (
         <div className="auth-shell">
             <ToastContainer />
-            <div className="auth-card">
-                <div className="auth-header">
-                    <p className="eyebrow">Welcome back</p>
-                    <h2>Sign in</h2>
+            <h1 className="auth-brand">IT Helpdesk</h1>
+            <div className="auth-card panel">
+                <div className="panel__body">
+                    <p className="eyebrow">Authorized users only</p>
+                    <h2>Employee login</h2>
+
+                    <form onSubmit={handleSubmit} className="auth-form" noValidate>
+                        <div className="field">
+                            <label htmlFor="email">Email</label>
+                            <input
+                                id="email"
+                                type="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                className={errors.email ? 'input input--error' : 'input'}
+                                placeholder="you@example.com"
+                                autoComplete="email"
+                            />
+                            {errors.email && <span className="error-text">{errors.email}</span>}
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="password">Password</label>
+                            <input
+                                id="password"
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                className={errors.password ? 'input input--error' : 'input'}
+                                placeholder="Enter your password"
+                                autoComplete="current-password"
+                            />
+                            {errors.password && <span className="error-text">{errors.password}</span>}
+                        </div>
+
+                        <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
+                            {isLoading ? 'Logging in...' : 'Log in'}
+                        </button>
+                    </form>
                 </div>
-
-                <form onSubmit={handleSubmit} className="auth-form" noValidate>
-                    <div className="field-group">
-                        <label htmlFor="email">Email</label>
-                        <input
-                            id="email"
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            className={errors.email ? 'input-error' : ''}
-                            placeholder="you@example.com"
-                            autoComplete="email"
-                        />
-                        {errors.email && <span className="error-text">{errors.email}</span>}
-                    </div>
-
-                    <div className="field-group">
-                        <label htmlFor="password">Password</label>
-                        <input
-                            id="password"
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className={errors.password ? 'input-error' : ''}
-                            placeholder="Enter your password"
-                            autoComplete="current-password"
-                        />
-                        {errors.password && <span className="error-text">{errors.password}</span>}
-                    </div>
-
-                    <button type="submit" className="primary-btn" disabled={isLoading}>
-                        {isLoading ? 'Logging in...' : 'Login'}
-                    </button>
-                </form>
             </div>
         </div>
     );

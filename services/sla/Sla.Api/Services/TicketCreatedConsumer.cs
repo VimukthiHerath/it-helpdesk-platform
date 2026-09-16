@@ -19,7 +19,18 @@ public sealed class TicketCreatedConsumer : BackgroundService
         _logger = logger;
     }
 
+    // Confluent.Kafka's Consume() is a blocking call, and this method never awaits,
+    // so running it inline would block BackgroundService.StartAsync on the host's
+    // startup thread. If Kafka isn't reachable yet, that blocks the whole host from
+    // starting until it hits the startup timeout and crashes the process. Running
+    // the loop on a background thread lets the host start (and Kestrel bind)
+    // immediately regardless of Kafka's availability.
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.Run(() => RunConsumerLoop(stoppingToken), stoppingToken);
+    }
+
+    private void RunConsumerLoop(CancellationToken stoppingToken)
     {
         var bootstrapServers =
             _configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -121,7 +132,5 @@ public sealed class TicketCreatedConsumer : BackgroundService
         {
             consumer.Close();
         }
-
-        return Task.CompletedTask;
     }
 }
