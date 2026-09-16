@@ -159,6 +159,7 @@ const TicketAssignments = () => {
                                 <tr>
                                     <th>Ticket</th>
                                     <th>Issue</th>
+                                    <th className="assignments-table__description">Description</th>
                                     <th>Urgency</th>
                                     <th>Status</th>
                                     <th>Assigned to</th>
@@ -174,6 +175,7 @@ const TicketAssignments = () => {
                                         <tr key={ticket.id} data-ticket-id={ticket.id} className={statusRowClass[ticket.status] || ''}>
                                             <td>#{ticket.id}</td>
                                             <td>{ticket.issueType || 'General request'}</td>
+                                            <td className="assignments-table__description">{ticket.description || '—'}</td>
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
                                             <td>{formatLabel(ticket.status, statusLabels)}</td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
