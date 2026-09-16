@@ -19,6 +19,9 @@
   --color-error: #8c3b2e;
   --color-error-bg: #f1e1da;
 
+  --color-amber: #8a6a1f;
+  --color-amber-bg: #f3e8c8;
+
   --font-display: 'IBM Plex Mono', 'Courier New', monospace;
   --font-body: 'IBM Plex Sans', 'Segoe UI', Tahoma, Arial, sans-serif;
 
@@ -128,6 +131,17 @@ button {
 .btn--secondary:active:not(:disabled) {
   background: var(--color-sage);
   color: var(--color-white);
+}
+
+.btn--danger {
+  background: var(--color-error);
+  color: var(--color-white);
+  border-color: var(--color-error);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
 }
 
 .btn--ghost {
@@ -257,6 +271,12 @@ select.input:focus {
 .badge--neutral {
   background: var(--color-bg);
   color: var(--color-ink-muted);
+}
+
+.badge--amber {
+  background: var(--color-amber-bg);
+  color: var(--color-amber);
+  border-color: var(--color-amber);
 }
 
 /* App bar: a solid title-bar strip at the top of every screen inside the app */
