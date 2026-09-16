@@ -9,6 +9,7 @@ using Auth.Api.Authorization;
 using Auth.Api.Data;
 using Auth.Api.DTO;
 using Auth.Api.Model;
+using Auth.Api.Services;
 
 namespace Auth.Api.Controller
 {
@@ -19,12 +20,18 @@ namespace Auth.Api.Controller
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IAssignmentRotationClient _rotationClient;
 
-        public AuthController(ApplicationDbContext context, ILogger<AuthController> logger, IConfiguration configuration)
+        public AuthController(
+            ApplicationDbContext context,
+            ILogger<AuthController> logger,
+            IConfiguration configuration,
+            IAssignmentRotationClient rotationClient)
         {
             _context = context;
             _logger = logger;
             _configuration = configuration;
+            _rotationClient = rotationClient;
         }
 
         [HttpPost("register")]
@@ -185,6 +192,173 @@ namespace Auth.Api.Controller
                 _logger.LogError(ex, "Error logging in user");
                 return Problem("Unable to login. Please try again later.");
             }
+        }
+
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            try
+            {
+                var users = await _context.Users
+                    .OrderBy(u => u.Id)
+                    .ToListAsync();
+
+                return Ok(users.Select(ToUserListItemDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error listing users");
+                return Problem("Unable to load users. Please try again later.");
+            }
+        }
+
+        private static AdminUserListItemDTO ToUserListItemDto(User user) => new()
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt,
+            CreatedBy = user.CreatedBy,
+        };
+
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                var callerId = GetAuthenticatedUserId();
+                if (callerId == id && user.Role == UserRole.Administrator && request.Role != UserRole.Administrator)
+                {
+                    return Conflict(new { message = "You cannot change your own role away from Administrator." });
+                }
+
+                var emailTaken = await _context.Users
+                    .AnyAsync(u => u.Id != id && u.Email == request.Email);
+                if (emailTaken)
+                {
+                    return Conflict(new { message = "That email is already registered." });
+                }
+
+                // Changing an agent's role away from Agent must be blocked while
+                // they're still in Assignment's round-robin rotation - see
+                // AssignmentRotationClient for why this cross-service check
+                // exists, and agent-rotation-management.md for the full chain
+                // (ASSIGN-5's future "remove from rotation" is what actually
+                // clears this, and that removal must itself refuse to run
+                // while the agent's queue is non-empty).
+                if (user.Role == UserRole.Agent && request.Role != UserRole.Agent)
+                {
+                    var blocked = await BlockIfAgentStillInRotationAsync(user.Id);
+                    if (blocked is not null)
+                    {
+                        return blocked;
+                    }
+                }
+
+                user.Name = request.Name;
+                user.Email = request.Email;
+                user.Role = request.Role;
+                user.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return Ok(ToUserListItemDto(user));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", id);
+                return Problem("Unable to update user. Please try again later.");
+            }
+        }
+
+        [Authorize(Roles = Roles.Administrator)]
+        [HttpPatch("users/{id}/deactivate")]
+        public async Task<IActionResult> DeactivateUser(int id)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                var callerId = GetAuthenticatedUserId();
+                if (callerId == id)
+                {
+                    return Conflict(new { message = "You cannot deactivate your own account." });
+                }
+
+                // Idempotent: deactivating an already-inactive account is a
+                // no-op success rather than an error.
+                if (!user.IsActive)
+                {
+                    return Ok(ToUserListItemDto(user));
+                }
+
+                // Same rotation guard as UpdateUser - see there and
+                // AssignmentRotationClient for the full reasoning.
+                if (user.Role == UserRole.Agent)
+                {
+                    var blocked = await BlockIfAgentStillInRotationAsync(user.Id);
+                    if (blocked is not null)
+                    {
+                        return blocked;
+                    }
+                }
+
+                user.IsActive = false;
+                user.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return Ok(ToUserListItemDto(user));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deactivating user {UserId}", id);
+                return Problem("Unable to deactivate user. Please try again later.");
+            }
+        }
+
+        private int GetAuthenticatedUserId()
+        {
+            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.Parse(userId!);
+        }
+
+        private async Task<IActionResult?> BlockIfAgentStillInRotationAsync(int userId)
+        {
+            var authorizationHeader = Request.Headers.Authorization.ToString();
+            var result = await _rotationClient.IsUserInRotationAsync(userId, authorizationHeader, HttpContext.RequestAborted);
+
+            return result switch
+            {
+                RotationCheckResult.InRotation => Conflict(new
+                {
+                    message = "This agent is still in the ticket rotation. Remove them from the rotation before changing their role or deactivating this account."
+                }),
+                RotationCheckResult.Unreachable => StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    message = "Unable to verify this agent's rotation status right now. Please try again later."
+                }),
+                _ => null,
+            };
         }
 
         [Authorize]

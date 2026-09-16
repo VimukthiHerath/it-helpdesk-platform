@@ -171,7 +171,7 @@ const CreateUserForm = () => {
                             {serverError && <span className="error-text">{serverError}</span>}
                             {lastCreated && (
                                 <span className="admin-create-status__success">
-                                    Created {lastCreated.name} ({roleOptions.find((r) => r.value === lastCreated.role)?.label || lastCreated.role}) — added by {getUserEmail() || 'you'}.
+                                    Created {lastCreated.name} ({roleOptions.find((r) => r.value === lastCreated.role)?.label || lastCreated.role}), user ID {lastCreated.id} — added by {getUserEmail() || 'you'}.
                                 </span>
                             )}
                         </div>

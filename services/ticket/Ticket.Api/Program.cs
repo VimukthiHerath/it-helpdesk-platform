@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Ticket.Api.Configuration;
 using Ticket.Api.Data;
+using Ticket.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -26,6 +27,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("TicketDb"),
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("TicketDb"))));
+
+builder.Services.AddScoped<TicketAssignmentSyncService>();
+builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 builder.Services.AddCors(options =>
 {
