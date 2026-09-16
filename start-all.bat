@@ -12,6 +12,13 @@ echo.
 echo Starting kafka-broker...
 az containerapp update --name kafka-broker --resource-group it-helpdesk-rg --min-replicas 1 --max-replicas 1
 
+echo Waiting 20s for kafka-broker to actually come up before starting
+echo the app services - the command above returns as soon as Azure
+echo accepts the update, not once the broker is really ready, so
+echo without this wait the race the warning above mentions is
+echo basically guaranteed, not just "brief."
+timeout /t 20 /nobreak
+
 echo Starting auth-service...
 az containerapp update --name auth-service --resource-group it-helpdesk-rg --min-replicas 1 --max-replicas 1
 
