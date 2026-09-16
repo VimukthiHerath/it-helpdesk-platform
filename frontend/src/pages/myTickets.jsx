@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './myTickets.css';
 
-const TICKET_API_URL = 'http://localhost:5164/api/ticket/mine';
+const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket/mine`;
 
 const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Within 24 hours'];
 const statusLabels = ['Unassigned', 'Assigned', 'Resolved'];
@@ -67,21 +67,27 @@ const MyTickets = () => {
 
     return (
         <main className="tickets-page">
+            <div className="app-bar">
+                <span className="app-bar__brand">IT Helpdesk</span>
+                <div className="app-bar__actions">
+                    <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
+                        Back to dashboard
+                    </button>
+                </div>
+            </div>
+
             <header className="tickets-page__header">
-                <button type="button" className="back-button" onClick={() => navigate('/')}>
-                    Back to dashboard
-                </button>
-                <p className="tickets-page__kicker">Support desk / Your activity</p>
+                <p className="eyebrow">Support desk / Your activity</p>
                 <h1>My tickets</h1>
                 <p className="tickets-page__summary">A read-only view of every request you have raised.</p>
             </header>
 
-            {state.loading && <div className="tickets-message">Loading your tickets...</div>}
+            {state.loading && <div className="tickets-message panel">Loading your tickets...</div>}
             {!state.loading && state.error && (
-                <div className="tickets-message tickets-message--error" role="alert">{state.error}</div>
+                <div className="tickets-message tickets-message--error panel" role="alert">{state.error}</div>
             )}
             {!state.loading && !state.error && tickets.length === 0 && (
-                <div className="tickets-message tickets-message--empty">
+                <div className="tickets-message panel">
                     <strong>No tickets yet</strong>
                     <span>Your submitted requests will appear here.</span>
                 </div>
@@ -89,10 +95,10 @@ const MyTickets = () => {
 
             {!state.loading && !state.error && tickets.length > 0 && (
                 <div className="tickets-layout">
-                    <section className="ticket-list" aria-label="Your tickets">
-                        <div className="ticket-list__heading">
+                    <section className="ticket-list panel" aria-label="Your tickets">
+                        <div className="panel__titlebar">
                             <span>Requests</span>
-                            <strong>{tickets.length}</strong>
+                            <span>{tickets.length}</span>
                         </div>
                         {tickets.map((ticket) => (
                             <button
@@ -109,20 +115,24 @@ const MyTickets = () => {
                     </section>
 
                     {selectedTicket && (
-                        <article className="ticket-detail" aria-live="polite">
-                            <div className="ticket-detail__topline">
+                        <article className="ticket-detail panel" aria-live="polite">
+                            <div className="panel__titlebar">
                                 <span>Ticket #{selectedTicket.id}</span>
-                                <span className="ticket-status-badge">{formatLabel(selectedTicket.status, statusLabels)}</span>
+                                <span className={`badge ${selectedTicket.status === 2 ? 'badge--sage' : 'badge--neutral'}`}>
+                                    {formatLabel(selectedTicket.status, statusLabels)}
+                                </span>
                             </div>
-                            <h2>{selectedTicket.issueType || 'General request'}</h2>
-                            <p className="ticket-detail__date">Submitted {formatDate(selectedTicket.createdAt)}</p>
-                            <div className="ticket-detail__meta">
-                                <div><span>Urgency</span><strong>{formatLabel(selectedTicket.urgency, urgencyLabels)}</strong></div>
-                                <div><span>Last updated</span><strong>{formatDate(selectedTicket.updatedAt || selectedTicket.createdAt)}</strong></div>
-                            </div>
-                            <div className="ticket-detail__description">
-                                <span>Description</span>
-                                <p>{selectedTicket.description || 'No description provided.'}</p>
+                            <div className="panel__body">
+                                <h2>{selectedTicket.issueType || 'General request'}</h2>
+                                <p className="ticket-detail__date">Submitted {formatDate(selectedTicket.createdAt)}</p>
+                                <div className="ticket-detail__meta">
+                                    <div><span>Urgency</span><strong>{formatLabel(selectedTicket.urgency, urgencyLabels)}</strong></div>
+                                    <div><span>Last updated</span><strong>{formatDate(selectedTicket.updatedAt || selectedTicket.createdAt)}</strong></div>
+                                </div>
+                                <div className="ticket-detail__description">
+                                    <span>Description</span>
+                                    <p>{selectedTicket.description || 'No description provided.'}</p>
+                                </div>
                             </div>
                         </article>
                     )}

@@ -1,0 +1,58 @@
+.user-table-wrap {
+    overflow-x: auto;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+}
+
+.user-table th {
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    padding: 0 12px 10px 0;
+    border-bottom: 1px solid var(--color-ink);
+}
+
+.user-table td {
+    padding: 12px 12px 12px 0;
+    border-bottom: 1px solid var(--color-ink);
+    vertical-align: middle;
+}
+
+.user-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.user-table td .input {
+    padding: 6px 8px;
+    font-size: 0.9rem;
+}
+
+.user-table__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.user-table__actions-row {
+    display: flex;
+    gap: 8px;
+}
+
+.user-table__actions .btn {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+}
+
+@media (max-width: 700px) {
+    .user-table {
+        min-width: 640px;
+    }
+}
