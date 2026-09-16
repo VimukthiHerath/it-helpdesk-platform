@@ -87,6 +87,13 @@
     width: 25%;
 }
 
+.assignments-table td.assignments-table__description {
+    /* A long unbroken run of characters (or a URL) has no space to wrap
+       at, so without this it pushes the cell - and the whole table - wider
+       than the page instead of staying inside its column. */
+    overflow-wrap: break-word;
+}
+
 .assignments-table--admin th:last-child,
 .assignments-table--admin td:last-child {
     width: 20%;

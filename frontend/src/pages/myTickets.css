@@ -133,6 +133,10 @@
     font-family: var(--font-body);
     line-height: 1.7;
     white-space: pre-wrap;
+    /* pre-wrap only breaks at spaces/newlines - a single long run with no
+       spaces (or a real long URL) would otherwise push this box wider than
+       the page instead of wrapping. */
+    overflow-wrap: break-word;
 }
 
 .tickets-message {
