@@ -40,32 +40,14 @@ that wasn't part of this ticket.
 | Service | Protected endpoints | Role(s) enforced |
 |---|---|---|
 | Auth | `GET /api/auth/me` | `[Authorize]` only — any authenticated user needs to be able to look up their own identity, so it's intentionally not role-restricted. `register`/`login` stay public by design. |
-| Auth | `GET /api/auth/users`, `PUT /api/auth/users/{id}`, `PATCH /api/auth/users/{id}/deactivate` | `Administrator` — added in `[[admin-manage-users]]`. The edit/deactivate pair make a real cross-service call to Assignment.Api; see that doc and the note below. |
 | Ticket | `POST /api/ticket` (submit), `GET /api/ticket/mine` (view own) | `Employee` |
 | Ticket | `GET /api/ticket` (list all, unfiltered) | `Agent`, `Administrator` — this endpoint predates AUTH-2 and had no role check at all, which meant any employee could enumerate every other employee's tickets. Restricted to staff as part of this work since AC1 requires every non-public endpoint to check a role, and there's no dedicated queue/resolve endpoint (TICKET-4) yet to carry that responsibility instead. |
-| Assignment | `GET /api/assignments/queue` | `Agent` — added in `[[agent-assignment-queue]]` (ASSIGN-4), which also gave Assignment.Api its first JWT/controller wiring (it previously had none). |
-| Assignment | `GET/POST /api/assignments/agents` (view/manage the round-robin rotation) | `Administrator` — added in `[[agent-rotation-management]]`. |
+| Assignment | none beyond `/health` | n/a — the queue-view endpoint (ASSIGN-4) doesn't exist on this branch yet. Add `[Authorize(Roles = Roles.Agent)]` to it when it lands. |
 | Notification | none beyond `/health` | n/a — no protected endpoints exist yet. |
 | SLA | none beyond `/health` | n/a — no protected endpoints exist yet. |
 
 `/health` is intentionally public on every service (used for container
 health checks) and is never role-restricted.
-
-## One deliberate exception to "no service calls another"
-
-The Summary above says no service calls another over the network to answer
-an authorization question, and that held until `[[admin-manage-users]]`:
-`AssignmentRotationClient` in Auth.Api calls `GET /api/assignments/agents`
-on Assignment.Api before letting an admin change an agent's role or
-deactivate them, to make sure that agent isn't still in the round-robin
-rotation. This is the first and only cross-service HTTP call anywhere in
-this codebase — everywhere else, decoupling is via Kafka events or by
-trusting the JWT. It's called out explicitly here so it doesn't get read as
-the new normal: it exists because this one check genuinely can't be
-answered from Auth's own database, and building event-driven sync for it
-would have been overkill for what this app needs right now. See
-`[[admin-manage-users]]` for the full reasoning and the fail-closed
-behavior if Assignment.Api is unreachable.
 
 ## Eliminating the Auth network round-trip (AC3)
 
@@ -97,10 +79,11 @@ in this repo yet.
 
 ## What's intentionally not done here
 
-- Notification/SLA got no code changes because they have no protected
-  endpoints to attach roles to on this branch. When TICKET-4 (resolve)
-  lands, apply `[Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]`,
-  following the same pattern as Ticket's other endpoints. Assignment's own
-  ASSIGN-4 gap was closed in `[[agent-assignment-queue]]`.
+- Assignment/Notification/SLA got no code changes because they have no
+  protected endpoints to attach roles to on this branch. When ASSIGN-4
+  (queue view) and TICKET-4 (resolve) land, apply
+  `[Authorize(Roles = Roles.Agent)]` and
+  `[Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]`
+  respectively, following the same pattern as Ticket's other endpoints.
 - No shared `Roles`/JWT-validation library was introduced — see "`Roles`
   constants" above for why.
