@@ -486,4 +486,12 @@ $RECYCLE.BIN/
 # Personal dev notes/docs, not meant to be part of the tracked repo
 vimukthis-dev-docs/
 
+# Local Azure cost-control / local-run scripts - contain resource-group
+# and port choices specific to whoever's running them locally, not meant
+# to be tracked centrally. See docs/PRODUCTION_DEPLOYMENT_GUIDE.md and
+# docs/LOCAL_DEV_TROUBLESHOOTING.md for what these do and how to get them.
+start-all.bat
+stop-all.bat
+start-backend.ps1
+
 .claude
