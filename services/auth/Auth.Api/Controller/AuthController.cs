@@ -154,6 +154,11 @@ namespace Auth.Api.Controller
                     return Unauthorized(new { message = "Invalid email or password." });
                 }
 
+                if (!user.IsActive)
+                {
+                    return Unauthorized(new { message = "Your account has been deactivated. Please contact your administrator." });
+                }
+
                 var jwtkey = _configuration["Jwt:Key"];
                 var jwtIssuer = _configuration["Jwt:Issuer"];
                 var jwtAudience = _configuration["Jwt:Audience"];
