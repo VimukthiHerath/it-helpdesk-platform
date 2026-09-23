@@ -29,6 +29,7 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
 
 builder.Services.AddScoped<RoundRobinAssignmentService>();
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
 {
