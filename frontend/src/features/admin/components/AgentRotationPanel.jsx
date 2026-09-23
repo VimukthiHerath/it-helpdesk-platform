@@ -4,9 +4,11 @@ import { getStoredToken } from '../../../shared/authToken';
 import './AgentRotationPanel.css';
 
 const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/agents`;
+const USERS_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/users`;
 
 const AgentRotationPanel = () => {
     const [agents, setAgents] = useState([]);
+    const [availableAgents, setAvailableAgents] = useState([]);
     const [state, setState] = useState({ loading: true, error: '' });
     const [userIdInput, setUserIdInput] = useState('');
     const [formError, setFormError] = useState('');
@@ -32,6 +34,14 @@ const AgentRotationPanel = () => {
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to load the agent rotation.');
 
+            const usersResponse = await fetch(USERS_URL, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const usersData = await usersResponse.json().catch(() => ([]));
+            if (usersResponse.ok) {
+                setAvailableAgents(usersData.filter(u => u.role === 2 && u.isActive));
+            }
+
             setAgents(Array.isArray(data) ? data : []);
             setState({ loading: false, error: '' });
         } catch (error) {
@@ -49,8 +59,8 @@ const AgentRotationPanel = () => {
         setFormError('');
 
         const userId = Number(userIdInput);
-        if (!Number.isInteger(userId) || userId <= 0) {
-            setFormError('Enter the account\'s numeric user ID.');
+        if (!userIdInput || !Number.isInteger(userId) || userId <= 0) {
+            setFormError('Please select an agent from the list.');
             return;
         }
 
@@ -105,9 +115,8 @@ const AgentRotationPanel = () => {
 
             <div className="panel__body">
                 <p className="admin-create-panel__intro">
-                    Tickets are assigned to agents in this order. Add an Agent-role
-                    account's user ID to put them into the rotation (shown after
-                    creating their account above).
+                    Tickets are assigned to agents in this order. Select an active agent
+                    from the list below to put them into the rotation.
                 </p>
 
                 {state.loading && <p>Loading rotation...</p>}
@@ -127,16 +136,20 @@ const AgentRotationPanel = () => {
 
                 <form className="agent-rotation-form" onSubmit={handleSubmit} noValidate>
                     <div className="field">
-                        <label htmlFor="rotation-user-id">User ID to add</label>
-                        <input
+                        <label htmlFor="rotation-user-id">Agent to add</label>
+                        <select
                             id="rotation-user-id"
-                            type="number"
-                            min="1"
                             value={userIdInput}
                             onChange={(event) => { setUserIdInput(event.target.value); setFormError(''); }}
-                            placeholder="e.g. 46"
                             className={formError ? 'input input--error' : 'input'}
-                        />
+                        >
+                            <option value="">Select an agent...</option>
+                            {availableAgents.map((agent) => (
+                                <option key={agent.id} value={agent.id}>
+                                    {agent.name} (ID {agent.id})
+                                </option>
+                            ))}
+                        </select>
                         {formError && <span className="error-text">{formError}</span>}
                     </div>
                     <button type="submit" className="btn btn--secondary" disabled={isSubmitting}>
