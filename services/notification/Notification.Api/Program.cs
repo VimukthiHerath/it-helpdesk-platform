@@ -15,6 +15,7 @@ builder.Services.AddDbContext<NotificationDbContext>(options =>
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 var app = builder.Build();
 
