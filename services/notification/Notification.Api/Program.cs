@@ -18,7 +18,6 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
-builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 var app = builder.Build();
 
