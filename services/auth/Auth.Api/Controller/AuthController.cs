@@ -154,6 +154,11 @@ namespace Auth.Api.Controller
                     return Unauthorized(new { message = "Invalid email or password." });
                 }
 
+                if (!user.IsActive)
+                {
+                    return Unauthorized(new { message = "Your account has been deactivated. Please contact your administrator." });
+                }
+
                 var jwtkey = _configuration["Jwt:Key"];
                 var jwtIssuer = _configuration["Jwt:Issuer"];
                 var jwtAudience = _configuration["Jwt:Audience"];
@@ -377,4 +382,29 @@ namespace Auth.Api.Controller
                 role
             });
         }
-}}
+
+        // Internal service-to-service endpoint.
+        // Used by Notification.Api Kafka consumers (which have no JWT token) to resolve
+        // a user's email address by their ID for email dispatch.
+        [AllowAnonymous]
+        [HttpGet("internal/users/{id}/email")]
+        public async Task<IActionResult> GetUserEmail(int id)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                return Ok(new { email = user.Email, name = user.Name });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching email for user {UserId}", id);
+                return Problem("Unable to fetch user email.");
+            }
+        }
+    }
+}

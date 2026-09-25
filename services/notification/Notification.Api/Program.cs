@@ -14,7 +14,11 @@ builder.Services.AddDbContext<NotificationDbContext>(options =>
 // Register the real Gmail SMTP email service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Register IHttpClientFactory so consumers can call Auth.Api to resolve user emails
+builder.Services.AddHttpClient();
+
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 var app = builder.Build();
 
