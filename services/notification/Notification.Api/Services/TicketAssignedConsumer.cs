@@ -93,8 +93,7 @@ public sealed class TicketAssignedConsumer : BackgroundService
                         continue;
                     }
 
-                    // AC2: Build a unique key from the Kafka partition + offset.
-                    // Same idempotency pattern as NOTIFY-2/TicketCreatedConsumer —
+                    // AC2: Same idempotency pattern as TicketCreatedConsumer —
                     // guarantees we never send the same assignment email twice even
                     // if Kafka redelivers the message.
                     var eventKey = $"{EventType}-{result.Partition.Value}-{result.Offset.Value}";
@@ -113,11 +112,17 @@ public sealed class TicketAssignedConsumer : BackgroundService
                         continue;
                     }
 
-                    // AC1: Fire email to the assigned agent on TicketAssigned.
-                    // In development we send to the test inbox so it can be verified
-                    // manually; in production this would resolve the agent's email
-                    // from the Auth service using their AgentUserId.
-                    var recipientEmail = "senulmintharu2004@gmail.com"; // TODO: resolve from Auth.Api in production
+                    // AC1: Resolve the real email of the assigned agent from Auth.Api.
+                    var recipientEmail = await ResolveUserEmailAsync(scope, assignedEvent.AgentUserId);
+                    if (recipientEmail is null)
+                    {
+                        _logger.LogWarning(
+                            "Could not resolve email for agent {AgentUserId}. Skipping assignment notification for ticket {TicketId}.",
+                            assignedEvent.AgentUserId,
+                            assignedEvent.TicketId);
+                        continue;
+                    }
+
                     var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
                     var emailBody = BuildTicketAssignedEmail(assignedEvent.TicketId, assignedEvent.AgentUserId, assignedEvent.AssignedAtUtc);
                     await emailService.SendAsync(
@@ -126,9 +131,9 @@ public sealed class TicketAssignedConsumer : BackgroundService
                         emailBody);
 
                     _logger.LogInformation(
-                        "Assignment email sent. TicketId={TicketId}, AgentUserId={AgentUserId}",
-                        assignedEvent.TicketId,
-                        assignedEvent.AgentUserId);
+                        "Assignment email sent to {Recipient} for ticket {TicketId}.",
+                        recipientEmail,
+                        assignedEvent.TicketId);
 
                     // Persist the processed event for idempotency + audit log.
                     db.ProcessedEvents.Add(new Models.ProcessedEvent
@@ -167,6 +172,29 @@ public sealed class TicketAssignedConsumer : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Calls the internal Auth.Api endpoint to resolve a user's email by their ID.
+    /// Returns null if the user is not found or the call fails.
+    /// </summary>
+    private async Task<string?> ResolveUserEmailAsync(IServiceScope scope, int userId)
+    {
+        var authApiUrl = _configuration["AuthApiUrl"] ?? "http://localhost:5121";
+        var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+        var client = httpClientFactory.CreateClient();
+
+        try
+        {
+            var response = await client.GetFromJsonAsync<AuthUserEmailDto>(
+                $"{authApiUrl}/api/auth/internal/users/{userId}/email");
+            return response?.Email;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to resolve email for user {UserId} from Auth.Api.", userId);
+            return null;
+        }
+    }
+
     private static string BuildTicketAssignedEmail(int ticketId, int agentUserId, DateTime assignedAt)
     {
         return "<h2>A ticket has been assigned to you!</h2>" +
@@ -180,4 +208,7 @@ public sealed class TicketAssignedConsumer : BackgroundService
                "<p>Please log in to the IT Helpdesk portal to view the full ticket details and respond to the requester.</p>" +
                "<p>-- IT Helpdesk System</p>";
     }
+
+    // Internal DTO for deserializing Auth.Api's user email response
+    private sealed record AuthUserEmailDto(string Email, string Name);
 }
