@@ -12,6 +12,7 @@ builder.Services.AddDbContext<SlaDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<SlaBreachMonitorService>();
 
 var app = builder.Build();
 
