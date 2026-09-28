@@ -20,13 +20,13 @@
     ],
     "x-wso2-production-endpoints": {
         "urls": [
-            "http://sla-api:5262/api/Sla"
+            "http://sla-api:5262"
         ],
         "type": "http"
     },
     "x-wso2-sandbox-endpoints": {
         "urls": [
-            "http://sla-api:5262/api/Sla"
+            "http://sla-api:5262"
         ],
         "type": "http"
     },

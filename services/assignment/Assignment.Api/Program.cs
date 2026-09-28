@@ -117,6 +117,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Assignment" }));
+// Also exposed under the controller base path so it's reachable through the
+// WSO2 gateway, which forwards every "/assignment/v1/*" request to
+// {endpoint}/api/Assignments/* and has no way to special-case a resource onto
+// the service root instead.
+app.MapGet("/api/Assignments/health", () => Results.Ok(new { status = "healthy", service = "Assignment" }));
 app.MapControllers();
 app.Run();
 

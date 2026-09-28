@@ -20,13 +20,13 @@
     ],
     "x-wso2-production-endpoints": {
         "urls": [
-            "http://notification-api:5214/api/Notification"
+            "http://notification-api:5214"
         ],
         "type": "http"
     },
     "x-wso2-sandbox-endpoints": {
         "urls": [
-            "http://notification-api:5214/api/Notification"
+            "http://notification-api:5214"
         ],
         "type": "http"
     },

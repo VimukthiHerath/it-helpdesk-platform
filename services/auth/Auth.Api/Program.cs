@@ -112,6 +112,10 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
+// Also exposed under the controller base path so it's reachable through the
+// WSO2 gateway, which forwards every "/auth/v1/*" request to {endpoint}/api/Auth/*
+// and has no way to special-case a resource onto the service root instead.
+app.MapGet("/api/Auth/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
 
 app.Run();
 
