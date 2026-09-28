@@ -406,5 +406,27 @@ namespace Auth.Api.Controller
                 return Problem("Unable to fetch user email.");
             }
         }
+
+        // Internal service-to-service endpoint.
+        // Used by Notification.Api to fetch all active administrator emails for SLA breach alerts.
+        [AllowAnonymous]
+        [HttpGet("internal/admins/emails")]
+        public async Task<IActionResult> GetAdminEmails()
+        {
+            try
+            {
+                var emails = await _context.Users
+                    .Where(u => u.Role == UserRole.Administrator && u.IsActive)
+                    .Select(u => u.Email)
+                    .ToListAsync();
+
+                return Ok(new { emails });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching administrator emails");
+                return Problem("Unable to fetch administrator emails.");
+            }
+        }
     }
 }
