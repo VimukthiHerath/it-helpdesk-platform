@@ -83,7 +83,7 @@ jobs:
           echo "Polling WSO2 Publisher REST API..."
           elapsed=0
           until curl -sk -u admin:admin \
-              "https://localhost:9443/publisher/v4/apis" -o /dev/null 2>/dev/null; do
+              "https://localhost:9443/api/am/publisher/v4/apis" -o /dev/null 2>/dev/null; do
             sleep 10; elapsed=$((elapsed+10))
             echo "  Waiting... ${elapsed}s"
             [ "$elapsed" -ge 180 ] && { echo "WSO2 did not start in time."; docker logs wso2-ci-test; exit 1; }

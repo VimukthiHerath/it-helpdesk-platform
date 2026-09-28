@@ -10,23 +10,23 @@
     },
     "servers": [
         {
-            "url": "http://localhost:5165",
+            "url": "http://localhost:5067",
             "description": "Local development"
         },
         {
-            "url": "http://assignment-api:5165",
+            "url": "http://assignment-api:5067",
             "description": "Docker internal DNS"
         }
     ],
     "x-wso2-production-endpoints": {
         "urls": [
-            "http://assignment-api:5165/api/Assignment"
+            "http://assignment-api:5067/api/Assignments"
         ],
         "type": "http"
     },
     "x-wso2-sandbox-endpoints": {
         "urls": [
-            "http://assignment-api:5165/api/Assignment"
+            "http://assignment-api:5067/api/Assignments"
         ],
         "type": "http"
     },

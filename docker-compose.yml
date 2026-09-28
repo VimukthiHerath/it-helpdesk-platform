@@ -94,7 +94,7 @@ services:
       - wso2_data:/home/wso2carbon/wso2am-4.3.0/repository/deployment
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "curl -sk https://localhost:9443/publisher/v4/apis -u admin:admin -o /dev/null -w '%{http_code}' | grep -qE '^[23]'" ]
+      test: [ "CMD-SHELL", "curl -sk https://localhost:9443/api/am/publisher/v4/apis -u admin:admin -o /dev/null -w '%{http_code}' | grep -qE '^[23]'" ]
       interval: 30s
       timeout: 10s
       retries: 10

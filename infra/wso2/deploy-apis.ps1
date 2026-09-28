@@ -49,7 +49,7 @@ $ready = $false
 
 while ($elapsed -lt $ReadyTimeout) {
     try {
-        $null = Invoke-RestMethod -Uri "$Wso2Host/publisher/v4/apis" `
+        $null = Invoke-RestMethod -Uri "$Wso2Host/api/am/publisher/v4/apis" `
             -Headers $authHeader @script:SkipCert -ErrorAction Stop
         $ready = $true; break
     } catch { }
@@ -96,12 +96,15 @@ $AccessToken = $tokenResp.access_token
 Write-Ok "Access token obtained."
 
 # ── Step 4: Import & Publish ──────────────────────────────────────────────────
+# NOTE: WSO2 appends the API's own version ("v1") onto whatever context is given
+# here, so the context must be version-less (e.g. "/auth") or the exposed path
+# ends up doubled ("/auth/v1/v1").
 $apiMap = [ordered]@{
-    "auth-api.json"        = "/auth/v1"
-    "ticket-api.json"      = "/ticket/v1"
-    "assignment-api.json"  = "/assignment/v1"
-    "sla-api.json"         = "/sla/v1"
-    "notification-api.json"= "/notification/v1"
+    "auth-api.json"        = "/auth"
+    "ticket-api.json"      = "/ticket"
+    "assignment-api.json"  = "/assignment"
+    "sla-api.json"         = "/sla"
+    "notification-api.json"= "/notification"
 }
 
 $bearerHeader = @{ Authorization = "Bearer $AccessToken" }
@@ -111,7 +114,8 @@ foreach ($entry in $apiMap.GetEnumerator()) {
     $file = $entry.Key
     $ctx  = $entry.Value
     $path = Join-Path $ApisDir $file
-    $name = (Get-Content $path | ConvertFrom-Json).info.title
+    $spec = Get-Content $path | ConvertFrom-Json
+    $name = $spec.info.title
 
     Write-Log "Importing: $name ($ctx)"
 
@@ -132,7 +136,7 @@ foreach ($entry in $apiMap.GetEnumerator()) {
         $multipart += "`r`n--$boundary--`r`n"
 
         $importResp = Invoke-RestMethod `
-            -Uri "$Wso2Host/publisher/v4/apis/import-openapi" `
+            -Uri "$Wso2Host/api/am/publisher/v4/apis/import-openapi" `
             -Method Post `
             -Headers $bearerHeader `
             -ContentType "multipart/form-data; boundary=$boundary" `
@@ -142,14 +146,60 @@ foreach ($entry in $apiMap.GetEnumerator()) {
         $ApiId = $importResp.id
         Write-Ok "Imported '$name' (ID: $ApiId)"
 
+        # import-openapi does NOT read the x-wso2-*-endpoints vendor extensions
+        # from the file, so the API is left with endpointConfig=null. WSO2
+        # refuses to publish an API with no endpoint and no subscription
+        # policy, so both must be set explicitly before publishing. It also
+        # does NOT translate a per-operation "security: []" (public, no auth)
+        # into WSO2's own authType="None" - every operation defaults to
+        # requiring a token, which would make even /login unreachable through
+        # the gateway unless corrected here.
+        Write-Log "Configuring endpoint + subscription policy for: $name"
+        $prodUrl    = $spec.'x-wso2-production-endpoints'.urls[0]
+        $sandboxUrl = $spec.'x-wso2-sandbox-endpoints'.urls[0]
+        $apiDetail  = Invoke-RestMethod -Uri "$Wso2Host/api/am/publisher/v4/apis/$ApiId" `
+            -Headers $bearerHeader @script:SkipCert
+        $apiDetail | Add-Member -Force -NotePropertyName endpointConfig -NotePropertyValue ([pscustomobject]@{
+            endpoint_type       = "http"
+            production_endpoints = @{ url = $prodUrl }
+            sandbox_endpoints     = @{ url = $sandboxUrl }
+        })
+        $apiDetail | Add-Member -Force -NotePropertyName policies -NotePropertyValue @("Unlimited")
+
+        foreach ($op in $apiDetail.operations) {
+            $verbLower = $op.verb.ToLower()
+            $pathProp = $spec.paths.PSObject.Properties[$op.target]
+            if ($pathProp) {
+                $verbProp = $pathProp.Value.PSObject.Properties[$verbLower]
+                if ($verbProp -and (-not $verbProp.Value.security -or $verbProp.Value.security.Count -eq 0)) {
+                    $op | Add-Member -Force -NotePropertyName authType -NotePropertyValue "None"
+                }
+            }
+        }
+        $null = Invoke-RestMethod -Uri "$Wso2Host/api/am/publisher/v4/apis/$ApiId" `
+            -Method Put -Headers $bearerHeader -ContentType "application/json" `
+            -Body ($apiDetail | ConvertTo-Json -Depth 20) @script:SkipCert
+
         # Publish
         $null = Invoke-RestMethod `
-            -Uri "$Wso2Host/publisher/v4/apis/change-lifecycle?action=Publish&apiId=$ApiId" `
+            -Uri "$Wso2Host/api/am/publisher/v4/apis/change-lifecycle?action=Publish&apiId=$ApiId" `
             -Method Post -Headers $bearerHeader @script:SkipCert
         Write-Ok "Published '$name'"
 
+        # Publishing only changes the lifecycle state; the API is not actually
+        # live on the gateway until a revision is created and deployed.
+        Write-Log "Deploying revision to gateway for: $name"
+        $revResp = Invoke-RestMethod -Uri "$Wso2Host/api/am/publisher/v4/apis/$ApiId/revisions" `
+            -Method Post -Headers $bearerHeader -ContentType "application/json" `
+            -Body '{"description":"Automated deploy"}' @script:SkipCert
+        $revBody = '[{"name":"Default","vhost":"localhost","displayOnDevportal":true}]'
+        $null = Invoke-RestMethod -Uri "$Wso2Host/api/am/publisher/v4/apis/$ApiId/deploy-revision?revisionId=$($revResp.id)" `
+            -Method Post -Headers $bearerHeader -ContentType "application/json" `
+            -Body $revBody @script:SkipCert
+        Write-Ok "Revision deployed to Default gateway."
+
     } catch {
-        Write-Warn "'$name': $($_.Exception.Message) – may already be deployed."
+        Write-Warn "'$name': $($_.Exception.Message) - may already be deployed."
         $failed++
     }
 }
@@ -160,7 +210,7 @@ if ($failed -eq 0) {
     Write-Ok "All 5 APIs imported and published."
     Write-Log "Publisher UI : $Wso2Host/publisher"
     Write-Log "DevPortal    : $Wso2Host/devportal"
-    Write-Log "HTTP Gateway : http://localhost:8280/<context>"
+    Write-Log "HTTP Gateway : http://localhost:8280/<context>/v1"
 } else {
-    Write-Warn "$failed API(s) had issues – check output above."
+    Write-Warn "$failed API(s) had issues - check output above."
 }

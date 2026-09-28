@@ -10,23 +10,23 @@
     },
     "servers": [
         {
-            "url": "http://localhost:5166",
+            "url": "http://localhost:5262",
             "description": "Local development"
         },
         {
-            "url": "http://sla-api:5166",
+            "url": "http://sla-api:5262",
             "description": "Docker internal DNS"
         }
     ],
     "x-wso2-production-endpoints": {
         "urls": [
-            "http://sla-api:5166/api/Sla"
+            "http://sla-api:5262/api/Sla"
         ],
         "type": "http"
     },
     "x-wso2-sandbox-endpoints": {
         "urls": [
-            "http://sla-api:5166/api/Sla"
+            "http://sla-api:5262/api/Sla"
         ],
         "type": "http"
     },
@@ -34,50 +34,6 @@
     "x-wso2-auth-header": "Authorization",
     "x-wso2-disable-security": false,
     "paths": {
-        "/": {
-            "get": {
-                "summary": "List SLA records",
-                "operationId": "slaList",
-                "tags": [
-                    "SLA"
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SLA list"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    }
-                }
-            }
-        },
-        "/breaches": {
-            "get": {
-                "summary": "Get SLA breach events",
-                "operationId": "slaBreaches",
-                "tags": [
-                    "SLA"
-                ],
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of SLA breaches"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    }
-                }
-            }
-        },
         "/health": {
             "get": {
                 "summary": "Health check",
