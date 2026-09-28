@@ -267,4 +267,63 @@ public class TicketController : ControllerBase
 
         return (ticket, null);
     }
+
+    // REPORT-1 (SCRUM-31): Administrator-only dynamic report.
+    // All filter params are optional — omitting any one means "include all values"
+    // for that dimension. The query is built up incrementally so EF only adds
+    // WHERE clauses for the filters that were actually supplied.
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpGet("report")]
+    public async Task<IActionResult> GetReport(
+        [FromQuery] int? status,
+        [FromQuery] int? urgency,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate)
+    {
+        // Friendly labels indexed by the enum's raw int value, matching the
+        // frontend's existing urgencyLabels / statusLabels convention in
+        // ticketAssignments.jsx so both places stay in sync.
+        var statusLabels = new[] { "Unassigned", "Assigned", "Resolved", "In Progress", "Closed" };
+        var urgencyLabels = new[] { "Within 1 hour", "Within 6 hours", "Within 12 hours", "Within 24 hours" };
+
+        try
+        {
+            IQueryable<Tickets> query = _context.Tickets;
+
+            // AC3: apply each optional filter only when the caller supplied it.
+            if (status.HasValue)
+                query = query.Where(t => (int)t.Status == status.Value);
+
+            if (urgency.HasValue)
+                query = query.Where(t => (int)t.Urgency == urgency.Value);
+
+            if (startDate.HasValue)
+                query = query.Where(t => t.CreatedAt >= startDate.Value.ToUniversalTime());
+
+            if (endDate.HasValue)
+                query = query.Where(t => t.CreatedAt <= endDate.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
+
+            var tickets = await query
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            // AC2: map to the report DTO with human-readable labels.
+            var result = tickets.Select(t => new TicketReportItemDTO
+            {
+                TicketId = t.Id,
+                Subject = t.Description,
+                Status = statusLabels.ElementAtOrDefault((int)t.Status) ?? t.Status.ToString(),
+                Urgency = urgencyLabels.ElementAtOrDefault((int)t.Urgency) ?? t.Urgency.ToString(),
+                CreatedDate = t.CreatedAt,
+                AssignedAgent = t.AssignedTo
+            });
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating ticket report");
+            return Problem("Unable to generate report. Please try again later.");
+        }
+    }
 }

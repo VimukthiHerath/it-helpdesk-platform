@@ -23,6 +23,11 @@ const Dashboard = () => {
                             All accounts
                         </button>
                     )}
+                    {isAdmin() && (
+                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
+                            Reports
+                        </button>
+                    )}
                     {isEmployee && (
                         <button type="button" className="btn btn--secondary" onClick={() => navigate('/my-tickets')}>
                             My tickets
@@ -85,6 +90,9 @@ const Dashboard = () => {
                             </button>
                             <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/rotation')}>
                                 Agent rotation
+                            </button>
+                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
+                                Reports
                             </button>
                             <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
                                 All tickets
