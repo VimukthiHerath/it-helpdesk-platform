@@ -44,14 +44,19 @@ This repo actually had **two** gateways added in the same sprint:
 2. WSO2 API Manager (`wso2-gateway` in `docker-compose.yml`, config in
    `infra/wso2/`), set up separately by DevOps.
 
-The team's decision was to standardize on **WSO2** going forward (partly a
-deliberate technical/architecture choice, partly because WSO2 experience is
-valuable for internship purposes, since WSO2 is a major recruiter from this
-programme). This document covers the WSO2 side only. As of this writing the
-custom YARP gateway's files are still present in the repo — if the team is
-fully committing to WSO2, that gateway and its CI/CD pipeline
-(`.github/workflows/gateway-ci-cd.yml`) should eventually be removed to avoid
-maintaining two systems that do the same job.
+**The team's decision: WSO2 is the standard, authoritative gateway.** The
+YARP gateway (`src/ApiGateway/`) is kept in the repo as a reference/fallback
+implementation only — it is not the live routing path, should not be assumed
+to receive real production traffic, and should not be extended going
+forward. Both gateways were fixed and independently verified working during
+this sprint (see `git log` for `fix(gateway):` commits for the YARP side),
+so the fallback is a working one, not dead code — but WSO2 is what clients
+should be pointed at, and what future gateway work should happen in.
+
+This document covers the WSO2 side only. If the team later decides to drop
+the fallback entirely, remove `src/ApiGateway/` and its CI/CD pipeline
+(`.github/workflows/gateway-ci-cd.yml`) in one clean commit — but that's a
+separate, deliberate decision, not something to do incidentally.
 
 ---
 
