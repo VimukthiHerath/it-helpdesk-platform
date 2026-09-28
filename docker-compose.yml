@@ -59,9 +59,9 @@ services:
       # Override cluster destinations to use Docker internal DNS
       ReverseProxy__Clusters__auth-cluster__Destinations__auth-primary__Address: "http://host.docker.internal:5121/"
       ReverseProxy__Clusters__ticket-cluster__Destinations__ticket-primary__Address: "http://host.docker.internal:5164/"
-      ReverseProxy__Clusters__assignment-cluster__Destinations__assignment-primary__Address: "http://host.docker.internal:5000/"
-      ReverseProxy__Clusters__sla-cluster__Destinations__sla-primary__Address: "http://host.docker.internal:5001/"
-      ReverseProxy__Clusters__notification-cluster__Destinations__notification-primary__Address: "http://host.docker.internal:5002/"
+      ReverseProxy__Clusters__assignment-cluster__Destinations__assignment-primary__Address: "http://host.docker.internal:5067/"
+      ReverseProxy__Clusters__sla-cluster__Destinations__sla-primary__Address: "http://host.docker.internal:5262/"
+      ReverseProxy__Clusters__notification-cluster__Destinations__notification-primary__Address: "http://host.docker.internal:5214/"
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1" ]
