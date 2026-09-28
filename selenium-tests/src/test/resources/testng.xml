@@ -6,4 +6,9 @@
             <class name="com.ithelpdesk.LoginSeleniumTest"/>
         </classes>
     </test>
+    <test name="TicketReport">
+        <classes>
+            <class name="com.ithelpdesk.TicketReportSeleniumTest"/>
+        </classes>
+    </test>
 </suite>
