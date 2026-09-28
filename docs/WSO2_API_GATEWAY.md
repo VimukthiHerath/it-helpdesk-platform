@@ -251,12 +251,53 @@ Application User"` (protected).
 source OpenAPI file and set `authType = "None"` on any operation where
 `security` is an empty array (or absent), before publishing.
 
+### Problem 10 — `/health` doesn't route correctly for any service
+
+Even with everything else working, `GET /auth/v1/health`,
+`/ticket/v1/health`, and `/assignment/v1/health` returned an **empty 404**
+through the gateway, while each service's own `/health` endpoint worked fine
+called directly. `/sla/v1/health` and `/notification/v1/health` also 404'd.
+
+**Root cause:** WSO2 forwards every operation to `{endpoint_base}` +
+`{resource_path}`.
+
+- For **Auth, Ticket, and Assignment**, the endpoint base (`/api/Auth`,
+  `/api/Ticket`, `/api/Assignments`) is correct for the real controller-routed
+  operations (`/login`, `/mine`, etc.), but each service's `/health` endpoint
+  is mapped at the **root** of the app (`app.MapGet("/health", ...)`), not
+  nested under that controller prefix. So WSO2 ended up requesting e.g.
+  `/api/Auth/health`, which doesn't exist — the empty 404 was ASP.NET Core's
+  default "no route matched" response, confirming the request *did* reach the
+  backend, just at the wrong path.
+- For **SLA and Notification**, the problem was slightly different: their
+  entire exposed surface *is* just `/health` at the service root, but the
+  WSO2 endpoint config still pointed at a non-existent `/api/Sla` /
+  `/api/Notification` base (left over from before we trimmed their specs in
+  Problem 2), so every request 404'd for the same "wrong prefix" reason.
+
+**Fix (two parts):**
+
+1. **SLA and Notification** — since `/health` is their *only* real operation,
+   there's no need for a shared base path at all. Changed their
+   `x-wso2-production-endpoints` / `x-wso2-sandbox-endpoints` URLs in
+   `sla-api.json` and `notification-api.json` to point at the bare service
+   root (`http://sla-api:5262`, `http://notification-api:5214`) instead of a
+   non-existent controller path.
+2. **Auth, Ticket, and Assignment** — these genuinely need the
+   `/api/{Controller}` base for their real operations, so that couldn't just
+   be changed. Instead, added a second health route in each service's
+   `Program.cs`, mapped under that same controller prefix
+   (`/api/Auth/health`, `/api/Ticket/health`, `/api/Assignments/health`),
+   alongside the existing root `/health` (kept as-is, since the YARP
+   gateway's active health check, Docker health checks, and direct
+   developer checks all rely on it).
+
 ---
 
 ## 6. Verified end-to-end (what we proved actually works)
 
-After all the fixes above, with Auth.Api, Ticket.Api, and Assignment.Api
-running locally and a clean `deploy-apis.ps1` run:
+With all 5 backend services running locally and a clean `deploy-apis.ps1`
+run:
 
 - `POST /auth/v1/login` through WSO2 (port `8280`) reaches the real
   `AuthController.Login` code with no token required — confirmed by seeing a
@@ -264,33 +305,16 @@ running locally and a clean `deploy-apis.ps1` run:
   connectivity issue in the test environment, unrelated to WSO2).
 - `GET /ticket/v1/mine` through WSO2 with no token correctly returns `401
   Missing Credentials` — protected routes are still protected.
+- `GET /health` through WSO2 works for **all 5 services**
+  (`/auth/v1/health`, `/ticket/v1/health`, `/assignment/v1/health`,
+  `/sla/v1/health`, `/notification/v1/health`), each returning the real
+  `{"status":"healthy","service":"..."}` payload from the actual backend.
 
-## 7. Known remaining gap: `/health` routing
-
-`GET /auth/v1/health`, `/ticket/v1/health`, and `/assignment/v1/health` still
-return an **empty 404** through the gateway, even though each service's own
-`/health` endpoint works fine when called directly.
-
-**Root cause:** WSO2 forwards every operation to `{endpoint_base}` +
-`{resource_path}`. The endpoint base (`/api/Auth`, `/api/Ticket`,
-`/api/Assignments`) is correct for the real controller-routed operations
-(`/login`, `/mine`, etc.), but each service's `/health` endpoint is mapped at
-the **root** of the app (`app.MapGet("/health", ...)`), not nested under that
-controller prefix. So WSO2 ends up requesting e.g. `/api/Auth/health`, which
-doesn't exist — the empty 404 is ASP.NET Core's default "no route matched"
-response, confirming the request *does* reach the backend, just at the wrong
-path.
-
-This wasn't fixed yet. Two realistic options going forward:
-1. Give each `/health` operation its own endpoint override in WSO2 (pointing
-   at the service root instead of the shared `/api/{Controller}` base).
-2. Drop `/health` from what's exposed through WSO2 entirely, and rely on
-   calling each service's health endpoint directly (or on WSO2's own
-   gateway-level health check) instead.
+No previously-working route regressed after the `/health` fix.
 
 ---
 
-## 8. Quick reference — running this yourself
+## 7. Quick reference — running this yourself
 
 ```bash
 # 1. Start MySQL + WSO2
