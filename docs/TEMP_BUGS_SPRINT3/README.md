@@ -8,3 +8,4 @@ folder once everything's been copied into the real report.
 |----|-------|----------|--------|
 | [BUG-01](BUG-01-agent-rotation-removal-missing.md) | No way to remove an agent from the ticket rotation | High | Open |
 | [BUG-02](BUG-02-accounts-table-id-column-cutoff.md) | "All accounts" table: ID column looked cut off | Low (cosmetic) | Fixed |
+| [BUG-03](BUG-03-unauthenticated-internal-endpoints.md) | Unauthenticated internal endpoints leak the entire user directory | Critical | Open |
