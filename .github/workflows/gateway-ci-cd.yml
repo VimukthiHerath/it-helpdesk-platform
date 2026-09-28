@@ -1,0 +1,151 @@
+name: API Gateway CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/ApiGateway/**'
+      - '.github/workflows/gateway-ci-cd.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/ApiGateway/**'
+      - '.github/workflows/gateway-ci-cd.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME:      ithelpdeskacr01
+  ACR_IMAGE:     ithelpdeskacr01.azurecr.io/api-gateway
+  ACA_ENV:       it-helpdesk-env
+  ACA_RG:        it-helpdesk-rg
+  ACA_APP_NAME:  api-gateway
+
+jobs:
+  # ── Job 1: Build & Test ────────────────────────────────────────────────────
+  build-and-test:
+    name: Build & Test (dotnet)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/ApiGateway
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages
+        run: dotnet restore ApiGateway.csproj
+
+      - name: Build (Release)
+        run: dotnet build ApiGateway.csproj --no-restore --configuration Release
+
+      - name: Verify published output
+        run: dotnet publish ApiGateway.csproj --no-restore --configuration Release --output ./publish
+        # No unit test project yet – publish acts as an integration smoke build.
+
+  # ── Job 2: Docker Build & Push to ACR ────────────────────────────────────
+  docker-build-push:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and tag Docker image
+        working-directory: src/ApiGateway
+        run: |
+          SHORT_SHA="sha-${{ github.sha }}"
+          docker build \
+            -t ${{ env.ACR_IMAGE }}:${SHORT_SHA} \
+            -t ${{ env.ACR_IMAGE }}:latest \
+            -f Dockerfile \
+            .
+
+      - name: Push Docker image to ACR
+        run: |
+          SHORT_SHA="sha-${{ github.sha }}"
+          docker push ${{ env.ACR_IMAGE }}:${SHORT_SHA}
+          docker push ${{ env.ACR_IMAGE }}:latest
+
+  # ── Job 3: Deploy to Azure Container Apps & Smoke Test ───────────────────
+  deploy-and-smoke-test:
+    name: Deploy & Smoke Test
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy new revision to Azure Container Apps
+        run: |
+          SHORT_SHA="sha-${{ github.sha }}"
+          az containerapp update \
+            --name        ${{ env.ACA_APP_NAME }} \
+            --resource-group ${{ env.ACA_RG }} \
+            --image       ${{ env.ACR_IMAGE }}:${SHORT_SHA} \
+            --set-env-vars \
+              ASPNETCORE_ENVIRONMENT=Production
+
+      - name: Wait for Container App to stabilise
+        run: |
+          echo "Waiting 30s for new revision to become active..."
+          sleep 30
+
+      - name: Retrieve Gateway FQDN
+        id: fqdn
+        run: |
+          FQDN=$(az containerapp show \
+            --name ${{ env.ACA_APP_NAME }} \
+            --resource-group ${{ env.ACA_RG }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo "GATEWAY_URL=https://${FQDN}" >> $GITHUB_ENV
+          echo "Gateway URL: https://${FQDN}"
+
+      - name: Smoke test – /health endpoint
+        run: |
+          echo "Testing $GATEWAY_URL/health ..."
+          HTTP_STATUS=$(curl -s -o /tmp/health_response.json -w "%{http_code}" \
+            --max-time 15 \
+            "$GATEWAY_URL/health")
+          cat /tmp/health_response.json
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "FAIL: /health returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "PASS: /health returned HTTP $HTTP_STATUS"
+
+      - name: Smoke test – all gateway routes
+        run: |
+          chmod +x scripts/test-gateway-routes.sh
+          GATEWAY_URL=$GATEWAY_URL bash scripts/test-gateway-routes.sh

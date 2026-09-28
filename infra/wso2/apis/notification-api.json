@@ -1,0 +1,84 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Notification API",
+        "description": "Event-driven notification dispatch service for IT Helpdesk Platform",
+        "version": "1.0.0",
+        "contact": {
+            "name": "IT Helpdesk Team"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5167",
+            "description": "Local development"
+        },
+        {
+            "url": "http://notification-api:5167",
+            "description": "Docker internal DNS"
+        }
+    ],
+    "x-wso2-production-endpoints": {
+        "urls": [
+            "http://notification-api:5167/api/Notification"
+        ],
+        "type": "http"
+    },
+    "x-wso2-sandbox-endpoints": {
+        "urls": [
+            "http://notification-api:5167/api/Notification"
+        ],
+        "type": "http"
+    },
+    "x-wso2-basePath": "/notification/v1",
+    "x-wso2-auth-header": "Authorization",
+    "x-wso2-disable-security": false,
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "List notification records",
+                "operationId": "notificationList",
+                "tags": [
+                    "Notifications"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "summary": "Health check",
+                "operationId": "notificationHealth",
+                "tags": [
+                    "Diagnostics"
+                ],
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "Healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

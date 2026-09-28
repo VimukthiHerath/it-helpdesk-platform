@@ -1,0 +1,196 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Ticket API",
+        "description": "Core ticket creation, listing, and management service for IT Helpdesk Platform",
+        "version": "1.0.0",
+        "contact": {
+            "name": "IT Helpdesk Team"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5164",
+            "description": "Local development"
+        },
+        {
+            "url": "http://ticket-api:5164",
+            "description": "Docker internal DNS"
+        }
+    ],
+    "x-wso2-production-endpoints": {
+        "urls": [
+            "http://ticket-api:5164/api/Ticket"
+        ],
+        "type": "http"
+    },
+    "x-wso2-sandbox-endpoints": {
+        "urls": [
+            "http://ticket-api:5164/api/Ticket"
+        ],
+        "type": "http"
+    },
+    "x-wso2-basePath": "/ticket/v1",
+    "x-wso2-auth-header": "Authorization",
+    "x-wso2-disable-security": false,
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "List all tickets",
+                "operationId": "ticketList",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of tickets"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create a new ticket",
+                "operationId": "ticketCreate",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "priority"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "priority": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Low",
+                                            "Medium",
+                                            "High",
+                                            "Critical"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ticket created"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/mine": {
+            "get": {
+                "summary": "Get tickets for the authenticated user",
+                "operationId": "ticketMine",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User's tickets"
+                    },
+                    "401": {
+                        "description": "Unauthorized – JWT required"
+                    }
+                }
+            }
+        },
+        "/{id}": {
+            "get": {
+                "summary": "Get ticket by ID",
+                "operationId": "ticketGetById",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket details"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "summary": "Health check",
+                "operationId": "ticketHealth",
+                "tags": [
+                    "Diagnostics"
+                ],
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "Healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

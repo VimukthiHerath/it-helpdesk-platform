@@ -1,0 +1,108 @@
+name: WSO2 API Gateway CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'infra/wso2/**'
+      - '.github/workflows/wso2-gateway-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'infra/wso2/**'
+      - '.github/workflows/wso2-gateway-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Job 1: Validate & Lint OpenAPI Definitions ────────────────────────────
+  validate-openapi:
+    name: Validate OpenAPI Definitions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for swagger-cli)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install swagger-cli
+        run: npm install -g @apidevtools/swagger-cli
+
+      - name: Validate auth-api.json
+        run: swagger-cli validate infra/wso2/apis/auth-api.json
+
+      - name: Validate ticket-api.json
+        run: swagger-cli validate infra/wso2/apis/ticket-api.json
+
+      - name: Validate assignment-api.json
+        run: swagger-cli validate infra/wso2/apis/assignment-api.json
+
+      - name: Validate sla-api.json
+        run: swagger-cli validate infra/wso2/apis/sla-api.json
+
+      - name: Validate notification-api.json
+        run: swagger-cli validate infra/wso2/apis/notification-api.json
+
+      - name: Check deploy-apis.sh syntax
+        run: bash -n infra/wso2/deploy-apis.sh
+
+      - name: Confirm all expected files present
+        run: |
+          for f in auth-api.json ticket-api.json assignment-api.json sla-api.json notification-api.json; do
+            test -f "infra/wso2/apis/$f" && echo "✔  $f" || { echo "✘  MISSING: $f"; exit 1; }
+          done
+
+  # ── Job 2: WSO2 Container Boot Smoke Test ─────────────────────────────────
+  gateway-boot-test:
+    name: WSO2 Container Boot Smoke Test
+    runs-on: ubuntu-latest
+    needs: validate-openapi
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start WSO2 API Manager (detached)
+        run: |
+          docker run -d \
+            --name wso2-ci-test \
+            -p 8280:8280 \
+            -p 8243:8243 \
+            -p 9443:9443 \
+            -e JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC" \
+            wso2/wso2am:4.3.0
+          echo "WSO2 container started."
+
+      - name: Wait for WSO2 management API (max 3 min)
+        run: |
+          echo "Polling WSO2 Publisher REST API..."
+          elapsed=0
+          until curl -sk -u admin:admin \
+              "https://localhost:9443/publisher/v4/apis" -o /dev/null 2>/dev/null; do
+            sleep 10; elapsed=$((elapsed+10))
+            echo "  Waiting... ${elapsed}s"
+            [ "$elapsed" -ge 180 ] && { echo "WSO2 did not start in time."; docker logs wso2-ci-test; exit 1; }
+          done
+          echo "WSO2 is ready after ${elapsed}s."
+
+      - name: Verify HTTP gateway port is open
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:8280/" || echo "000")
+          echo "HTTP gateway response: $HTTP_CODE"
+          # 404 is acceptable (no routes yet) — means gateway is up
+          [ "$HTTP_CODE" != "000" ] && echo "PASS: Gateway is responding." || { echo "FAIL: Gateway unreachable."; exit 1; }
+
+      - name: Verify Publisher UI port (9443)
+        run: |
+          HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 10 "https://localhost:9443/publisher" || echo "000")
+          echo "Publisher UI response: $HTTP_CODE"
+          [ "$HTTP_CODE" != "000" ] && echo "PASS" || { echo "FAIL: Publisher unreachable."; exit 1; }
+
+      - name: Dump WSO2 logs on failure
+        if: failure()
+        run: docker logs wso2-ci-test --tail 100
