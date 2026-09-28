@@ -11,6 +11,10 @@ on:
     paths:
       - 'src/ApiGateway/**'
       - '.github/workflows/gateway-ci-cd.yml'
+  # WSO2 is the standard gateway (see docs/WSO2_API_GATEWAY.md); this YARP
+  # gateway is kept as a fallback and must not auto-deploy to Azure anymore.
+  # Build & test still run automatically on push/PR; deploying is manual only.
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -56,7 +60,7 @@ jobs:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout repository
@@ -93,7 +97,7 @@ jobs:
     name: Deploy & Smoke Test
     runs-on: ubuntu-latest
     needs: docker-build-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout repository
