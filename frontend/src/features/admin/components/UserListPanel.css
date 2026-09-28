@@ -23,6 +23,13 @@
 
 .user-table__id {
     width: 6%;
+    /* Every other column gets a 12px gap from its own right padding, which
+       also serves as the gap before the next column - but nothing pads the
+       left of the first column, so its content sits flush against the panel
+       edge instead of getting the same breathing room. Matching that here
+       keeps the ID column visually consistent with the rest of the row
+       instead of looking cut off. */
+    padding-left: 12px;
 }
 
 .user-table__name {
