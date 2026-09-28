@@ -9,3 +9,6 @@ folder once everything's been copied into the real report.
 | [BUG-01](BUG-01-agent-rotation-removal-missing.md) | No way to remove an agent from the ticket rotation | High | Open |
 | [BUG-02](BUG-02-accounts-table-id-column-cutoff.md) | "All accounts" table: ID column looked cut off | Low (cosmetic) | Fixed |
 | [BUG-03](BUG-03-unauthenticated-internal-endpoints.md) | Unauthenticated internal endpoints leak the entire user directory | Critical | Open |
+| [BUG-04](BUG-04-notification-crash-on-smtp-failure.md) | Notification.Api crashes entirely (and crash-loops) on any SMTP failure | Critical | Open |
+| [BUG-05](BUG-05-notifications-silently-lost-on-crash.md) | A crash mid-processing silently loses the notification forever | Critical | Open |
+| [BUG-06](BUG-06-sla-false-breach-alerts.md) | SLA breach alerts fire for tickets that are already resolved | High | Open |
