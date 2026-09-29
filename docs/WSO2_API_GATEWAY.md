@@ -349,3 +349,105 @@ DevPortal: `https://localhost:9443/devportal`
 (Default WSO2 login: `admin` / `admin` — **must be changed before any
 non-local deployment**, see the "wrong direction" note in the deployment
 discussion: this is not currently safe to expose beyond localhost.)
+
+---
+
+## 8. Deployed to Azure — real, live gateway
+
+WSO2 now genuinely runs in Azure (`it-helpdesk-rg`, Container App
+`wso2-gateway`, in the same `it-helpdesk-env` as the 5 backend services) and
+is configured with all 5 real APIs, routing real traffic. This is not a
+local-only setup anymore — it's what a client would actually go through.
+
+### Infrastructure
+
+| Piece | Detail |
+|---|---|
+| Container App | `wso2-gateway`, image `wso2/wso2am:4.3.0` (public, no ACR build needed) |
+| Compute | 1.0 vCPU / 2Gi memory, scale 0-1 (idle by default, same cost-control pattern as the other services) |
+| Ingress | External, HTTP, target port `8280` only — this is the real public entry point |
+| Persistence | Azure Files share `wso2-data` on storage account `ithelpdeskwso2sa`, mounted at two narrow subpaths: `repository/database` (WSO2's embedded config DB) and `repository/deployment/server/synapse-configs` (deployed API artifacts) |
+| IaC | `infra/wso2/azure/wso2-gateway.containerapp.yaml` — the exact spec used to create it (`az containerapp create --yaml ...`) |
+
+### Why only two narrow subpaths are mounted, not the whole `repository/`
+
+The first attempt mounted the entire `repository/` folder from the (empty)
+Azure Files share. Unlike Docker's local named volumes — which auto-copy an
+image's existing files into a new volume on first mount — Azure Files just
+overlays an empty folder, silently deleting files WSO2's own startup script
+expected to find. The container crash-looped immediately.
+
+Re-seeding the full `repository/deployment` folder (2,504 files, extracted
+from a clean copy of the image) fixed that crash, but produced a *second*
+one: a `NullPointerException` deploying WSO2's own built-in admin console
+webapp, from subtle file fidelity loss crossing Windows → Azure Files (SMB)
+→ Linux container for some of those files.
+
+The actual fix: only two things genuinely need to survive a container
+restart — the embedded database, and the record of which APIs are deployed
+(`synapse-configs/`). Everything else (`webapps/`, `axis2services/`, etc.)
+is WSO2's own static content and is now left completely untouched, served
+straight from the image every time. Narrower mount, same effective
+persistence, no more fidelity risk.
+
+### Why configuration was applied via `exec`, not the Publisher UI or a script
+
+WSO2's management API (port `9443`) is deliberately **never exposed
+externally** — not even temporarily — because it still has the default
+`admin`/`admin` login. Two things were tried and rejected before landing on
+the final approach:
+
+1. **External TCP ingress on 9443** — rejected outright by Azure
+   (`ContainerAppTcpRequiresVnet`): TCP-transport ingress requires a custom
+   VNET, which this environment doesn't have, and setting one up would mean
+   rebuilding the whole environment.
+2. **Internal-only TCP ingress on 9443** — this *is* supported without a
+   VNET, but never actually became reachable even from another Container
+   App in the same environment (connection timeouts every time, likely a
+   platform quirk with TCP-mode internal ingress on Consumption plan). Not
+   worth chasing further once a working alternative existed.
+
+**What actually worked:** `az containerapp exec` directly into
+`wso2-gateway`, talking to `https://localhost:9443` — no ingress, no
+networking, no VNET involved at all, since `exec` attaches straight into
+the running container over Azure's own control plane. The one real
+constraint: the container runs as a non-root user with no `apt`/`sudo`, so
+`jq` couldn't be installed there. Worked around by keeping every remote
+command down to plain `curl` (using `--oauth2-bearer` to avoid header
+values with spaces, which don't survive the CLI's argument passing intact),
+and doing all JSON construction/parsing on the local machine instead
+(Python's `json` module standing in for `jq`), staging both the input
+specs and the computed request bodies as files on the same Azure Files
+share so every remote command was just `curl ... -d @/path/to/file` — short,
+quote-free, and reliable.
+
+A temporary helper Container App (`wso2-config-helper`, plain `ubuntu:22.04`,
+deleted once done) was also used briefly for the same reason: it runs as
+root, so `curl`+`jq` could actually be installed there, before the
+simpler exec-into-wso2-gateway approach replaced the need for it entirely.
+
+### Verified end-to-end in Azure (not just locally)
+
+```
+POST /auth/v1/login    -> 401 {"message":"Invalid email or password."}
+                           (a real response from the real Auth service — not a WSO2 auth error)
+GET  /ticket/v1/mine    -> 401 {"code":"900902","message":"Missing Credentials"}
+                           (WSO2 itself correctly blocking an unauthenticated protected call)
+GET  /sla/v1/health           -> 200 {"status":"healthy","service":"SLA"}
+GET  /notification/v1/health  -> 200 {"status":"healthy","service":"Notification"}
+```
+
+### Known gap: `/health` 404s for Auth, Ticket, and Assignment through the gateway
+
+`GET /auth/v1/health`, `/ticket/v1/health`, and `/assignment/v1/health` all
+404 through the gateway right now. This is **not** a WSO2 configuration
+problem — it's that the currently-*deployed* Azure images for those three
+services predate the fix described in Problem 10 above (adding a
+controller-prefixed `/api/Auth/health` route alongside the root `/health`).
+The fix is already committed in source
+(`services/auth/Auth.Api/Program.cs` etc.) — confirmed live:
+`GET https://auth-service.../health` → 200, but
+`GET https://auth-service.../api/Auth/health` → 404 on the currently-running
+container. Redeploying those three services (their existing CI/CD already
+auto-deploys on push) will close this gap; it wasn't done as part of this
+work since it's outside the gateway's own scope.
