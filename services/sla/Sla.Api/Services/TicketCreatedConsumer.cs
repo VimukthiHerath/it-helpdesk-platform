@@ -1,8 +1,6 @@
 using System.Text.Json;
 using Sla.Api.DTO;
 using Confluent.Kafka;
-using Sla.Api.Data;
-using Sla.Api.Models;
 
 namespace Sla.Api.Services;
 
@@ -97,59 +95,13 @@ public sealed class TicketCreatedConsumer : BackgroundService
                         result.Partition,
                         result.Offset);
 
-                    // Map urgency to deadline duration based on frontend labels
-                    // (0 = 1 hour, 1 = 6 hours, 2 = 12 hours, 3 = 24 hours)
-                    TimeSpan slaDuration = ticketEvent.Urgency switch
-                    {
-                        0 => TimeSpan.FromHours(1),
-                        1 => TimeSpan.FromHours(6),
-                        2 => TimeSpan.FromHours(12),
-                        3 => TimeSpan.FromHours(24),
-                        _ => TimeSpan.FromHours(24) // Default fallback
-                    };
-
-                    DateTime deadlineUtc = ticketEvent.CreatedAtUtc.Add(slaDuration);
-
                     string eventKey = $"TicketCreated-{result.Partition}-{result.Offset}";
 
                     using (var scope = _scopeFactory.CreateScope())
                     {
-                        var db = scope.ServiceProvider.GetRequiredService<SlaDbContext>();
-
-                        // Idempotency check
-                        bool alreadyProcessed = db.ProcessedEvents.Any(e => e.EventKey == eventKey);
-                        if (alreadyProcessed)
-                        {
-                            _logger.LogInformation("Event {EventKey} already processed. Skipping.", eventKey);
-                            continue;
-                        }
-
-                        // Create SLA record
-                        var ticketSla = new TicketSla
-                        {
-                            TicketId = ticketEvent.TicketId,
-                            Urgency = ticketEvent.Urgency,
-                            CreatedAtUtc = ticketEvent.CreatedAtUtc,
-                            DeadlineUtc = deadlineUtc,
-                            Status = "Active"
-                        };
-
-                        db.TicketSlas.Add(ticketSla);
-
-                        // Record idempotency
-                        db.ProcessedEvents.Add(new ProcessedEvent
-                        {
-                            EventKey = eventKey,
-                            ProcessedAtUtc = DateTime.UtcNow
-                        });
-
-                        db.SaveChanges();
+                        var creationService = scope.ServiceProvider.GetRequiredService<SlaRecordCreationService>();
+                        creationService.CreateAsync(ticketEvent, eventKey, stoppingToken).GetAwaiter().GetResult();
                     }
-
-                    _logger.LogInformation(
-                        "Successfully calculated and saved SLA deadline for Ticket {TicketId}. DeadlineUtc={DeadlineUtc}",
-                        ticketEvent.TicketId,
-                        deadlineUtc);
                 }
                 catch (ConsumeException exception)
                 {
