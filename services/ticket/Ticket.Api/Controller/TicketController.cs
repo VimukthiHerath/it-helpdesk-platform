@@ -298,10 +298,10 @@ public class TicketController : ControllerBase
                 query = query.Where(t => (int)t.Urgency == urgency.Value);
 
             if (startDate.HasValue)
-                query = query.Where(t => t.CreatedAt >= startDate.Value.ToUniversalTime());
+                query = query.Where(t => t.CreatedAt >= ReportDateRangeHelper.ToUtcStartBoundary(startDate.Value));
 
             if (endDate.HasValue)
-                query = query.Where(t => t.CreatedAt <= endDate.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
+                query = query.Where(t => t.CreatedAt <= ReportDateRangeHelper.ToUtcEndBoundary(endDate.Value));
 
             var tickets = await query
                 .OrderByDescending(t => t.CreatedAt)
