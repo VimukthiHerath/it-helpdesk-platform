@@ -24,6 +24,7 @@ builder.Services.AddScoped<SlaBreachedNotificationService>();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
 builder.Services.AddHostedService<SlaBreachedConsumer>();
+builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 var app = builder.Build();
 
