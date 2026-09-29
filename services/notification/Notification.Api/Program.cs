@@ -17,6 +17,11 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Register IHttpClientFactory so consumers can call Auth.Api to resolve user emails
 builder.Services.AddHttpClient();
 
+builder.Services.AddScoped<IUserEmailResolver, AuthApiUserEmailResolver>();
+builder.Services.AddScoped<IAdminEmailResolver, AuthApiAdminEmailResolver>();
+builder.Services.AddScoped<TicketCreatedNotificationService>();
+builder.Services.AddScoped<SlaBreachedNotificationService>();
+
 builder.Services.AddHostedService<TicketCreatedConsumer>();
 builder.Services.AddHostedService<SlaBreachedConsumer>();
 

@@ -1,9 +1,5 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Confluent.Kafka;
-using Microsoft.EntityFrameworkCore;
-using Notification.Api.Data;
-using Notification.Api.DTO;
 
 namespace Notification.Api.Services;
 
@@ -78,49 +74,8 @@ public sealed class SlaBreachedConsumer : BackgroundService
                     var eventKey = $"{EventType}-{breachedEvent.TicketId}";
 
                     using var scope = _scopeFactory.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
-
-                    var alreadyProcessed = await db.ProcessedEvents
-                        .AnyAsync(e => e.EventKey == eventKey, stoppingToken);
-
-                    if (alreadyProcessed)
-                    {
-                        _logger.LogWarning("Duplicate SlaBreached event skipped. EventKey={EventKey}", eventKey);
-                        continue;
-                    }
-
-                    // Dynamically fetch all administrators' emails from Auth.Api
-                    var adminEmails = await ResolveAdminEmailsAsync(scope);
-                    if (adminEmails.Count == 0)
-                    {
-                        _logger.LogWarning("No administrator emails found. Skipping SLA breach notification for ticket {TicketId}.", breachedEvent.TicketId);
-                        continue;
-                    }
-
-                    // AC1: Send email to all administrators
-                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                    var emailBody = BuildBreachedEmail(breachedEvent.TicketId, breachedEvent.OriginalDeadlineUtc, breachedEvent.BreachedAtUtc);
-                    
-                    foreach (var adminEmail in adminEmails)
-                    {
-                        await emailService.SendAsync(
-                            adminEmail,
-                            $"[URGENT] SLA Breach - Ticket #{breachedEvent.TicketId}",
-                            emailBody);
-
-                        _logger.LogInformation("SLA Breach alert email sent to {Recipient} for ticket {TicketId}.", adminEmail, breachedEvent.TicketId);
-                    }
-
-                    // Persist processed event. Since we send to multiple admins, we log the first one or just 'Admins'.
-                    db.ProcessedEvents.Add(new Models.ProcessedEvent
-                    {
-                        EventKey = eventKey,
-                        EventType = EventType,
-                        Recipient = string.Join(",", adminEmails),
-                        ProcessedAtUtc = DateTime.UtcNow
-                    });
-                    
-                    await db.SaveChangesAsync(stoppingToken);
+                    var notificationService = scope.ServiceProvider.GetRequiredService<SlaBreachedNotificationService>();
+                    await notificationService.ProcessAsync(breachedEvent, eventKey, stoppingToken);
                 }
                 catch (ConsumeException exception)
                 {
@@ -142,39 +97,6 @@ public sealed class SlaBreachedConsumer : BackgroundService
         }
     }
 
-    private async Task<List<string>> ResolveAdminEmailsAsync(IServiceScope scope)
-    {
-        var authApiUrl = _configuration["AuthApiUrl"] ?? "http://localhost:5121";
-        var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-        var client = httpClientFactory.CreateClient();
-
-        try
-        {
-            var response = await client.GetFromJsonAsync<AdminEmailsDto>(
-                $"{authApiUrl}/api/auth/internal/admins/emails");
-            return response?.Emails ?? new List<string>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to resolve administrator emails from Auth.Api.");
-            return new List<string>();
-        }
-    }
-
-    private static string BuildBreachedEmail(int ticketId, DateTime originalDeadline, DateTime breachedAt)
-    {
-        return "<h2>URGENT: Ticket SLA Breach</h2>" +
-               "<p>Administrator,</p>" +
-               $"<p>Ticket <strong>#{ticketId}</strong> has breached its SLA and requires immediate intervention.</p>" +
-               "<ul>" +
-               $"<li><strong>Original Deadline:</strong> {originalDeadline:f} UTC</li>" +
-               $"<li><strong>Breach Detected At:</strong> {breachedAt:f} UTC</li>" +
-               "</ul>" +
-               "<p>Please review and re-assign this ticket immediately.</p>" +
-               "<p>-- IT Helpdesk System</p>";
-    }
-
-    private sealed record AdminEmailsDto(List<string> Emails);
 }
 
 public class SlaBreachedEvent
