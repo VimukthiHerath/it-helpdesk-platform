@@ -1,0 +1,62 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "SLA API",
+        "description": "Service Level Agreement monitoring and breach detection for IT Helpdesk Platform",
+        "version": "1.0.0",
+        "contact": {
+            "name": "IT Helpdesk Team"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5262",
+            "description": "Local development"
+        },
+        {
+            "url": "http://sla-api:5262",
+            "description": "Docker internal DNS"
+        }
+    ],
+    "x-wso2-production-endpoints": {
+        "urls": [
+            "http://sla-api:5262"
+        ],
+        "type": "http"
+    },
+    "x-wso2-sandbox-endpoints": {
+        "urls": [
+            "http://sla-api:5262"
+        ],
+        "type": "http"
+    },
+    "x-wso2-basePath": "/sla/v1",
+    "x-wso2-auth-header": "Authorization",
+    "x-wso2-disable-security": false,
+    "paths": {
+        "/health": {
+            "get": {
+                "summary": "Health check",
+                "operationId": "slaHealth",
+                "tags": [
+                    "Diagnostics"
+                ],
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "Healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

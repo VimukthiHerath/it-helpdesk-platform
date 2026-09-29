@@ -1,0 +1,46 @@
+location: southeastasia
+name: wso2-gateway
+resourceGroup: it-helpdesk-rg
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: /subscriptions/0e4a7888-eeba-499e-9e68-0bcffb2db727/resourceGroups/it-helpdesk-rg/providers/Microsoft.App/managedEnvironments/it-helpdesk-env
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8280
+      transport: auto
+      allowInsecure: false
+    activeRevisionsMode: Single
+  template:
+    containers:
+      - image: wso2/wso2am:4.3.0
+        name: wso2-gateway
+        env:
+          - name: JAVA_OPTS
+            value: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+        resources:
+          cpu: 1.0
+          memory: 2Gi
+        volumeMounts:
+          # Only the two things that actually need to survive a restart are
+          # mounted here: the embedded databases, and the deployed-API
+          # synapse configs (what "deploy-revision" writes). Everything else
+          # under repository/ (webapps/, axis2services/, etc.) is WSO2's own
+          # static, never-modified image content - mounting an external
+          # volume over it risks subtle fidelity loss (see the "server
+          # crashed on deployment/server/webapps" incident - deploy-apis.sh
+          # runs *after* boot, so it doesn't need webapps/ to be shared at
+          # all).
+          - volumeName: wso2-data
+            mountPath: /home/wso2carbon/wso2am-4.3.0/repository/deployment/server/synapse-configs
+            subPath: synapse-configs
+          - volumeName: wso2-data
+            mountPath: /home/wso2carbon/wso2am-4.3.0/repository/database
+            subPath: database
+    volumes:
+      - name: wso2-data
+        storageType: AzureFile
+        storageName: wso2-data-storage
+    scale:
+      minReplicas: 0
+      maxReplicas: 1

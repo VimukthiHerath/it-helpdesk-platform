@@ -1,0 +1,119 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Assignment API",
+        "description": "Ticket assignment and agent routing service for IT Helpdesk Platform",
+        "version": "1.0.0",
+        "contact": {
+            "name": "IT Helpdesk Team"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:5067",
+            "description": "Local development"
+        },
+        {
+            "url": "http://assignment-api:5067",
+            "description": "Docker internal DNS"
+        }
+    ],
+    "x-wso2-production-endpoints": {
+        "urls": [
+            "http://assignment-api:5067/api/Assignments"
+        ],
+        "type": "http"
+    },
+    "x-wso2-sandbox-endpoints": {
+        "urls": [
+            "http://assignment-api:5067/api/Assignments"
+        ],
+        "type": "http"
+    },
+    "x-wso2-basePath": "/assignment/v1",
+    "x-wso2-auth-header": "Authorization",
+    "x-wso2-disable-security": false,
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "List all assignments",
+                "operationId": "assignmentList",
+                "tags": [
+                    "Assignments"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
+        "/{id}": {
+            "get": {
+                "summary": "Get assignment by ticket ID",
+                "operationId": "assignmentGetById",
+                "tags": [
+                    "Assignments"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment detail"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "summary": "Health check",
+                "operationId": "assignmentHealth",
+                "tags": [
+                    "Diagnostics"
+                ],
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "Healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}

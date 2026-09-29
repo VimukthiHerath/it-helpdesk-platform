@@ -1,22 +1,26 @@
 using System.Text.Json;
-using Notification.Api.DTO;
 using Confluent.Kafka;
+using Notification.Api.DTO;
 
 namespace Notification.Api.Services;
 
 public sealed class TicketCreatedConsumer : BackgroundService
 {
     private const string ConsumerGroupId = "notification-workers";
+    private const string EventType = "TicketCreated";
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketCreatedConsumer> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public TicketCreatedConsumer(
         IConfiguration configuration,
-        ILogger<TicketCreatedConsumer> logger)
+        ILogger<TicketCreatedConsumer> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     // Confluent.Kafka's Consume() is a blocking call, and this method never awaits,
@@ -30,7 +34,7 @@ public sealed class TicketCreatedConsumer : BackgroundService
         return Task.Run(() => RunConsumerLoop(stoppingToken), stoppingToken);
     }
 
-    private void RunConsumerLoop(CancellationToken stoppingToken)
+    private async Task RunConsumerLoop(CancellationToken stoppingToken)
     {
         var bootstrapServers =
             _configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
@@ -91,21 +95,14 @@ public sealed class TicketCreatedConsumer : BackgroundService
                         continue;
                     }
 
-                    _logger.LogInformation(
-                        "Received TicketCreated event. " +
-                        "TicketId={TicketId}, Description={Description}, " +
-                        "IssueType={IssueType}, Urgency={Urgency}, " +
-                        "Status={Status}, CreatedBy={CreatedBy}, " +
-                        "CreatedAtUtc={CreatedAtUtc}, Partition={Partition}, Offset={Offset}",
-                        ticketEvent.TicketId,
-                        ticketEvent.Description,
-                        ticketEvent.IssueType,
-                        ticketEvent.Urgency,
-                        ticketEvent.Status,
-                        ticketEvent.CreatedBy,
-                        ticketEvent.CreatedAtUtc,
-                        result.Partition,
-                        result.Offset);
+                    // AC2: Build a unique key from the Kafka partition + offset.
+                    // This guarantees we never process the same message twice,
+                    // even if Kafka redelivers it (at-least-once delivery).
+                    var eventKey = $"{EventType}-{result.Partition.Value}-{result.Offset.Value}";
+
+                    using var scope = _scopeFactory.CreateScope();
+                    var notificationService = scope.ServiceProvider.GetRequiredService<TicketCreatedNotificationService>();
+                    await notificationService.ProcessAsync(ticketEvent, eventKey, stoppingToken);
                 }
                 catch (ConsumeException exception)
                 {
@@ -133,4 +130,5 @@ public sealed class TicketCreatedConsumer : BackgroundService
             consumer.Close();
         }
     }
+
 }

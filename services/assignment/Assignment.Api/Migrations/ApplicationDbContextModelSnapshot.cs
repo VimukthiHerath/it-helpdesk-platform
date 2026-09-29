@@ -38,20 +38,6 @@ namespace Assignment.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Agents");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DisplayOrder = 0,
-                            UserId = 3
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DisplayOrder = 1,
-                            UserId = 26
-                        });
                 });
 
             modelBuilder.Entity("Assignment.Api.Model.TicketAssignment", b =>

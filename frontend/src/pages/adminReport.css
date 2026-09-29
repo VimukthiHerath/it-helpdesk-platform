@@ -1,0 +1,187 @@
+.report-page {
+    min-height: 100vh;
+    box-sizing: border-box;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    padding-bottom: 64px;
+}
+
+.report-page__header {
+    width: min(100%, 1120px);
+    margin: 0 auto;
+    padding: clamp(24px, 5vw, 48px) clamp(20px, 5vw, 48px) 0;
+}
+
+.report-page__back {
+    margin-bottom: 20px;
+    padding: 0;
+    font-size: 0.85rem;
+}
+
+.report-page h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.1;
+}
+
+.report-page__subtitle {
+    margin: 10px 0 0;
+    color: var(--color-ink-muted);
+    font-family: var(--font-body);
+    line-height: 1.5;
+}
+
+/* ── Filters Panel ─────────────────────────────────────── */
+.report-filters {
+    width: min(100%, 1120px);
+    margin: 32px auto 0;
+}
+
+.report-filters__form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.report-filters__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.report-filters__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.report-filters__actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* ── Result count ──────────────────────────────────────── */
+.report-results {
+    width: min(100%, 1120px);
+    margin: 32px auto 0;
+}
+
+.report-results__count {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    padding: 0 clamp(20px, 5vw, 48px);
+}
+
+/* ── Results Table ─────────────────────────────────────── */
+.report-table-wrap {
+    overflow-x: auto;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-family: var(--font-body);
+}
+
+.report-table th {
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--color-ink);
+}
+
+.report-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid var(--color-ink);
+    vertical-align: middle;
+    line-height: 1.4;
+}
+
+.report-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.report-table__subject {
+    width: 30%;
+    overflow-wrap: break-word;
+}
+
+/* ── Status Badges ─────────────────────────────────────── */
+.report-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+}
+
+.report-badge--unassigned {
+    color: var(--color-ink-muted);
+}
+
+.report-badge--assigned {
+    color: var(--color-amber);
+    background: var(--color-amber-bg);
+}
+
+.report-badge--in-progress {
+    color: var(--color-sage-deep);
+    background: var(--color-sage-pale);
+}
+
+.report-badge--resolved {
+    color: var(--color-sage-deep);
+    background: var(--color-sage-pale);
+}
+
+.report-badge--closed {
+    color: var(--color-error);
+    background: var(--color-error-bg);
+}
+
+/* ── Empty / Error messages ────────────────────────────── */
+.report-message {
+    width: min(100%, 1120px);
+    margin: 32px auto 0;
+    padding: 24px clamp(20px, 5vw, 48px);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--color-ink-muted);
+}
+
+.report-message strong {
+    color: var(--color-ink);
+    font-size: 1.05rem;
+    font-family: var(--font-display);
+}
+
+.report-message--error {
+    color: var(--color-error);
+}
+
+.report-unassigned {
+    color: var(--color-ink-muted);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 700px) {
+    .report-table {
+        min-width: 700px;
+    }
+
+    .report-filters__grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

@@ -21,17 +21,20 @@ public class AssignmentsController : ControllerBase
     private readonly ILogger<AssignmentsController> _logger;
     private readonly IProducer<string, string> _kafkaProducer;
     private readonly IConfiguration _configuration;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public AssignmentsController(
         ApplicationDbContext context,
         ILogger<AssignmentsController> logger,
         IProducer<string, string> kafkaProducer,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory)
     {
         _context = context;
         _logger = logger;
         _kafkaProducer = kafkaProducer;
         _configuration = configuration;
+        _httpClientFactory = httpClientFactory;
     }
 
     // AC1: only tickets assigned to the caller. AC2: most urgent first - lower
@@ -117,6 +120,36 @@ public class AssignmentsController : ControllerBase
 
         try
         {
+            // Cross-service call to Auth.Api to verify user exists and is an Agent
+            var authApiUrl = _configuration["AuthApiUrl"] ?? "http://localhost:5121";
+            var client = _httpClientFactory.CreateClient();
+            
+            // Forward the caller's authorization token
+            if (Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                var token = authHeader.ToString().Replace("Bearer ", "").Replace("bearer ", "");
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var responseAuth = await client.GetAsync($"{authApiUrl}/api/auth/users");
+            if (!responseAuth.IsSuccessStatusCode)
+            {
+                return Problem("Unable to verify user role with Auth API.");
+            }
+
+            var users = await responseAuth.Content.ReadFromJsonAsync<List<AuthUserDto>>();
+            var targetUser = users?.FirstOrDefault(u => u.Id == request.UserId);
+
+            if (targetUser == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            if (targetUser.Role != 2) // 2 = Agent
+            {
+                return BadRequest(new { message = "Only Agent-role accounts can be added to the rotation." });
+            }
+
             var alreadyInRotation = await _context.Agents.AnyAsync(a => a.UserId == request.UserId);
             if (alreadyInRotation)
             {
@@ -283,4 +316,10 @@ public class AssignmentsController : ControllerBase
 
         return int.Parse(userId!);
     }
+}
+
+public class AuthUserDto
+{
+    public int Id { get; set; }
+    public int Role { get; set; }
 }

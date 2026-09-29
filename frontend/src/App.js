@@ -8,6 +8,7 @@ import TicketAssignments from './pages/ticketAssignments';
 import AdminAccountsPage from './features/admin/pages/AdminAccountsPage';
 import AdminCreateUserPage from './features/admin/pages/AdminCreateUserPage';
 import AdminRotationPage from './features/admin/pages/AdminRotationPage';
+import AdminReportPage from './pages/adminReport';
 import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
@@ -163,6 +164,10 @@ function App() {
         <Route
           path="/admin/rotation"
           element={<AdminRoute><AdminRotationPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/report"
+          element={<AdminRoute><AdminReportPage /></AdminRoute>}
         />
         <Route
           path="*"

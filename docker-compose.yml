@@ -18,7 +18,7 @@ services:
     volumes:
       - kafka_data:/tmp/kraft-combined-logs
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,6 +45,68 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  # ── Sprint 3 Addition: YARP API Gateway ────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./src/ApiGateway
+      dockerfile: Dockerfile
+    image: ithelpdeskacr01.azurecr.io/api-gateway:local
+    container_name: local-api-gateway
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Override cluster destinations to use Docker internal DNS
+      ReverseProxy__Clusters__auth-cluster__Destinations__auth-primary__Address: "http://host.docker.internal:5121/"
+      ReverseProxy__Clusters__ticket-cluster__Destinations__ticket-primary__Address: "http://host.docker.internal:5164/"
+      ReverseProxy__Clusters__assignment-cluster__Destinations__assignment-primary__Address: "http://host.docker.internal:5067/"
+      ReverseProxy__Clusters__sla-cluster__Destinations__sla-primary__Address: "http://host.docker.internal:5262/"
+      ReverseProxy__Clusters__notification-cluster__Destinations__notification-primary__Address: "http://host.docker.internal:5214/"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - default
+
+  # ── Sprint 3 Addition: WSO2 API Manager 4.3.0 ──────────────────────────────
+  wso2-gateway:
+    image: wso2/wso2am:4.3.0
+    container_name: local-wso2-gateway
+    ports:
+      - "8280:8280" # HTTP  Pass-through Gateway
+      - "8243:8243" # HTTPS Pass-through Gateway
+      - "9443:9443" # Management: Publisher / DevPortal / Admin
+    environment:
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+      # Allow WSO2 to resolve host services via host.docker.internal
+      # (for Linux hosts, add --add-host=host.docker.internal:host-gateway
+      #  or set extra_hosts below)
+    extra_hosts:
+      - "auth-api:host-gateway"
+      - "ticket-api:host-gateway"
+      - "assignment-api:host-gateway"
+      - "sla-api:host-gateway"
+      - "notification-api:host-gateway"
+    volumes:
+      - wso2_data:/home/wso2carbon/wso2am-4.3.0/repository/deployment
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sk https://localhost:9443/api/am/publisher/v4/apis -u admin:admin -o /dev/null -w '%{http_code}' | grep -qE '^[23]'" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    networks:
+      - default
+
 volumes:
   kafka_data:
   mysql_data:
+  wso2_data:
+
+networks:
+  default:
+    name: it-helpdesk-net
