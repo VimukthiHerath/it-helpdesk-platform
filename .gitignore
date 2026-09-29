@@ -495,3 +495,9 @@ stop-all.bat
 start-backend.ps1
 
 .claude
+
+# Local-only notes/credentials, never commit
+.local-notes/
+
+# Personal dev working notes, not part of the graded repo
+vimukthis-dev-docs/
