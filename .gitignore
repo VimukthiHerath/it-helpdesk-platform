@@ -501,3 +501,6 @@ start-backend.ps1
 
 # Personal dev working notes, not part of the graded repo
 vimukthis-dev-docs/
+
+# Selenium test suite - kept locally, not tracked in the repo
+selenium-tests/
