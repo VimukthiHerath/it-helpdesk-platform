@@ -38,14 +38,24 @@ No `appsettings.json` in the repo has an `Smtp` section at all (checked all
 of them) — it only ever worked for whoever set it up locally via their own
 `dotnet user-secrets`, which never got shared or documented.
 
-The callers don't guard against this either —
+The gap is specifically in
 `services/notification/Notification.Api/Services/TicketCreatedConsumer.cs`
-(line ~133, inside the per-message `try`) and `SlaBreachedConsumer.cs`
-(~line 106) both only catch `ConsumeException` and `JsonException`. An
-`ArgumentNullException` from `EmailService` isn't caught by either, so it
-propagates all the way up and crashes the `BackgroundService`. Since
-`HostOptions.BackgroundServiceExceptionBehavior` defaults to `StopHost`,
-that takes the entire application down.
+(the per-message `try` there only catches `ConsumeException`/`JsonException`,
+nothing broader). An `ArgumentNullException` from `EmailService` isn't caught
+by that, so it propagates all the way up and crashes the `BackgroundService`.
+Since `HostOptions.BackgroundServiceExceptionBehavior` defaults to `StopHost`,
+that takes the *entire application* down — including `SlaBreachedConsumer`,
+even though `SlaBreachedConsumer` itself is written correctly and already has
+a broad `catch (Exception exception)` around its own processing (see
+`SlaBreachedConsumer.cs` lines 84-87). That consumer doesn't crash on its own;
+it's collateral damage from `TicketCreatedConsumer`'s unhandled exception
+taking down the shared host process. This is proven directly by
+`Notification.Api.Tests`: `TicketCreatedNotificationServiceTests.
+ProcessAsync_EmailServiceThrows_ExceptionShouldNotPropagate` fails (the
+exception does propagate), while the equivalent
+`SlaBreachedNotificationServiceTests.ProcessAsync_EmailServiceThrows_
+ExceptionDoesNotPropagate` passes — same failure injected into both, only
+one of the two consumers handles it.
 
 ## How to see it yourself
 
@@ -96,9 +106,12 @@ part of the repo, and you can put it straight back after.
 
 - Validate SMTP config at startup (fail fast with a clear error, not a
   mid-request crash), or
-- Wrap `EmailService.SendAsync` in a try/catch and let a send failure log an
-  error and move on, rather than take the whole host down, and
-- Change `HostOptions.BackgroundServiceExceptionBehavior` to `Ignore` for
-  these consumers, or catch `Exception` (not just `ConsumeException`/
-  `JsonException`) in the consumer loops — see also BUG-05, which is a
-  direct consequence of this same gap.
+- Add a broad `catch (Exception)` around the send in
+  `TicketCreatedConsumer.cs`, matching the pattern `SlaBreachedConsumer.cs`
+  already uses — that pattern is proven safe and already shipped in this
+  same codebase, so this isn't a new approach, just applying an existing one
+  consistently, and
+- Change `HostOptions.BackgroundServiceExceptionBehavior` to `Ignore` so one
+  consumer's bug can't take the whole host (and the *other*, well-behaved
+  consumer) down with it — see also BUG-05, which is a direct consequence of
+  this same gap.

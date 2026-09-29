@@ -13,3 +13,4 @@ folder once everything's been copied into the real report.
 | [BUG-05](BUG-05-notifications-silently-lost-on-crash.md) | A crash mid-processing silently loses the notification forever | Critical | Open |
 | [BUG-06](BUG-06-sla-false-breach-alerts.md) | SLA breach alerts fire for tickets that are already resolved | High | Open |
 | [BUG-07](BUG-07-ticket-report-timezone-bug.md) | Ticket report date filter shifts with the server's local timezone | Medium | Open |
+| [BUG-08](BUG-08-sla-breach-duplicate-publish-on-save-failure.md) | A transient DB failure after a Kafka publish causes the same SLA breach to be republished | High | Open |
