@@ -52,6 +52,16 @@ jobs:
           az acr login --name ithelpdeskacr01
           docker push ithelpdeskacr01.azurecr.io/assignment-service:${{ github.sha }}
 
+      - name: Install EF Core tools
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Apply database migrations
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        working-directory: services/assignment/Assignment.Api
+        run: dotnet ef database update --connection "${{ secrets.ASSIGNMENT_DB_CONNECTION_STRING }}"
+
+
       - name: Deploy to Container Apps
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: az containerapp update --name assignment-service --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/assignment-service:${{ github.sha }}
