@@ -100,9 +100,17 @@ public sealed class TicketCreatedConsumer : BackgroundService
                     // even if Kafka redelivers it (at-least-once delivery).
                     var eventKey = $"{EventType}-{result.Partition.Value}-{result.Offset.Value}";
 
-                    using var scope = _scopeFactory.CreateScope();
-                    var notificationService = scope.ServiceProvider.GetRequiredService<TicketCreatedNotificationService>();
-                    await notificationService.ProcessAsync(ticketEvent, eventKey, stoppingToken);
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var notificationService = scope.ServiceProvider.GetRequiredService<TicketCreatedNotificationService>();
+                        await notificationService.ProcessAsync(ticketEvent, eventKey, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing event from topic {Topic} at offset {Offset}. Swallowing to prevent crash loop.", 
+                            result.Topic, result.Offset);
+                    }
                 }
                 catch (ConsumeException exception)
                 {

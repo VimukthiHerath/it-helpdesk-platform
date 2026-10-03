@@ -145,6 +145,54 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
 
     private static int NextTestUserId() => Random.Shared.Next(2_000_000, 3_000_000);
 
+    [Fact]
+    public async Task RemoveAgent_WithNonAdminRole_Returns403()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Agent"));
+
+        var response = await client.DeleteAsync($"/api/assignments/agents/{NextTestUserId()}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoveAgent_NotFound_Returns404()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var missingUserId = NextTestUserId();
+        var response = await client.DeleteAsync($"/api/assignments/agents/{missingUserId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoveAgent_AsAdministrator_RemovesUserAndReturns204()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var newUserId = NextTestUserId();
+        
+        // Add first
+        var addResponse = await client.PostAsJsonAsync("/api/assignments/agents", new { userId = newUserId });
+        Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);
+
+        // Then delete
+        var deleteResponse = await client.DeleteAsync($"/api/assignments/agents/{newUserId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        // Verify no longer in rotation
+        var getResponse = await client.GetAsync("/api/assignments/agents");
+        var agents = await getResponse.Content.ReadFromJsonAsync<List<AgentResponse>>();
+        Assert.DoesNotContain(agents, a => a.UserId == newUserId);
+    }
+
     private async Task<int> GetMaxDisplayOrderAsync()
     {
         using var scope = _factory.Services.CreateScope();

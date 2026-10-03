@@ -106,6 +106,43 @@ const AgentRotationPanel = () => {
         }
     };
 
+    const handleRemove = async (agentId) => {
+        if (!window.confirm("Remove this agent from the active ticket rotation?")) {
+            return;
+        }
+
+        const token = getStoredToken();
+        if (!token) {
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${AGENTS_URL}/${agentId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 401) {
+                navigate('/login', { replace: true });
+                return;
+            }
+            if (response.status === 403) {
+                alert('Your account no longer has administrator access.');
+                return;
+            }
+
+            const data = response.status !== 204 ? await response.json().catch(() => ({})) : {};
+            if (!response.ok) throw new Error(data?.message || 'Unable to remove the agent.');
+
+            await loadAgents();
+        } catch (error) {
+            alert(error.message || 'Unable to remove the agent.');
+        }
+    };
+
     return (
         <section className="admin-create-panel panel" aria-labelledby="agent-rotation-title">
             <div className="panel__titlebar">
@@ -129,6 +166,7 @@ const AgentRotationPanel = () => {
                             <li key={agent.id}>
                                 <span>User ID {agent.userId}</span>
                                 <span className="badge badge--neutral">Slot {agent.displayOrder}</span>
+                                <button type="button" className="btn btn--secondary" onClick={() => handleRemove(agent.userId)}>Remove</button>
                             </li>
                         ))}
                     </ol>

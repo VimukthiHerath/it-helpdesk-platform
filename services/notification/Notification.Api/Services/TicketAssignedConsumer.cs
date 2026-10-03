@@ -98,52 +98,60 @@ public sealed class TicketAssignedConsumer : BackgroundService
                     // if Kafka redelivers the message.
                     var eventKey = $"{EventType}-{result.Partition.Value}-{result.Offset.Value}";
 
-                    using var scope = _scopeFactory.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
-
-                    var alreadyProcessed = await db.ProcessedEvents
-                        .AnyAsync(e => e.EventKey == eventKey, stoppingToken);
-
-                    if (alreadyProcessed)
+                    try
                     {
-                        _logger.LogWarning(
-                            "Duplicate TicketAssigned event skipped. EventKey={EventKey}",
-                            eventKey);
-                        continue;
-                    }
+                        using var scope = _scopeFactory.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
 
-                    // AC1: Resolve the real email of the assigned agent from Auth.Api.
-                    var recipientEmail = await ResolveUserEmailAsync(scope, assignedEvent.AgentUserId);
-                    if (recipientEmail is null)
-                    {
-                        _logger.LogWarning(
-                            "Could not resolve email for agent {AgentUserId}. Skipping assignment notification for ticket {TicketId}.",
-                            assignedEvent.AgentUserId,
+                        var alreadyProcessed = await db.ProcessedEvents
+                            .AnyAsync(e => e.EventKey == eventKey, stoppingToken);
+
+                        if (alreadyProcessed)
+                        {
+                            _logger.LogWarning(
+                                "Duplicate TicketAssigned event skipped. EventKey={EventKey}",
+                                eventKey);
+                            continue;
+                        }
+
+                        // AC1: Resolve the real email of the assigned agent from Auth.Api.
+                        var recipientEmail = await ResolveUserEmailAsync(scope, assignedEvent.AgentUserId);
+                        if (recipientEmail is null)
+                        {
+                            _logger.LogWarning(
+                                "Could not resolve email for agent {AgentUserId}. Skipping assignment notification for ticket {TicketId}.",
+                                assignedEvent.AgentUserId,
+                                assignedEvent.TicketId);
+                            continue;
+                        }
+
+                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                        var emailBody = BuildTicketAssignedEmail(assignedEvent.TicketId, assignedEvent.AgentUserId, assignedEvent.AssignedAtUtc);
+                        await emailService.SendAsync(
+                            recipientEmail,
+                            $"[IT Helpdesk] Ticket #{assignedEvent.TicketId} Assigned to You",
+                            emailBody);
+
+                        _logger.LogInformation(
+                            "Assignment email sent to {Recipient} for ticket {TicketId}.",
+                            recipientEmail,
                             assignedEvent.TicketId);
-                        continue;
+
+                        // Persist the processed event for idempotency + audit log.
+                        db.ProcessedEvents.Add(new Models.ProcessedEvent
+                        {
+                            EventKey = eventKey,
+                            EventType = EventType,
+                            Recipient = recipientEmail,
+                            ProcessedAtUtc = DateTime.UtcNow
+                        });
+                        await db.SaveChangesAsync(stoppingToken);
                     }
-
-                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                    var emailBody = BuildTicketAssignedEmail(assignedEvent.TicketId, assignedEvent.AgentUserId, assignedEvent.AssignedAtUtc);
-                    await emailService.SendAsync(
-                        recipientEmail,
-                        $"[IT Helpdesk] Ticket #{assignedEvent.TicketId} Assigned to You",
-                        emailBody);
-
-                    _logger.LogInformation(
-                        "Assignment email sent to {Recipient} for ticket {TicketId}.",
-                        recipientEmail,
-                        assignedEvent.TicketId);
-
-                    // Persist the processed event for idempotency + audit log.
-                    db.ProcessedEvents.Add(new Models.ProcessedEvent
+                    catch (Exception ex)
                     {
-                        EventKey = eventKey,
-                        EventType = EventType,
-                        Recipient = recipientEmail,
-                        ProcessedAtUtc = DateTime.UtcNow
-                    });
-                    await db.SaveChangesAsync(stoppingToken);
+                        _logger.LogError(ex, "Error processing event from topic {Topic} at offset {Offset}. Swallowing to prevent crash loop.", 
+                            result.Topic, result.Offset);
+                    }
                 }
                 catch (ConsumeException exception)
                 {
@@ -179,8 +187,13 @@ public sealed class TicketAssignedConsumer : BackgroundService
     private async Task<string?> ResolveUserEmailAsync(IServiceScope scope, int userId)
     {
         var authApiUrl = _configuration["AuthApiUrl"] ?? "http://localhost:5121";
+        var expectedKey = _configuration["InternalService:ApiKey"];
         var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
         var client = httpClientFactory.CreateClient();
+        if (!string.IsNullOrEmpty(expectedKey))
+        {
+            client.DefaultRequestHeaders.Add("X-Internal-Key", expectedKey);
+        }
 
         try
         {

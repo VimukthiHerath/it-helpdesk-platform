@@ -17,7 +17,12 @@ public sealed class AuthApiUserEmailResolver : IUserEmailResolver
     public async Task<string?> ResolveUserEmailAsync(int userId, CancellationToken cancellationToken)
     {
         var authApiUrl = _configuration["AuthApiUrl"] ?? "http://localhost:5121";
+        var expectedKey = _configuration["InternalService:ApiKey"];
         var client = _httpClientFactory.CreateClient();
+        if (!string.IsNullOrEmpty(expectedKey))
+        {
+            client.DefaultRequestHeaders.Add("X-Internal-Key", expectedKey);
+        }
 
         try
         {

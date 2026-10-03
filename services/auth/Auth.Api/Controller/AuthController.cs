@@ -390,6 +390,11 @@ namespace Auth.Api.Controller
         [HttpGet("internal/users/{id}/email")]
         public async Task<IActionResult> GetUserEmail(int id)
         {
+            if (!IsAuthorizedInternalCall())
+            {
+                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+            }
+
             try
             {
                 var user = await _context.Users.FindAsync(id);
@@ -413,6 +418,11 @@ namespace Auth.Api.Controller
         [HttpGet("internal/admins/emails")]
         public async Task<IActionResult> GetAdminEmails()
         {
+            if (!IsAuthorizedInternalCall())
+            {
+                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+            }
+
             try
             {
                 var emails = await _context.Users
@@ -427,6 +437,27 @@ namespace Auth.Api.Controller
                 _logger.LogError(ex, "Error fetching administrator emails");
                 return Problem("Unable to fetch administrator emails.");
             }
+        }
+
+        private bool IsAuthorizedInternalCall()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                return true;
+            }
+
+            var expectedKey = _configuration["InternalService:ApiKey"];
+            if (string.IsNullOrEmpty(expectedKey))
+            {
+                return false;
+            }
+
+            if (Request.Headers.TryGetValue("X-Internal-Key", out var providedKey))
+            {
+                return string.Equals(expectedKey, providedKey.ToString(), StringComparison.Ordinal);
+            }
+
+            return false;
         }
     }
 }

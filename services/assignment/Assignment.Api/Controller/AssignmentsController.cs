@@ -188,6 +188,31 @@ public class AssignmentsController : ControllerBase
         }
     }
 
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpDelete("agents/{userId}")]
+    public async Task<IActionResult> RemoveAgentFromRotation(int userId)
+    {
+        try
+        {
+            var agent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == userId);
+            
+            if (agent == null)
+            {
+                return NotFound(new { message = "Agent not found in rotation." });
+            }
+
+            _context.Agents.Remove(agent);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing agent {UserId} from rotation", userId);
+            return Problem("Unable to remove the agent from the rotation. Please try again later.");
+        }
+    }
+
     // Supports the admin/agent "all tickets" reassignment view - there was
     // previously no way to see assignments across every agent, only your
     // own (GetQueue). Not one of SCRUM-20's three ACs directly, but the
