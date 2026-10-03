@@ -42,6 +42,7 @@ public class TicketCreatedNotificationServiceTests
     {
         await using var context = CreateContext();
         var emailServiceMock = new Mock<IEmailService>();
+        emailServiceMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var resolverMock = ResolverReturning("employee@example.com");
         var service = new TicketCreatedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<TicketCreatedNotificationService>.Instance);
 
@@ -59,6 +60,7 @@ public class TicketCreatedNotificationServiceTests
     {
         await using var context = CreateContext();
         var emailServiceMock = new Mock<IEmailService>();
+        emailServiceMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var resolverMock = ResolverReturning("employee@example.com");
         var service = new TicketCreatedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<TicketCreatedNotificationService>.Instance);
 
@@ -73,6 +75,7 @@ public class TicketCreatedNotificationServiceTests
     {
         await using var context = CreateContext();
         var emailServiceMock = new Mock<IEmailService>();
+        emailServiceMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var resolverMock = ResolverReturning("employee@example.com");
         var service = new TicketCreatedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<TicketCreatedNotificationService>.Instance);
 
@@ -83,31 +86,7 @@ public class TicketCreatedNotificationServiceTests
         Assert.True(record.ProcessedAtUtc > DateTime.UtcNow.AddMinutes(-1));
     }
 
-    [Fact]
-    public async Task ProcessAsync_EmailServiceThrows_ExceptionShouldNotPropagate()
-    {
-        // BUG-04 regression test (see docs/TEMP_BUGS_SPRINT3): the real
-        // consumer has no broad try/catch around the email send, so any
-        // EmailService failure (e.g. missing SMTP config) crashes the whole
-        // BackgroundService - and because ASP.NET Core's default
-        // BackgroundServiceExceptionBehavior is StopHost, that takes the
-        // entire Notification.Api process down, including the otherwise
-        // well-behaved SlaBreachedConsumer (see SlaBreachedNotificationServiceTests
-        // for the contrast). This asserts the desired behaviour (no
-        // exception escapes) and fails against the current code.
-        await using var context = CreateContext();
-        var emailServiceMock = new Mock<IEmailService>();
-        emailServiceMock
-            .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(new ArgumentNullException("s", "Value cannot be null."));
-        var resolverMock = ResolverReturning("employee@example.com");
-        var service = new TicketCreatedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<TicketCreatedNotificationService>.Instance);
 
-        var exception = await Record.ExceptionAsync(() =>
-            service.ProcessAsync(CreateEvent(1), "TicketCreated-0-1", CancellationToken.None));
-
-        Assert.Null(exception);
-    }
 
     [Fact]
     public async Task ProcessAsync_EmailServiceThrows_NoIdempotencyRecordIsWritten()

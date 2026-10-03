@@ -47,7 +47,8 @@ public sealed class TicketCreatedConsumer : BackgroundService
             BootstrapServers = bootstrapServers,
             GroupId = ConsumerGroupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
 
         using var consumer = new ConsumerBuilder<string, string>(
@@ -105,6 +106,8 @@ public sealed class TicketCreatedConsumer : BackgroundService
                         using var scope = _scopeFactory.CreateScope();
                         var notificationService = scope.ServiceProvider.GetRequiredService<TicketCreatedNotificationService>();
                         await notificationService.ProcessAsync(ticketEvent, eventKey, stoppingToken);
+                        
+                        consumer.Commit(result);
                     }
                     catch (Exception ex)
                     {

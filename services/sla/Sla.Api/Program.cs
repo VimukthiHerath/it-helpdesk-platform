@@ -1,5 +1,6 @@
 using Sla.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Sla.Api.Consumers;
 using Sla.Api.Services;
 using Confluent.Kafka;
 
@@ -24,6 +25,7 @@ builder.Services.AddScoped<SlaBreachDetectionService>();
 builder.Services.AddScoped<SlaRecordCreationService>();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<TicketResolvedConsumer>();
 builder.Services.AddHostedService<SlaBreachMonitorService>();
 
 var app = builder.Build();

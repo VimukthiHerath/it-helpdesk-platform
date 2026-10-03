@@ -1,4 +1,5 @@
 using Confluent.Kafka;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Ticket.Api.Data;
 using Ticket.Api.DTO;
 using Ticket.Api.Model;
 using Ticket.Api.Services;
+using Ticket.Api.Events;
 
 namespace Ticket.Api.Controller;
 
@@ -193,6 +195,28 @@ public class TicketController : ControllerBase
 
             var updated = await _statusService.ApplyStatusChangeAsync(
                 ticket!, request.NewStatus, GetAuthenticatedUserId(), HttpContext.RequestAborted);
+
+            if (updated.Status == TicketStatus.resolved || updated.Status == TicketStatus.closed)
+            {
+                var resolvedEvent = new TicketResolvedEvent
+                {
+                    TicketId = updated.Id,
+                    ResolvedAtUtc = DateTime.UtcNow,
+                    ResolvedByUserId = GetAuthenticatedUserId().ToString(),
+                    Status = updated.Status.ToString()
+                };
+
+                var topicName = _configuration["Kafka:TicketResolvedTopic"] ?? "ticket-resolved";
+                var eventPayload = JsonSerializer.Serialize(resolvedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+                await _kafkaProducer.ProduceAsync(topicName, new Message<string, string>
+                {
+                    Key = updated.Id.ToString(),
+                    Value = eventPayload
+                });
+
+                _logger.LogInformation("Published TicketResolvedEvent for Ticket {TicketId}", updated.Id);
+            }
 
             return Ok(new TicketStatusResponseDTO
             {

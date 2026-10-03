@@ -45,7 +45,8 @@ public sealed class TicketAssignedConsumer : BackgroundService
             BootstrapServers = bootstrapServers,
             GroupId = ConsumerGroupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
 
         using var consumer = new ConsumerBuilder<string, string>(
@@ -146,6 +147,8 @@ public sealed class TicketAssignedConsumer : BackgroundService
                             ProcessedAtUtc = DateTime.UtcNow
                         });
                         await db.SaveChangesAsync(stoppingToken);
+                        
+                        consumer.Commit(result);
                     }
                     catch (Exception ex)
                     {

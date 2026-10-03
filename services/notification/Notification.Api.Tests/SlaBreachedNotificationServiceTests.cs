@@ -37,6 +37,7 @@ public class SlaBreachedNotificationServiceTests
     {
         await using var context = CreateContext();
         var emailServiceMock = new Mock<IEmailService>();
+        emailServiceMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var resolverMock = ResolverReturning("admin1@example.com", "admin2@example.com");
         var service = new SlaBreachedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<SlaBreachedNotificationService>.Instance);
 
@@ -51,6 +52,7 @@ public class SlaBreachedNotificationServiceTests
     {
         await using var context = CreateContext();
         var emailServiceMock = new Mock<IEmailService>();
+        emailServiceMock.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var resolverMock = ResolverReturning("admin1@example.com");
         var service = new SlaBreachedNotificationService(context, emailServiceMock.Object, resolverMock.Object, NullLogger<SlaBreachedNotificationService>.Instance);
 

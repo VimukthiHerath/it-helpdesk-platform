@@ -37,7 +37,8 @@ public sealed class SlaBreachedConsumer : BackgroundService
             BootstrapServers = bootstrapServers,
             GroupId = ConsumerGroupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = false,
+            EnableAutoOffsetStore = false
         };
 
         using var consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
@@ -73,9 +74,18 @@ public sealed class SlaBreachedConsumer : BackgroundService
                     // AC2: Idempotency check ensures email is sent exactly once per breach
                     var eventKey = $"{EventType}-{breachedEvent.TicketId}";
 
-                    using var scope = _scopeFactory.CreateScope();
-                    var notificationService = scope.ServiceProvider.GetRequiredService<SlaBreachedNotificationService>();
-                    await notificationService.ProcessAsync(breachedEvent, eventKey, stoppingToken);
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var notificationService = scope.ServiceProvider.GetRequiredService<SlaBreachedNotificationService>();
+                        await notificationService.ProcessAsync(breachedEvent, eventKey, stoppingToken);
+
+                        consumer.Commit(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing SLA Breach event");
+                    }
                 }
                 catch (ConsumeException exception)
                 {

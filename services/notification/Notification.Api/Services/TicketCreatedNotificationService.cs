@@ -58,10 +58,15 @@ public class TicketCreatedNotificationService
         var emailBody = BuildTicketReceivedEmail(ticketEvent.TicketId, ticketEvent.Description, ticketEvent.IssueType, ticketEvent.CreatedAtUtc);
 
         // No try/catch here - see the class-level note above.
-        await _emailService.SendAsync(
+        var sent = await _emailService.SendAsync(
             recipientEmail,
             $"[IT Helpdesk] Ticket #{ticketEvent.TicketId} Received",
             emailBody);
+            
+        if (!sent)
+        {
+            throw new InvalidOperationException("Failed to send email. Aborting to allow Kafka retry.");
+        }
 
         _logger.LogInformation("Ticket received email sent to {Recipient} for ticket {TicketId}.", recipientEmail, ticketEvent.TicketId);
 
