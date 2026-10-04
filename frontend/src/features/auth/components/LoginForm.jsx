@@ -129,6 +129,12 @@ const LoginForm = () => {
                             {errors.password && <span className="error-text">{errors.password}</span>}
                         </div>
 
+                        <div className="field forgot-password-field">
+                            <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="forgot-password-link">
+                                Forgot Password?
+                            </a>
+                        </div>
+
                         <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
                             {isLoading ? 'Logging in...' : 'Log in'}
                         </button>

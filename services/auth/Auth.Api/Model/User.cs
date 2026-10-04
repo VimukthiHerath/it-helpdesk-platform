@@ -43,4 +43,25 @@ public class User
     // Null for accounts created through public self-registration.
     [Column("created_by")]
     public int? CreatedBy { get; set; }
+
+    // Password Reset & Security
+    [MaxLength(255)]
+    [Column("reset_token_hash")]
+    public string? ResetTokenHash { get; set; }
+    
+    [Column("reset_token_expires_at_utc")]
+    public DateTime? ResetTokenExpiresAtUtc { get; set; }
+    
+    [Column("reset_token_used")]
+    public bool ResetTokenUsed { get; set; } = false;
+    
+    [Column("last_password_reset_requested_at_utc")]
+    public DateTime? LastPasswordResetRequestedAtUtc { get; set; }
+    
+    [Column("reset_request_count_in_window")]
+    public int ResetRequestCountInWindow { get; set; } = 0;
+    
+    [MaxLength(255)]
+    [Column("security_stamp")]
+    public string? SecurityStamp { get; set; } = Guid.NewGuid().ToString();
 }

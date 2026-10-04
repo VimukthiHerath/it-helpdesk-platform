@@ -5,6 +5,8 @@ import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
 import AgentQueue from './pages/agentQueue';
 import AdminUsersPage from './features/admin/pages/AdminUsersPage';
+import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
@@ -112,6 +114,14 @@ function App() {
         <Route
           path="/login"
           element={<PublicRoute><LoginPage /></PublicRoute>}
+        />
+        <Route
+          path="/forgot-password"
+          element={<PublicRoute><ForgotPasswordPage /></PublicRoute>}
+        />
+        <Route
+          path="/reset-password"
+          element={<PublicRoute><ResetPasswordPage /></PublicRoute>}
         />
         <Route
           path="/"
