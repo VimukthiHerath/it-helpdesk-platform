@@ -21,6 +21,18 @@ properties:
         resources:
           cpu: 1.0
           memory: 2Gi
+        probes:
+          # WSO2 APIM takes several minutes to boot on 1 vCPU. The default
+          # startup probe gives up after ~4 min and kills the JVM, which
+          # loops forever (and can leave a stale H2 lock file behind).
+          # Window here: 60s + 10 x 60s = ~11 min.
+          - type: Startup
+            tcpSocket:
+              port: 8280
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 10
+            timeoutSeconds: 5
         volumeMounts:
           # Only the two things that actually need to survive a restart are
           # mounted here: the embedded databases, and the deployed-API
@@ -42,5 +54,7 @@ properties:
         storageType: AzureFile
         storageName: wso2-data-storage
     scale:
+      # Must stay at 1: the embedded H2 database lives on a shared file
+      # volume and cannot be opened by two replicas at once ("file is locked").
       minReplicas: 0
       maxReplicas: 1
