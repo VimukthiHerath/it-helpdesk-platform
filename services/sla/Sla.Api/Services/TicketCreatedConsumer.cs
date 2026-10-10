@@ -1,6 +1,10 @@
 using System.Text.Json;
 using Sla.Api.DTO;
 using Confluent.Kafka;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.EntityFrameworkCore;
+using Sla.Api.Data;
+using Sla.Api.Model;
 
 namespace Sla.Api.Services;
 
@@ -10,17 +14,26 @@ public sealed class TicketCreatedConsumer : BackgroundService
 
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketCreatedConsumer> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IMemoryCache _memoryCache;
 
     public TicketCreatedConsumer(
         IConfiguration configuration,
-        ILogger<TicketCreatedConsumer> logger)
+        ILogger<TicketCreatedConsumer> logger,
+        IServiceScopeFactory scopeFactory,
+        IMemoryCache memoryCache)
     {
         _configuration = configuration;
         _logger = logger;
+        _scopeFactory = scopeFactory;
+        _memoryCache = memoryCache;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Yield to allow hosted services to start up gracefully if Consume blocks
+        await Task.Yield();
+
         var bootstrapServers =
             _configuration["Kafka:BootstrapServers"] ?? "localhost:9092";
 
@@ -95,6 +108,9 @@ public sealed class TicketCreatedConsumer : BackgroundService
                         ticketEvent.CreatedAtUtc,
                         result.Partition,
                         result.Offset);
+
+                    // SLA Calculation & Database Insertion
+                    await ProcessSlaAsync(ticketEvent);
                 }
                 catch (ConsumeException exception)
                 {
@@ -121,7 +137,49 @@ public sealed class TicketCreatedConsumer : BackgroundService
         {
             consumer.Close();
         }
+    }
 
-        return Task.CompletedTask;
+    private async Task ProcessSlaAsync(TicketCreatedEvent ticketEvent)
+    {
+        string urgencyStr = ticketEvent.Urgency switch
+        {
+            1 => "LOW",
+            2 => "MEDIUM",
+            3 => "HIGH",
+            4 => "CRITICAL",
+            _ => "MEDIUM"
+        };
+        var cacheKey = $"SlaTier_{urgencyStr}";
+
+        if (!_memoryCache.TryGetValue(cacheKey, out int durationMinutes))
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<SlaDbContext>();
+
+            var policy = await dbContext.SlaTierPolicies
+                .FirstOrDefaultAsync(p => p.TierName == urgencyStr);
+
+            durationMinutes = policy?.DurationMinutes ?? 1440; // Default fallback
+
+            _memoryCache.Set(cacheKey, durationMinutes, TimeSpan.FromMinutes(30));
+        }
+
+        var deadline = ticketEvent.CreatedAtUtc.AddMinutes(durationMinutes);
+
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<SlaDbContext>();
+            var newSla = new TicketSla
+            {
+                TicketId = ticketEvent.TicketId,
+                TargetResolutionTimeUtc = deadline
+            };
+
+            dbContext.TicketSlas.Add(newSla);
+            await dbContext.SaveChangesAsync();
+        }
+        
+        _logger.LogInformation("Calculated SLA deadline {Deadline} (Duration {DurationMinutes}m) for Ticket {TicketId}",
+            deadline, durationMinutes, ticketEvent.TicketId);
     }
 }
