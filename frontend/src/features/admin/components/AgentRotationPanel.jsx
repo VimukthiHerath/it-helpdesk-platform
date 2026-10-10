@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getStoredToken } from '../../../shared/authToken';
+import { getStoredToken, isAdmin } from '../../../shared/authToken';
 import './AgentRotationPanel.css';
 
 const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/agents`;
+const ROTATION_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignment/rotation`;
 
 const AgentRotationPanel = () => {
     const [agents, setAgents] = useState([]);
@@ -12,6 +13,7 @@ const AgentRotationPanel = () => {
     const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const adminMode = isAdmin();
 
     const loadAgents = async () => {
         const token = getStoredToken();
@@ -32,7 +34,8 @@ const AgentRotationPanel = () => {
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to load the agent rotation.');
 
-            setAgents(Array.isArray(data) ? data : []);
+            const allAgents = Array.isArray(data) ? data : [];
+            setAgents(allAgents.filter(a => a.isActive));
             setState({ loading: false, error: '' });
         } catch (error) {
             setState({ loading: false, error: error.message || 'Unable to load the agent rotation.' });
@@ -62,7 +65,7 @@ const AgentRotationPanel = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await fetch(AGENTS_URL, {
+            const response = await fetch(ROTATION_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -96,6 +99,41 @@ const AgentRotationPanel = () => {
         }
     };
 
+    const handleRemove = async (agentUserId) => {
+        const token = getStoredToken();
+        if (!token) {
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        try {
+            const response = await fetch(`${ROTATION_URL}/${agentUserId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 401) {
+                navigate('/login', { replace: true });
+                return;
+            }
+            if (response.status === 403) {
+                setFormError('Your account no longer has administrator access.');
+                return;
+            }
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data?.message || 'Unable to remove that agent.');
+            }
+
+            await loadAgents();
+        } catch (error) {
+            setFormError(error.message || 'Unable to remove that agent.');
+        }
+    };
+
     return (
         <section className="admin-create-panel panel" aria-labelledby="agent-rotation-title">
             <div className="panel__titlebar">
@@ -119,30 +157,43 @@ const AgentRotationPanel = () => {
                         {agents.map((agent) => (
                             <li key={agent.id}>
                                 <span>User ID {agent.userId}</span>
-                                <span className="badge badge--neutral">Slot {agent.displayOrder}</span>
+                                <div>
+                                    <span className="badge badge--neutral" style={{ marginRight: '8px' }}>Slot {agent.displayOrder}</span>
+                                    {adminMode && (
+                                        <button
+                                            onClick={() => handleRemove(agent.userId)}
+                                            className="btn btn--danger"
+                                            style={{ padding: '2px 8px', fontSize: '0.8rem' }}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
                             </li>
                         ))}
                     </ol>
                 )}
 
-                <form className="agent-rotation-form" onSubmit={handleSubmit} noValidate>
-                    <div className="field">
-                        <label htmlFor="rotation-user-id">User ID to add</label>
-                        <input
-                            id="rotation-user-id"
-                            type="number"
-                            min="1"
-                            value={userIdInput}
-                            onChange={(event) => { setUserIdInput(event.target.value); setFormError(''); }}
-                            placeholder="e.g. 46"
-                            className={formError ? 'input input--error' : 'input'}
-                        />
-                        {formError && <span className="error-text">{formError}</span>}
-                    </div>
-                    <button type="submit" className="btn btn--secondary" disabled={isSubmitting}>
-                        {isSubmitting ? 'Adding...' : 'Add to rotation'}
-                    </button>
-                </form>
+                {adminMode && (
+                    <form className="agent-rotation-form" onSubmit={handleSubmit} noValidate>
+                        <div className="field">
+                            <label htmlFor="rotation-user-id">User ID to add</label>
+                            <input
+                                id="rotation-user-id"
+                                type="number"
+                                min="1"
+                                value={userIdInput}
+                                onChange={(event) => { setUserIdInput(event.target.value); setFormError(''); }}
+                                placeholder="e.g. 46"
+                                className={formError ? 'input input--error' : 'input'}
+                            />
+                            {formError && <span className="error-text">{formError}</span>}
+                        </div>
+                        <button type="submit" className="btn btn--secondary" disabled={isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add to rotation'}
+                        </button>
+                    </form>
+                )}
             </div>
         </section>
     );

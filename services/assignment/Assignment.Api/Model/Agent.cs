@@ -18,4 +18,7 @@ public class Agent
     [Required]
     [Column("display_order")]
     public int DisplayOrder { get; set; }
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 }

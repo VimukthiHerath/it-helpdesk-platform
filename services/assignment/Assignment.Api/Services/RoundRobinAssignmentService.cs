@@ -36,6 +36,7 @@ public class RoundRobinAssignmentService
     public async Task AssignAsync(TicketCreatedEvent ticketEvent, CancellationToken cancellationToken)
     {
         var agents = await _context.Agents
+            .Where(a => a.IsActive)
             .OrderBy(a => a.DisplayOrder)
             .ToListAsync(cancellationToken);
 
@@ -73,7 +74,6 @@ public class RoundRobinAssignmentService
             nextAgent.DisplayOrder);
     }
 
-    // AC1 (different agents in a fixed order) + AC2 (wraps after the last one).
     private static Agent PickNextAgent(List<Agent> agents, TicketAssignment? lastAssignment)
     {
         if (lastAssignment is null)
@@ -82,14 +82,8 @@ public class RoundRobinAssignmentService
         }
 
         var lastIndex = agents.FindIndex(a => a.Id == lastAssignment.AgentId);
-        if (lastIndex == -1)
-        {
-            // The previously-assigned agent isn't in the current rotation
-            // (e.g. removed from the list) - restart from the beginning.
-            return agents[0];
-        }
-
-        var nextIndex = (lastIndex + 1) % agents.Count;
+        
+        var nextIndex = lastIndex == -1 ? 0 : (lastIndex + 1) % agents.Count;
         return agents[nextIndex];
     }
 

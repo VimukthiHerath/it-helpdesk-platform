@@ -20,8 +20,8 @@ public class ApplicationDbContext : DbContext
         // so this is a fixed list of already-existing local Agent-role users.
         // Update per environment until agent management is wired up properly.
         modelBuilder.Entity<Agent>().HasData(
-            new Agent { Id = 1, UserId = 3, DisplayOrder = 0 },
-            new Agent { Id = 2, UserId = 26, DisplayOrder = 1 }
+            new Agent { Id = 1, UserId = 3, DisplayOrder = 0, IsActive = true },
+            new Agent { Id = 2, UserId = 26, DisplayOrder = 1, IsActive = true }
         );
     }
 }
