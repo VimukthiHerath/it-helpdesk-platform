@@ -383,81 +383,85 @@ namespace Auth.Api.Controller
             });
         }
 
-        // Internal service-to-service endpoint.
-        // Used by Notification.Api Kafka consumers (which have no JWT token) to resolve
-        // a user's email address by their ID for email dispatch.
         [AllowAnonymous]
-        [HttpGet("internal/users/{id}/email")]
-        public async Task<IActionResult> GetUserEmail(int id)
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDTO request)
         {
-            if (!IsAuthorizedInternalCall())
+            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+            var genericResponse = Ok(new { message = "If an account exists for this email, a password reset link has been sent." });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || !user.IsActive) return genericResponse;
+
+            var windowMinutes = _configuration.GetValue<int>("PasswordReset:WindowMinutes", 15);
+            var maxRequests = _configuration.GetValue<int>("PasswordReset:MaxRequestsPerWindow", 3);
+
+            if (user.LastPasswordResetRequestedAtUtc.HasValue && 
+                DateTime.UtcNow <= user.LastPasswordResetRequestedAtUtc.Value.AddMinutes(windowMinutes))
             {
-                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+                if (user.ResetRequestCountInWindow >= maxRequests) return genericResponse;
+                user.ResetRequestCountInWindow++;
+            }
+            else
+            {
+                user.ResetRequestCountInWindow = 1;
             }
 
-            try
-            {
-                var user = await _context.Users.FindAsync(id);
-                if (user is null)
-                {
-                    return NotFound(new { message = "User not found." });
-                }
+            user.LastPasswordResetRequestedAtUtc = DateTime.UtcNow;
 
-                return Ok(new { email = user.Email, name = user.Name });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching email for user {UserId}", id);
-                return Problem("Unable to fetch user email.");
-            }
+            var rawTokenBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+            var rawToken = Convert.ToBase64String(rawTokenBytes);
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var tokenHashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawToken));
+            var tokenHash = Convert.ToBase64String(tokenHashBytes);
+
+            user.ResetTokenHash = tokenHash;
+            user.ResetTokenExpiresAtUtc = DateTime.UtcNow.AddMinutes(_configuration.GetValue<int>("PasswordReset:TokenTtlMinutes", 15));
+            user.ResetTokenUsed = false;
+
+            await _context.SaveChangesAsync();
+
+            var resetBaseUrl = _configuration.GetValue<string>("PasswordReset:ResetBaseUrl", "http://localhost:3000/reset-password");
+            var resetLink = $"{resetBaseUrl}?token={Uri.EscapeDataString(rawToken)}";
+
+            _logger.LogInformation("[PASSWORD_RESET_STUB] To: {Email} | Reset Link: {ResetLink} | Expires: {ExpiryUtc}", 
+                user.Email, resetLink, user.ResetTokenExpiresAtUtc);
+
+            return genericResponse;
         }
 
-        // Internal service-to-service endpoint.
-        // Used by Notification.Api to fetch all active administrator emails for SLA breach alerts.
         [AllowAnonymous]
-        [HttpGet("internal/admins/emails")]
-        public async Task<IActionResult> GetAdminEmails()
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDTO request)
         {
-            if (!IsAuthorizedInternalCall())
+            if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var incomingTokenHashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(request.Token));
+            var incomingTokenHash = Convert.ToBase64String(incomingTokenHashBytes);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetTokenHash == incomingTokenHash);
+
+            if (user == null || user.ResetTokenUsed || user.ResetTokenExpiresAtUtc < DateTime.UtcNow)
             {
-                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+                return BadRequest(new { message = "This reset link has expired or is invalid. Please request a new one." });
             }
 
-            try
+            if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.Password))
             {
-                var emails = await _context.Users
-                    .Where(u => u.Role == UserRole.Administrator && u.IsActive)
-                    .Select(u => u.Email)
-                    .ToListAsync();
-
-                return Ok(new { emails });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching administrator emails");
-                return Problem("Unable to fetch administrator emails.");
-            }
-        }
-
-        private bool IsAuthorizedInternalCall()
-        {
-            if (User?.Identity?.IsAuthenticated == true)
-            {
-                return true;
+                return BadRequest(new { message = "New password cannot be the same as the current password." });
             }
 
-            var expectedKey = _configuration["InternalService:ApiKey"];
-            if (string.IsNullOrEmpty(expectedKey))
-            {
-                return false;
-            }
+            user.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            user.ResetTokenUsed = true;
+            user.ResetTokenExpiresAtUtc = null;
+            user.SecurityStamp = Guid.NewGuid().ToString();
 
-            if (Request.Headers.TryGetValue("X-Internal-Key", out var providedKey))
-            {
-                return string.Equals(expectedKey, providedKey.ToString(), StringComparison.Ordinal);
-            }
+            await _context.SaveChangesAsync();
 
-            return false;
+            return Ok(new { message = "Password has been successfully reset. Please log in with your new password." });
         }
     }
 }
