@@ -36,7 +36,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Build Docker image
-        run: docker build -t ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }} .
+        run: docker build -t ithelpdeskacr02.azurecr.io/sla-service:${{ github.sha }} .
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
@@ -49,9 +49,9 @@ jobs:
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
-          az acr login --name ithelpdeskacr01
-          docker push ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }}
+          az acr login --name ithelpdeskacr02
+          docker push ithelpdeskacr02.azurecr.io/sla-service:${{ github.sha }}
 
       - name: Deploy to Container Apps
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: az containerapp update --name sla-service --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/sla-service:${{ github.sha }}
+        run: az containerapp update --name sla-service --resource-group it-helpdesk-rg --image ithelpdeskacr02.azurecr.io/sla-service:${{ github.sha }}

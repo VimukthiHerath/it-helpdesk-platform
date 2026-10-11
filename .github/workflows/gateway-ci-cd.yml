@@ -21,9 +21,9 @@ permissions:
   contents: read
 
 env:
-  ACR_NAME:      ithelpdeskacr01
-  ACR_IMAGE:     ithelpdeskacr01.azurecr.io/api-gateway
-  ACA_ENV:       it-helpdesk-env
+  ACR_NAME:      ithelpdeskacr02
+  ACR_IMAGE:     ithelpdeskacr02.azurecr.io/api-gateway
+  ACA_ENV:       it-helpdesk-envstd
   ACA_RG:        it-helpdesk-rg
   ACA_APP_NAME:  api-gateway
 
