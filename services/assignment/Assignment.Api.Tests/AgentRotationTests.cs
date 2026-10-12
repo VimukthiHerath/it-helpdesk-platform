@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Moq.Protected;
 using Xunit;
 
 namespace Assignment.Api.Tests;
@@ -29,7 +30,32 @@ public class AgentRotationTests
     
     private RotationController CreateController(ApplicationDbContext context, bool isAdmin = true)
     {
-        var controller = new RotationController(context, new NullLogger<RotationController>());
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = System.Net.HttpStatusCode.OK,
+                Content = new StringContent("{\"id\":100,\"email\":\"agent@example.com\"}")
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object)
+        {
+            BaseAddress = new Uri("http://localhost:5121")
+        };
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient("AuthApi")).Returns(httpClient);
+
+        var config = new ConfigurationBuilder().Build();
+
+        var controller = new RotationController(
+            context,
+            new NullLogger<RotationController>(),
+            mockFactory.Object,
+            config);
         
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, "999") };
         if (isAdmin)

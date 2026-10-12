@@ -234,7 +234,17 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
     public async Task DeactivateUser_AgentStillInRotation_Returns409()
     {
         var agentId = await CreateUserAsync(_factory.WithWebHostBuilder(_ => { }), $"deactivate-blocked-{Guid.NewGuid():N}@example.com", UserRole.Agent);
-        var factory = WithStubbedAssignmentApi(request => InRotationFor(request, agentId));
+        var factory = WithStubbedAssignmentApi(request =>
+        {
+            if (request.RequestUri?.AbsolutePath.Contains($"/api/Assignment/Rotation/{agentId}") == true)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent($"{{\"userId\":{agentId},\"isActive\":true,\"displayOrder\":0}}", Encoding.UTF8, "application/json")
+                };
+            }
+            return InRotationFor(request, agentId);
+        });
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
@@ -243,6 +253,33 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         var response = await client.PatchAsync($"/api/auth/users/{agentId}/deactivate", content: null);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeactivateUser_AgentInactiveInRotation_Succeeds()
+    {
+        var agentId = await CreateUserAsync(_factory.WithWebHostBuilder(_ => { }), $"deactivate-inactive-rotation-{Guid.NewGuid():N}@example.com", UserRole.Agent);
+        var factory = WithStubbedAssignmentApi(request =>
+        {
+            if (request.RequestUri?.AbsolutePath.Contains($"/api/Assignment/Rotation/{agentId}") == true)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent($"{{\"userId\":{agentId},\"isActive\":false,\"displayOrder\":0}}", Encoding.UTF8, "application/json")
+                };
+            }
+            return InRotationFor(request, agentId);
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+
+        var response = await client.PatchAsync($"/api/auth/users/{agentId}/deactivate", content: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.False(body?.IsActive);
     }
 
     [Fact]
@@ -293,11 +330,26 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
             });
         });
 
-    private static HttpResponseMessage NotInRotation(HttpRequestMessage request) =>
-        JsonArrayResponse("[]");
+    private static HttpResponseMessage NotInRotation(HttpRequestMessage request)
+    {
+        if (request.RequestUri?.AbsolutePath.Contains("/api/Assignment/Rotation/") == true)
+        {
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }
+        return JsonArrayResponse("[]");
+    }
 
-    private static HttpResponseMessage InRotationFor(HttpRequestMessage request, int agentUserId) =>
-        JsonArrayResponse($"[{{\"id\":1,\"userId\":{agentUserId},\"displayOrder\":0}}]");
+    private static HttpResponseMessage InRotationFor(HttpRequestMessage request, int agentUserId)
+    {
+        if (request.RequestUri?.AbsolutePath.Contains($"/api/Assignment/Rotation/{agentUserId}") == true)
+        {
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent($"{{\"userId\":{agentUserId},\"isActive\":true,\"displayOrder\":0}}", Encoding.UTF8, "application/json")
+            };
+        }
+        return JsonArrayResponse($"[{{\"id\":1,\"userId\":{agentUserId},\"displayOrder\":0}}]");
+    }
 
     private static HttpResponseMessage JsonArrayResponse(string json) => new(HttpStatusCode.OK)
     {

@@ -11,6 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers();
 
+builder.Services.AddHttpClient("AuthApi", client =>
+{
+    var authUrl = builder.Configuration["AuthApi:BaseUrl"] ?? "http://localhost:5121";
+    client.BaseAddress = new Uri(authUrl);
+});
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("AssignmentDb"),

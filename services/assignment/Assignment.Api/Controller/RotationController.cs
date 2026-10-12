@@ -5,6 +5,7 @@ using Assignment.Api.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using System.Security.Claims;
 
 namespace Assignment.Api.Controller;
@@ -16,11 +17,44 @@ public class RotationController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<RotationController> _logger;
+    private readonly HttpClient _authClient;
+    private readonly string _authApiBaseUrl;
 
-    public RotationController(ApplicationDbContext context, ILogger<RotationController> logger)
+    public RotationController(
+        ApplicationDbContext context,
+        ILogger<RotationController> logger,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _authClient = httpClientFactory.CreateClient("AuthApi");
+        _authApiBaseUrl = (configuration["AuthApi:BaseUrl"] ?? "http://localhost:5121").TrimEnd('/');
+    }
+
+    [HttpGet("{agentId}")]
+    public async Task<IActionResult> GetAgentRotationStatus(int agentId)
+    {
+        try
+        {
+            var agent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == agentId);
+            if (agent == null)
+            {
+                return NotFound(new { message = $"Agent with user ID {agentId} not found." });
+            }
+
+            return Ok(new
+            {
+                userId = agent.UserId,
+                isActive = agent.IsActive,
+                displayOrder = agent.DisplayOrder
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving agent {AgentId} status", agentId);
+            return Problem("Unable to load agent status. Please try again later.");
+        }
     }
 
     [HttpPost]
@@ -33,6 +67,30 @@ public class RotationController : ControllerBase
 
         try
         {
+            // Verify user exists in Auth.Api
+            try
+            {
+                var authUrl = string.IsNullOrEmpty(_authClient.BaseAddress?.ToString())
+                    ? $"{_authApiBaseUrl}/api/Auth/users/{request.UserId}"
+                    : $"/api/Auth/users/{request.UserId}";
+
+                var authResponse = await _authClient.GetAsync(authUrl);
+
+                if (authResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    return NotFound(new { message = $"User ID {request.UserId} does not exist in the Auth system." });
+                }
+
+                if (!authResponse.IsSuccessStatusCode)
+                {
+                    return StatusCode(500, new { message = "Failed to validate user with Auth service." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to connect to Auth service to validate user {UserId}", request.UserId);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Unable to validate user with Auth service at this time." });
+            }
             var existingAgent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == request.UserId);
             var adminId = GetAuthenticatedUserId();
 
