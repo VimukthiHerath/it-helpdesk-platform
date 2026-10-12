@@ -1,37 +1,50 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using Auth.Api.Configuration;
+using Auth.Api.Data;
+using Auth.Api.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("AuthDb"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("AuthDb"))));
+
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddHttpClient("AssignmentApi", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AssignmentApi:BaseUrl"]!);
+});
+builder.Services.AddScoped<IAssignmentRotationClient, AssignmentRotationClient>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy.WithOrigins(builder.Configuration["cors:FrontendUrl"]!)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
-builder.Services.AddSwaggerGen(c =>
+builder.Services.AddSwaggerGen(options =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "API Documentation",
-        Version = "v1",
-        Description = "Interactive endpoint documentation."
-    });
-
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme."
+        Description = "Enter 'Bearer' followed by your token"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -47,19 +60,63 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        RequireExpirationTime = true,
+        ClockSkew = TimeSpan.Zero,
+        ValidIssuer = jwtSetting?.Issuer,
+        ValidAudience = jwtSetting?.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+    };
+});
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
 
-app.UseCors("AllowAll");
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Auth" }))
-.WithName("GetHealth")
-.WithOpenApi(op => { op.Summary = "Health Check"; op.Description = "Returns 200 OK if service is running."; return op; })
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status500InternalServerError);
-//Test comment 
+        await context.Response.WriteAsJsonAsync(new
+        {
+            message = "An unexpected error occurred. Please try again later."
+        });
+    });
+});
+
+app.UseCors("FrontendPolicy");
+app.UseAuthentication();
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapControllers();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
+// Also exposed under the controller base path so it's reachable through the
+// WSO2 gateway, which forwards every "/auth/v1/*" request to {endpoint}/api/Auth/*
+// and has no way to special-case a resource onto the service root instead.
+app.MapGet("/api/Auth/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
+
 app.Run();
 
-
-
+public partial class Program { }

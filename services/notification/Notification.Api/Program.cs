@@ -1,60 +1,44 @@
+using Microsoft.EntityFrameworkCore;
+using Notification.Api.Data;
+using Notification.Api.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
-});
+builder.Services.AddSwaggerGen();
 
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "API Documentation",
-        Version = "v1",
-        Description = "Interactive endpoint documentation."
-    });
+// Register the idempotency database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<NotificationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme."
-    });
+// Register the real Gmail SMTP email service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+// Register IHttpClientFactory so consumers can call Auth.Api to resolve user emails
+builder.Services.AddHttpClient();
+
+builder.Services.AddScoped<IUserEmailResolver, AuthApiUserEmailResolver>();
+builder.Services.AddScoped<IAdminEmailResolver, AuthApiAdminEmailResolver>();
+builder.Services.AddScoped<TicketCreatedNotificationService>();
+builder.Services.AddScoped<SlaBreachedNotificationService>();
+
+builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<SlaBreachedConsumer>();
+builder.Services.AddHostedService<TicketAssignedConsumer>();
+
 var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseCors("AllowAll");
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Notification" }))
-.WithName("GetHealth")
-.WithOpenApi(op => { op.Summary = "Health Check"; op.Description = "Returns 200 OK if service is running."; return op; })
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status500InternalServerError);
+
+// Auto-apply any pending migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+    db.Database.Migrate();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Notification" }));
 app.Run();
-
-
-

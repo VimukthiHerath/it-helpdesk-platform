@@ -1,60 +1,46 @@
+using Sla.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Sla.Api.Consumers;
+using Sla.Api.Services;
+using Confluent.Kafka;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddCors(options =>
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddDbContext<SlaDbContext>(options =>
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
+
+// One long-lived Kafka producer for the process, instead of building a new
+// one on every SlaBreachMonitorService tick.
+builder.Services.AddSingleton<IProducer<string, string>>(sp =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
+    var bootstrapServers = sp.GetRequiredService<IConfiguration>()["Kafka:BootstrapServers"] ?? "localhost:9092";
+    return new ProducerBuilder<string, string>(new ProducerConfig { BootstrapServers = bootstrapServers }).Build();
 });
 
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "API Documentation",
-        Version = "v1",
-        Description = "Interactive endpoint documentation."
-    });
+builder.Services.AddScoped<SlaBreachDetectionService>();
+builder.Services.AddScoped<SlaRecordCreationService>();
 
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme."
-    });
+builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<TicketResolvedConsumer>();
+builder.Services.AddHostedService<SlaBreachMonitorService>();
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
 var app = builder.Build();
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseCors("AllowAll");
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Sla" }))
-.WithName("GetHealth")
-.WithOpenApi(op => { op.Summary = "Health Check"; op.Description = "Returns 200 OK if service is running."; return op; })
-.Produces(StatusCodes.Status200OK)
-.Produces(StatusCodes.Status500InternalServerError);
+
+// Automatically apply migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<SlaDbContext>();
+    dbContext.Database.Migrate();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "SLA" }));
 app.Run();
-
-
-
