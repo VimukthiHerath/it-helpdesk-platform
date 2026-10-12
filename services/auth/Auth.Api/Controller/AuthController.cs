@@ -22,19 +22,22 @@ namespace Auth.Api.Controller
         private readonly IConfiguration _configuration;
         private readonly IAssignmentRotationClient _rotationClient;
         private readonly ITokenService _tokenService;
+        private readonly IPasswordResetPublisher _passwordResetPublisher;
 
         public AuthController(
             ApplicationDbContext context,
             ILogger<AuthController> logger,
             IConfiguration configuration,
             IAssignmentRotationClient rotationClient,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            IPasswordResetPublisher passwordResetPublisher)
         {
             _context = context;
             _logger = logger;
             _configuration = configuration;
             _rotationClient = rotationClient;
             _tokenService = tokenService;
+            _passwordResetPublisher = passwordResetPublisher;
         }
 
         [HttpPost("register")]
@@ -412,8 +415,9 @@ namespace Auth.Api.Controller
             var resetBaseUrl = _configuration.GetValue<string>("PasswordReset:ResetBaseUrl", "http://localhost:3000/reset-password");
             var resetLink = $"{resetBaseUrl}?token={Uri.EscapeDataString(rawToken)}";
 
-            _logger.LogInformation("[PASSWORD_RESET_STUB] To: {Email} | Reset Link: {ResetLink} | Expires: {ExpiryUtc}", 
-                user.Email, resetLink, user.ResetTokenExpiresAtUtc);
+            // The email is sent by Notification.Api. The link is a secret, so it is never logged.
+            _passwordResetPublisher.Publish(user.Id, user.Email, resetLink, user.ResetTokenExpiresAtUtc!.Value);
+            _logger.LogInformation("Password reset requested for user {UserId}.", user.Id);
 
             return genericResponse;
         }

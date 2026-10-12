@@ -23,6 +23,7 @@ builder.Services.AddHttpClient("AssignmentApi", client =>
 builder.Services.AddScoped<IAssignmentRotationClient, AssignmentRotationClient>();
 builder.Services.AddSingleton<IRsaKeyService, RsaKeyService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddSingleton<IPasswordResetPublisher, KafkaPasswordResetPublisher>();
 
 builder.Services.AddCors(options =>
 {
