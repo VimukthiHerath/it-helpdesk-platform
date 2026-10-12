@@ -21,6 +21,8 @@ builder.Services.AddHttpClient("AssignmentApi", client =>
     client.BaseAddress = new Uri(builder.Configuration["AssignmentApi:BaseUrl"]!);
 });
 builder.Services.AddScoped<IAssignmentRotationClient, AssignmentRotationClient>();
+builder.Services.AddSingleton<IRsaKeyService, RsaKeyService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddCors(options =>
 {
@@ -62,12 +64,26 @@ builder.Services.AddSwaggerGen(options =>
 
 var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
+// Build a temporary service provider to retrieve IRsaKeyService for signing/validation key
+var rsaKeyService = builder.Services.BuildServiceProvider().GetRequiredService<IRsaKeyService>();
+
+var rsaSigningKey = rsaKeyService.GetSigningKey();
+var legacySymmetricKey = !string.IsNullOrEmpty(jwtSetting?.Key) 
+    ? new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key)) 
+    : null;
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>{
+.AddJwtBearer(options => {
+    var validKeys = new List<SecurityKey> { rsaSigningKey };
+    if (legacySymmetricKey != null)
+    {
+        validKeys.Add(legacySymmetricKey);
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -76,9 +92,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         RequireExpirationTime = true,
         ClockSkew = TimeSpan.Zero,
-        ValidIssuer = jwtSetting?.Issuer,
-        ValidAudience = jwtSetting?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+        ValidIssuer = jwtSetting?.Issuer ?? "AuthApi",
+        ValidAudience = jwtSetting?.Audience ?? "ItHelpdeskClient",
+        IssuerSigningKeys = validKeys
     };
 });
 

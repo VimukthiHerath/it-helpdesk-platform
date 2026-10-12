@@ -451,3 +451,27 @@ The fix is already committed in source
 container. Redeploying those three services (their existing CI/CD already
 auto-deploys on push) will close this gap; it wasn't done as part of this
 work since it's outside the gateway's own scope.
+
+---
+
+## 12. SCRUM-61: Routing Protected Frontend Calls Through WSO2 (RS256 & JWKS)
+
+### Architecture Transition
+Previously, `Auth.Api` minted tokens with symmetric HMAC-SHA256 (`HS256`). Because WSO2 Gateway verifies tokens independently at the gateway edge before forwarding requests, using asymmetric RS256 with a published JSON Web Key Set (JWKS) is standard:
+- **`Auth.Api`** holds the RSA private key (`keys/jwt-signing-key.pem` or in-memory fallback) and signs JWTs using RS256 (`kid: it-helpdesk-auth-key-1`).
+- **JWKS Endpoint**: `Auth.Api` exposes `GET /.well-known/jwks.json` and `GET /.well-known/openid-configuration` with the public key.
+- **Downstream Services** (`Ticket.Api`, `Assignment.Api`): Configured to validate tokens against `Auth.Api`'s JWKS, with fallback support for legacy HMAC tokens during rollover.
+- **Frontend**: Configured `.env` files to route all API calls through the WSO2 Gateway URL (`REACT_APP_API_GATEWAY_URL` / `http://localhost:8280` or Azure Container Apps URL).
+
+### Configuring WSO2 Key Manager for JWKS
+To enable WSO2 Gateway to validate Auth.Api JWTs:
+1. Log in to the WSO2 Admin Console (`https://<wso2-host>:9443/admin`).
+2. Navigate to **Key Managers** -> **Add Key Manager**.
+3. Set:
+   - **Name**: `AuthApi`
+   - **Type**: `Resident Key Manager` or `Custom`
+   - **Issuer**: `AuthApi`
+   - **JWKS Endpoint**: `http://auth-api:5121/.well-known/jwks.json` (or public URL)
+   - **Token Validation**: Select **Self-Validate JWT** using the JWKS URL.
+4. Save and publish. WSO2 will fetch public keys from `Auth.Api`'s JWKS endpoint and validate incoming `Authorization: Bearer <token>` requests across all protected routes (`/ticket/v1/*`, `/assignment/v1/*`, `/auth/v1/users`).
+
