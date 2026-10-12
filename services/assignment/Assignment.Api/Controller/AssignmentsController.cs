@@ -49,16 +49,11 @@ public class AssignmentsController : ControllerBase
             var userId = GetAuthenticatedUserId();
             var agent = _context.Agents.FirstOrDefault(a => a.UserId == userId);
 
-            // Caller is a valid Agent-role user but isn't in the rotation table
-            // (e.g. not yet onboarded into Assignments' Agents seed) - an empty
-            // queue is the honest answer, not an error.
-            if (agent is null)
-            {
-                return Ok(Array.Empty<AssignmentQueueItemDTO>());
-            }
+            // Match on agent.Id if rotation row exists, or directly on userId if assignments store Auth user ID
+            var targetAgentId = agent?.Id;
 
             var queue = _context.Assignments
-                .Where(a => a.AgentId == agent.Id)
+                .Where(a => (targetAgentId != null && a.AgentId == targetAgentId) || a.AgentId == userId)
                 .OrderBy(a => a.Urgency)
                 .ThenBy(a => a.AssignedAtUtc)
                 .Select(a => new AssignmentQueueItemDTO
@@ -84,6 +79,12 @@ public class AssignmentsController : ControllerBase
     // user id on trust (no cross-service call to verify the user exists or
     // is Agent-role) - same "no cross-service calls" convention as
     // everywhere else in this service.
+    // Viewing the rotation is Agent+Administrator (SCRUM-20 needs agents to
+    // see who they can reassign a ticket to, not just admins) - but managing
+    // it (below) stays Administrator-only. Assignment.Api takes the raw Auth
+    // user id on trust (no cross-service call to verify the user exists or
+    // is Agent-role) - same "no cross-service calls" convention as
+    // everywhere else in this service.
     [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
     [HttpGet("agents")]
     public IActionResult GetAgents()
@@ -91,6 +92,7 @@ public class AssignmentsController : ControllerBase
         try
         {
             var agents = _context.Agents
+                .Where(a => a.IsActive)
                 .OrderBy(a => a.DisplayOrder)
                 .Select(a => new AgentDTO
                 {
@@ -150,16 +152,39 @@ public class AssignmentsController : ControllerBase
                 return BadRequest(new { message = "Only Agent-role accounts can be added to the rotation." });
             }
 
-            var alreadyInRotation = await _context.Agents.AnyAsync(a => a.UserId == request.UserId);
-            if (alreadyInRotation)
+            var existingAgent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == request.UserId);
+            if (existingAgent != null)
             {
-                return Conflict(new { message = "That user is already in the rotation." });
+                if (existingAgent.IsActive)
+                {
+                    return Conflict(new { message = "That user is already in the rotation." });
+                }
+
+                // Reactivate agent at the end of the rotation
+                var maxOrder = await _context.Agents
+                    .Where(a => a.IsActive)
+                    .Select(a => (int?)a.DisplayOrder)
+                    .MaxAsync();
+
+                existingAgent.IsActive = true;
+                existingAgent.DisplayOrder = (maxOrder ?? -1) + 1;
+                await _context.SaveChangesAsync();
+
+                var reactivatedResponse = new AgentDTO
+                {
+                    Id = existingAgent.Id,
+                    UserId = existingAgent.UserId,
+                    DisplayOrder = existingAgent.DisplayOrder,
+                };
+
+                return StatusCode(StatusCodes.Status201Created, reactivatedResponse);
             }
 
             // Appends to the end of the rotation. No locking against a
             // concurrent add - same single-writer assumption already
             // documented on RoundRobinAssignmentService.
             var maxDisplayOrder = await _context.Agents
+                .Where(a => a.IsActive)
                 .Select(a => (int?)a.DisplayOrder)
                 .MaxAsync();
 
@@ -167,6 +192,7 @@ public class AssignmentsController : ControllerBase
             {
                 UserId = request.UserId,
                 DisplayOrder = (maxDisplayOrder ?? -1) + 1,
+                IsActive = true,
             };
 
             _context.Agents.Add(agent);
@@ -194,14 +220,15 @@ public class AssignmentsController : ControllerBase
     {
         try
         {
-            var agent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == userId);
+            var agent = await _context.Agents.FirstOrDefaultAsync(a => a.UserId == userId && a.IsActive);
             
             if (agent == null)
             {
                 return NotFound(new { message = "Agent not found in rotation." });
             }
 
-            _context.Agents.Remove(agent);
+            // ASSIGN-5: Soft-delete by setting IsActive = false so existing ticket assignments remain intact
+            agent.IsActive = false;
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -224,16 +251,18 @@ public class AssignmentsController : ControllerBase
     {
         try
         {
-            var assignments = _context.Assignments
-                .Join(_context.Agents, a => a.AgentId, ag => ag.Id, (a, ag) => new AssignmentListItemDTO
-                {
-                    TicketId = a.TicketId,
-                    AgentUserId = ag.UserId,
-                    Urgency = a.Urgency,
-                    AssignedAtUtc = a.AssignedAtUtc,
-                })
-                .OrderBy(a => a.TicketId)
-                .ToList();
+            var assignments = (from a in _context.Assignments
+                               join ag in _context.Agents on a.AgentId equals ag.Id into agentJoin
+                               from ag in agentJoin.DefaultIfEmpty()
+                               orderby a.TicketId
+                               select new AssignmentListItemDTO
+                               {
+                                   TicketId = a.TicketId,
+                                   AgentUserId = ag != null ? ag.UserId : a.AgentId,
+                                   Urgency = a.Urgency,
+                                   AssignedAtUtc = a.AssignedAtUtc,
+                               })
+                               .ToList();
 
             return Ok(assignments);
         }
