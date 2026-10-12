@@ -6,7 +6,7 @@ namespace Auth.Api.Services;
 
 public interface ITokenService
 {
-    string CreateToken(int userId, string email, string role, int expiryMinutes = 60);
+    string CreateToken(int userId, string email, string role, string securityStamp, int expiryMinutes = 60);
 }
 
 public class TokenService : ITokenService
@@ -20,8 +20,9 @@ public class TokenService : ITokenService
         _configuration = configuration;
     }
 
-    public string CreateToken(int userId, string email, string role, int expiryMinutes = 60)
+    public string CreateToken(int userId, string email, string role, string securityStamp, int expiryMinutes = 60)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(securityStamp);
         var issuer = _configuration["Jwt:Issuer"] ?? "AuthApi";
         var audience = _configuration["Jwt:Audience"] ?? "ItHelpdeskClient";
 
@@ -31,6 +32,7 @@ public class TokenService : ITokenService
             new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Email, email),
             new(ClaimTypes.Role, role),
+            new("SecurityStamp", securityStamp),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

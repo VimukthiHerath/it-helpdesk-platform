@@ -187,5 +187,60 @@ namespace Auth.Api.Tests
             
             Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         }
+
+        [Fact]
+        public async Task ResetPassword_UpdatesSecurityStamp_AndRejectsOldJwt()
+        {
+            // Arrange: Setup an administrator user and log in to capture Token A
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var client = _factory.CreateClient();
+
+            var email = $"tokenrevocation_{Guid.NewGuid():N}@example.com";
+            var oldPassword = "InitialPassword123!";
+            var user = new User
+            {
+                Name = "Revocation Test Admin",
+                Email = email,
+                Password = BCrypt.Net.BCrypt.HashPassword(oldPassword),
+                Role = UserRole.Administrator,
+                IsActive = true,
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+
+            // Log in to capture Token A
+            var loginRes = await client.PostAsJsonAsync("/api/auth/login", new { Email = email, Password = oldPassword });
+            Assert.Equal(HttpStatusCode.OK, loginRes.StatusCode);
+            var loginData = await loginRes.Content.ReadFromJsonAsync<dynamic>();
+            string tokenA = loginData.GetProperty("token").GetString();
+            Assert.False(string.IsNullOrEmpty(tokenA));
+
+            // Verify Token A can access protected endpoint before password reset
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenA);
+            var preResetRes = await client.GetAsync("/api/auth/users");
+            Assert.Equal(HttpStatusCode.OK, preResetRes.StatusCode);
+
+            // Act: Execute reset password flow
+            var rawToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            user.ResetTokenHash = Convert.ToBase64String(sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(rawToken)));
+            user.ResetTokenExpiresAtUtc = DateTime.UtcNow.AddMinutes(15);
+            await db.SaveChangesAsync();
+
+            var newPassword = "UpdatedPassword123!";
+            var resetRes = await client.PostAsJsonAsync("/api/auth/reset-password", new
+            {
+                Token = rawToken,
+                NewPassword = newPassword,
+                ConfirmPassword = newPassword
+            });
+            Assert.Equal(HttpStatusCode.OK, resetRes.StatusCode);
+
+            // Assert: Attempting to call an authorized endpoint with Token A returns 401 Unauthorized
+            var postResetRes = await client.GetAsync("/api/auth/users");
+            Assert.Equal(HttpStatusCode.Unauthorized, postResetRes.StatusCode);
+        }
     }
 }

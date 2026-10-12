@@ -96,6 +96,34 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSetting?.Audience ?? "ItHelpdeskClient",
         IssuerSigningKeys = validKeys
     };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var dbContext = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+
+            // Extract User ID and Stamp from incoming token
+            var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? context.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var tokenStamp = context.Principal?.FindFirst("SecurityStamp")?.Value;
+
+            if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrWhiteSpace(tokenStamp))
+            {
+                context.Fail("This token is missing user identity or session information.");
+                return;
+            }
+
+            // Look up the current user in the database
+            var user = await dbContext.Users.FindAsync(userId);
+
+            // If the user is deleted, inactive, or the security stamp doesn't match, revoke access
+            if (user == null || !user.IsActive || user.SecurityStamp != tokenStamp)
+            {
+                context.Fail("This token is no longer valid due to a password change or session revocation.");
+            }
+        }
+    };
 });
 
 builder.Services.AddAuthorization();

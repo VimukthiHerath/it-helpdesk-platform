@@ -165,7 +165,9 @@ namespace Auth.Api.Controller
                 var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var parsed) ? parsed : 60;
                 var roleName = user.Role.ToString();
 
-                var tokenString = _tokenService.CreateToken(user.Id, user.Email, roleName, expiryMinutes);
+                // Older accounts predate the password-reset migration and may have no stamp yet.
+                user.SecurityStamp ??= Guid.NewGuid().ToString();
+                var tokenString = _tokenService.CreateToken(user.Id, user.Email, roleName, user.SecurityStamp, expiryMinutes);
 
                 user.LastLoginAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
@@ -428,7 +430,7 @@ namespace Auth.Api.Controller
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetTokenHash == incomingTokenHash);
 
-            if (user == null || user.ResetTokenUsed || user.ResetTokenExpiresAtUtc < DateTime.UtcNow)
+            if (user == null || user.ResetTokenUsed || !user.ResetTokenExpiresAtUtc.HasValue || user.ResetTokenExpiresAtUtc <= DateTime.UtcNow)
             {
                 return BadRequest(new { message = "This reset link has expired or is invalid. Please request a new one." });
             }
