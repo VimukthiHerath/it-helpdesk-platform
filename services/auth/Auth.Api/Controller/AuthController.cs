@@ -21,17 +21,20 @@ namespace Auth.Api.Controller
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
         private readonly IAssignmentRotationClient _rotationClient;
+        private readonly ITokenService _tokenService;
 
         public AuthController(
             ApplicationDbContext context,
             ILogger<AuthController> logger,
             IConfiguration configuration,
-            IAssignmentRotationClient rotationClient)
+            IAssignmentRotationClient rotationClient,
+            ITokenService tokenService)
         {
             _context = context;
             _logger = logger;
             _configuration = configuration;
             _rotationClient = rotationClient;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
@@ -159,29 +162,10 @@ namespace Auth.Api.Controller
                     return Unauthorized(new { message = "Your account has been deactivated. Please contact your administrator." });
                 }
 
-                var jwtkey = _configuration["Jwt:Key"];
-                var jwtIssuer = _configuration["Jwt:Issuer"];
-                var jwtAudience = _configuration["Jwt:Audience"];
-                var expiryMinutes = int.Parse(_configuration["Jwt:ExpiryMinutes"]!);
+                var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var parsed) ? parsed : 60;
+                var roleName = user.Role.ToString();
 
-                var claims = new[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role.ToString()),
-                };
-
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtkey!));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                var token = new JwtSecurityToken(
-                    issuer: jwtIssuer,
-                    audience: jwtAudience,
-                    claims: claims,
-                    expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
-                    signingCredentials: creds);
-
-                var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+                var tokenString = _tokenService.CreateToken(user.Id, user.Email, roleName, expiryMinutes);
 
                 user.LastLoginAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();

@@ -6,6 +6,12 @@
 # dotenv files
 .env
 
+# RSA keys and certificates
+*.pem
+*.key
+keys/
+private.pem
+
 # User-specific files
 *.rsuser
 *.suo
