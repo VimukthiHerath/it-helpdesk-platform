@@ -37,15 +37,13 @@ const LoginForm = () => {
         const newErrors = {};
 
         if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
+            newErrors.email = 'Email is required.';
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
+            newErrors.email = 'Please enter a valid email address.';
         }
 
         if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
+            newErrors.password = 'Password is required.';
         }
 
         setErrors(newErrors);
@@ -55,7 +53,7 @@ const LoginForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if(!validateForm()) return;
+        if (!validateForm()) return;
 
         setIsLoading(true);
 
@@ -100,34 +98,33 @@ const LoginForm = () => {
             <h1 className="auth-brand">IT Helpdesk</h1>
             <div className="auth-card panel">
                 <div className="panel__body">
-                    <p className="eyebrow">Authorized users only</p>
-                    <h2>Employee login</h2>
+                    <h2>Welcome Back</h2>
 
                     <form onSubmit={handleSubmit} className="auth-form" noValidate>
                         <div className="field">
-                            <label htmlFor="email">Email</label>
+                            <label htmlFor="email">Email<span className="text-red-500">*</span></label>
                             <input
                                 id="email"
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className={errors.email ? 'input input--error' : 'input'}
-                                placeholder="you@example.com"
+                                className={errors.email ? 'input input--error border-red-500' : 'input'}
+                                placeholder="name@company.com"
                                 autoComplete="email"
                             />
                             {errors.email && <span className="error-text">{errors.email}</span>}
                         </div>
 
                         <div className="field">
-                            <label htmlFor="password">Password</label>
+                            <label htmlFor="password">Password<span className="text-red-500">*</span></label>
                             <input
                                 id="password"
                                 type="password"
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                className={errors.password ? 'input input--error' : 'input'}
+                                className={errors.password ? 'input input--error border-red-500' : 'input'}
                                 placeholder="Enter your password"
                                 autoComplete="current-password"
                             />
@@ -141,7 +138,7 @@ const LoginForm = () => {
                         </div>
 
                         <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
-                            {isLoading ? 'Logging in...' : 'Log in'}
+                            {isLoading ? 'Logging In...' : 'Log In'}
                         </button>
                     </form>
                 </div>

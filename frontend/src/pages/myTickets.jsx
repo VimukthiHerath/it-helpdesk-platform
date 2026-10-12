@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/layout/Navbar';
 import './myTickets.css';
 
 const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket/mine`;
@@ -25,41 +26,43 @@ const formatDate = (value) => {
 };
 
 const MyTickets = () => {
-    const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
-    const [state, setState] = useState({ loading: true, error: '' });
+    const [state, setState] = useState({ loading: true, tickets: [], error: '' });
+    const tickets = state.tickets;
     const navigate = useNavigate();
 
     useEffect(() => {
-        const loadTickets = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                navigate('/login', { replace: true });
-                return;
-            }
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login', { replace: true });
+            return;
+        }
 
+        const loadTickets = async () => {
             try {
                 const response = await fetch(TICKET_API_URL, {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
                 });
-                const data = await response.json().catch(() => ([]));
 
                 if (response.status === 401) {
                     localStorage.removeItem('token');
                     navigate('/login', { replace: true });
                     return;
                 }
-                if (!response.ok) throw new Error(data?.message || 'Unable to load your tickets.');
 
+                if (!response.ok) {
+                    throw new Error('Could not load tickets');
+                }
+
+                const data = await response.json();
                 const loadedTickets = Array.isArray(data) ? data : [];
-                setTickets(loadedTickets);
+                setState({ loading: false, tickets: loadedTickets, error: '' });
                 setSelectedTicket(loadedTickets[0] || null);
-            } catch (error) {
-                setState({ loading: false, error: error.message || 'Unable to load your tickets.' });
-                return;
+            } catch (err) {
+                setState({ loading: false, tickets: [], error: err.message || 'Could not load tickets' });
             }
-
-            setState({ loading: false, error: '' });
         };
 
         loadTickets();
@@ -67,14 +70,11 @@ const MyTickets = () => {
 
     return (
         <main className="tickets-page">
-            <div className="app-bar">
-                <span className="app-bar__brand">IT Helpdesk</span>
-                <div className="app-bar__actions">
-                    <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-                        Back to dashboard
-                    </button>
-                </div>
-            </div>
+            <Navbar>
+                <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
+                    Back to dashboard
+                </button>
+            </Navbar>
 
             <header className="tickets-page__header">
                 <p className="eyebrow">Support desk / Your activity</p>

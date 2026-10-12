@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import TicketCreateForm from '../features/ticket/components/ticketCreateForm';
+import Navbar from '../components/layout/Navbar';
 import { isAdmin, isAgent, getUserRole } from '../shared/authToken';
 import './dashboard.css';
 
@@ -15,39 +16,36 @@ const Dashboard = () => {
 
     return (
         <main className="dashboard-shell">
-            <div className="app-bar">
-                <span className="app-bar__brand">IT Helpdesk</span>
-                <div className="app-bar__actions">
-                    {isAdmin() && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/accounts')}>
-                            All accounts
-                        </button>
-                    )}
-                    {isAdmin() && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
-                            Reports
-                        </button>
-                    )}
-                    {isEmployee && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/my-tickets')}>
-                            My tickets
-                        </button>
-                    )}
-                    {isAgentUser && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/agent/queue')}>
-                            My queue
-                        </button>
-                    )}
-                    {(isAgentUser || isAdmin()) && (
-                        <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
-                            All tickets
-                        </button>
-                    )}
-                    <button type="button" className="btn btn--ghost" onClick={handleLogout}>
-                        Log out
+            <Navbar>
+                {isAdmin() && (
+                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/accounts')}>
+                        All accounts
                     </button>
-                </div>
-            </div>
+                )}
+                {isAdmin() && (
+                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
+                        Reports
+                    </button>
+                )}
+                {isEmployee && (
+                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/my-tickets')}>
+                        My tickets
+                    </button>
+                )}
+                {isAgentUser && (
+                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/agent/queue')}>
+                        My queue
+                    </button>
+                )}
+                {(isAgentUser || isAdmin()) && (
+                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
+                        All tickets
+                    </button>
+                )}
+                <button type="button" className="btn btn--ghost" onClick={handleLogout}>
+                    Log out
+                </button>
+            </Navbar>
 
             <div className="dashboard-header">
                 <p className="eyebrow">Dashboard</p>
