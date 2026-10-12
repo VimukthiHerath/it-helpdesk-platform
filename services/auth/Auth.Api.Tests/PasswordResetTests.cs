@@ -187,7 +187,6 @@ namespace Auth.Api.Tests
             
             Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
         }
-
         [Fact]
         public async Task ResetPassword_UpdatesSecurityStamp_AndRejectsOldJwt()
         {
