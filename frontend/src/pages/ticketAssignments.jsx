@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStoredToken, isAdmin } from '../shared/authToken';
+import Navbar from '../components/layout/Navbar';
 import './ticketAssignments.css';
 
 const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
@@ -123,14 +124,11 @@ const TicketAssignments = () => {
 
     return (
         <main className="assignments-page">
-            <div className="app-bar">
-                <span className="app-bar__brand">IT Helpdesk</span>
-                <div className="app-bar__actions">
-                    <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-                        Back to dashboard
-                    </button>
-                </div>
-            </div>
+            <Navbar>
+                <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
+                    Back to dashboard
+                </button>
+            </Navbar>
 
             <header className="assignments-page__header">
                 <p className="eyebrow">Support desk / All tickets</p>

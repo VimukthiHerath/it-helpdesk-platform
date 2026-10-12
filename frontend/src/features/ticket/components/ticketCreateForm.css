@@ -52,8 +52,31 @@
     font-size: 0.86rem;
 }
 
-.ticket-status--success { color: var(--color-sage-deep); }
-.ticket-status--error { color: var(--color-error); }
+.ticket-status--success {
+    color: var(--color-sage-deep);
+}
+
+.ticket-status--error {
+    color: var(--color-error);
+}
+
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 @media (max-width: 600px) {
     .panel__body {
