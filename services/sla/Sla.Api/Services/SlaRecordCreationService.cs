@@ -1,6 +1,8 @@
 using Sla.Api.Data;
 using Sla.Api.DTO;
 using Sla.Api.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Sla.Api.Services;
 
@@ -11,11 +13,13 @@ public class SlaRecordCreationService
 {
     private readonly SlaDbContext _db;
     private readonly ILogger<SlaRecordCreationService> _logger;
+    private readonly IMemoryCache? _cache;
 
-    public SlaRecordCreationService(SlaDbContext db, ILogger<SlaRecordCreationService> logger)
+    public SlaRecordCreationService(SlaDbContext db, ILogger<SlaRecordCreationService> logger, IMemoryCache? cache = null)
     {
         _db = db;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task CreateAsync(TicketCreatedEvent ticketEvent, string eventKey, CancellationToken cancellationToken)
@@ -27,7 +31,24 @@ public class SlaRecordCreationService
             return;
         }
 
-        var deadlineUtc = SlaDeadlineCalculator.ComputeDeadline(ticketEvent.CreatedAtUtc, ticketEvent.Urgency);
+        var tierName = ticketEvent.Urgency switch
+        {
+            0 => "LOW",
+            1 => "MEDIUM",
+            2 => "HIGH",
+            3 => "CRITICAL",
+            _ => "MEDIUM"
+        };
+        var cacheKey = $"SlaTier_{tierName}";
+        int durationMinutes;
+        if (_cache is null || !_cache.TryGetValue(cacheKey, out durationMinutes))
+        {
+            var policy = await _db.SlaTierPolicies.FirstOrDefaultAsync(p => p.TierName == tierName, cancellationToken);
+            durationMinutes = policy?.DurationMinutes ?? (int)SlaDeadlineCalculator.DurationFor(ticketEvent.Urgency).TotalMinutes;
+            _cache?.Set(cacheKey, durationMinutes, TimeSpan.FromMinutes(30));
+        }
+
+        var deadlineUtc = ticketEvent.CreatedAtUtc.AddMinutes(durationMinutes);
 
         _db.TicketSlas.Add(new TicketSla
         {
