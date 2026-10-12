@@ -51,6 +51,8 @@ public class ReportsController : ControllerBase
             .Select(g =>
             {
                 var totalResolved = g.Count();
+                var slaEligibleCount = g.Count(t => t.SlaDeadlineUtc.HasValue);
+                var missingSlaCount = totalResolved - slaEligibleCount;
 
                 if (totalResolved == 0)
                 {
@@ -58,6 +60,8 @@ public class ReportsController : ControllerBase
                     {
                         AgentId = g.Key,
                         TotalResolvedTickets = 0,
+                        SlaEligibleTickets = 0,
+                        TicketsMissingSla = 0,
                         AverageTtrMinutes = null,
                         SlaBreachRate = 0.00
                     };
@@ -68,12 +72,16 @@ public class ReportsController : ControllerBase
                 avgTtr = Math.Round(avgTtr, 2);
 
                 var breachedCount = g.Count(t => t.SlaDeadlineUtc.HasValue && t.ResolvedAtUtc!.Value > t.SlaDeadlineUtc.Value);
-                var breachRate = Math.Round(((double)breachedCount / totalResolved) * 100, 2);
+                var breachRate = slaEligibleCount > 0
+                    ? Math.Round(((double)breachedCount / slaEligibleCount) * 100, 2)
+                    : 0.00;
 
                 return new AgentPerformanceReportDto
                 {
                     AgentId = g.Key,
                     TotalResolvedTickets = totalResolved,
+                    SlaEligibleTickets = slaEligibleCount,
+                    TicketsMissingSla = missingSlaCount,
                     AverageTtrMinutes = avgTtr,
                     SlaBreachRate = breachRate
                 };

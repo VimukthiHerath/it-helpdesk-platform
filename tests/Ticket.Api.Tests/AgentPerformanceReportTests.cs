@@ -88,6 +88,67 @@ public class AgentPerformanceReportTests
     }
 
     [Fact]
+    public async Task GetPerformanceReport_WithMissingSlaDeadlines_ExcludesThemFromBreachRateDenominator()
+    {
+        // Arrange
+        using var context = CreateInMemoryDbContext();
+        var controller = CreateController(context);
+
+        var now = DateTime.UtcNow;
+        // Agent A has 3 resolved tickets:
+        // Ticket 1: On-time (Resolved < Deadline)
+        // Ticket 2: Breached (Resolved > Deadline)
+        // Ticket 3: Missing SLA (SlaDeadlineUtc = null)
+        context.Tickets.AddRange(
+            new Model.Ticket
+            {
+                Id = 1,
+                AssignedAgentId = "AgentA",
+                Status = "Resolved",
+                CreatedAtUtc = now.AddMinutes(-60),
+                ResolvedAtUtc = now,
+                SlaDeadlineUtc = now.AddMinutes(30) // On-time (resolved before deadline)
+            },
+            new Model.Ticket
+            {
+                Id = 2,
+                AssignedAgentId = "AgentA",
+                Status = "Resolved",
+                CreatedAtUtc = now.AddMinutes(-120),
+                ResolvedAtUtc = now,
+                SlaDeadlineUtc = now.AddMinutes(-30) // Breached (resolved after deadline)
+            },
+            new Model.Ticket
+            {
+                Id = 3,
+                AssignedAgentId = "AgentA",
+                Status = "Resolved",
+                CreatedAtUtc = now.AddMinutes(-180),
+                ResolvedAtUtc = now,
+                SlaDeadlineUtc = null // Historical ticket without SLA deadline
+            }
+        );
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await controller.GetAgentPerformanceReport(now.AddDays(-1), now.AddDays(1), CancellationToken.None);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var report = Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(okResult.Value);
+
+        var agentReport = report.FirstOrDefault(r => r.AgentId == "AgentA");
+        Assert.NotNull(agentReport);
+        Assert.Equal(3, agentReport.TotalResolvedTickets);
+        Assert.Equal(2, agentReport.SlaEligibleTickets);
+        Assert.Equal(1, agentReport.TicketsMissingSla);
+        // 1 breach out of 2 eligible = 50.00% (NOT 1 out of 3 = 33.33%)
+        Assert.Equal(50.00, agentReport.SlaBreachRate);
+        // Average TTR applies to all 3 tickets: (60 + 120 + 180) / 3 = 120.00
+        Assert.Equal(120.00, agentReport.AverageTtrMinutes);
+    }
+
+    [Fact]
     public async Task GetPerformanceReport_WithZeroResolvedTickets_HandlesZeroDivisionGracefully()
     {
         // Wait, EF Core GroupBy might still group it if we have records but none match the filter...
