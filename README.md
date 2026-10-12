@@ -263,6 +263,9 @@ dotnet test services/assignment/Assignment.Api.Tests
 
 ## Further documentation
 
+- [Architectural evolution and final state](docs/architecture/evolution.md).
+- [Architecture diagrams](docs/architecture/diagrams.md).
+- [Architecture decision records](docs/adr/).
 - [`docs/CI-CD-PIPELINE-EXPLAINED.md`](docs/CI-CD-PIPELINE-EXPLAINED.md) — how the GitHub Actions pipelines, Dockerfiles, and Azure infrastructure fit together.
 - [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](docs/PRODUCTION_DEPLOYMENT_GUIDE.md) — the manual steps CI/CD doesn't cover (migrations, ingress/CORS, secrets, seed data) — read this before shipping anything beyond plain app logic.
 - [`docs/DEPLOY_KAFKA_UI.md`](docs/DEPLOY_KAFKA_UI.md) — how the production Kafka UI dashboard was set up.
