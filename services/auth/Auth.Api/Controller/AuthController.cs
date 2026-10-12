@@ -449,5 +449,82 @@ namespace Auth.Api.Controller
 
             return Ok(new { message = "Password has been successfully reset. Please log in with your new password." });
         }
+
+        // Internal service-to-service endpoint.
+        // Used by Notification.Api Kafka consumers (which have no JWT token) to resolve
+        // a user's email address by their ID for email dispatch.
+        [AllowAnonymous]
+        [HttpGet("internal/users/{id}/email")]
+        public async Task<IActionResult> GetUserEmail(int id)
+        {
+            if (!IsAuthorizedInternalCall())
+            {
+                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                return Ok(new { email = user.Email, name = user.Name });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching email for user {UserId}", id);
+                return Problem("Unable to fetch user email.");
+            }
+        }
+
+        // Internal service-to-service endpoint.
+        // Used by Notification.Api to fetch all active administrator emails for SLA breach alerts.
+        [AllowAnonymous]
+        [HttpGet("internal/admins/emails")]
+        public async Task<IActionResult> GetAdminEmails()
+        {
+            if (!IsAuthorizedInternalCall())
+            {
+                return Unauthorized(new { message = "Unauthorized: Authentication or valid internal service key required." });
+            }
+
+            try
+            {
+                var emails = await _context.Users
+                    .Where(u => u.Role == UserRole.Administrator && u.IsActive)
+                    .Select(u => u.Email)
+                    .ToListAsync();
+
+                return Ok(new { emails });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching administrator emails");
+                return Problem("Unable to fetch administrator emails.");
+            }
+        }
+
+        private bool IsAuthorizedInternalCall()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                return true;
+            }
+
+            var expectedKey = _configuration["InternalService:ApiKey"];
+            if (string.IsNullOrEmpty(expectedKey))
+            {
+                return false;
+            }
+
+            if (Request.Headers.TryGetValue("X-Internal-Key", out var providedKey))
+            {
+                return string.Equals(expectedKey, providedKey.ToString(), StringComparison.Ordinal);
+            }
+
+            return false;
+        }
     }
 }
