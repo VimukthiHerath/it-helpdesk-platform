@@ -29,6 +29,30 @@ public class AssignmentRotationClient : IAssignmentRotationClient
     {
         try
         {
+            // First attempt to query the dedicated rotation status endpoint
+            using var directRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/Assignment/Rotation/{userId}");
+            if (!string.IsNullOrEmpty(authorizationHeader))
+            {
+                directRequest.Headers.TryAddWithoutValidation("Authorization", authorizationHeader);
+            }
+
+            var directResponse = await _httpClient.SendAsync(directRequest, cancellationToken);
+            if (directResponse.IsSuccessStatusCode)
+            {
+                var rosterRecord = await directResponse.Content.ReadFromJsonAsync<AgentRotationEntry>(cancellationToken: cancellationToken);
+                if (rosterRecord != null && rosterRecord.IsActive)
+                {
+                    return RotationCheckResult.InRotation;
+                }
+                return RotationCheckResult.NotInRotation;
+            }
+
+            if (directResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return RotationCheckResult.NotInRotation;
+            }
+
+            // Fallback to checking /api/assignments/agents list
             using var request = new HttpRequestMessage(HttpMethod.Get, "/api/assignments/agents");
             if (!string.IsNullOrEmpty(authorizationHeader))
             {
@@ -47,7 +71,8 @@ public class AssignmentRotationClient : IAssignmentRotationClient
             var agents = await response.Content.ReadFromJsonAsync<List<AgentRotationEntry>>(cancellationToken: cancellationToken)
                 ?? new List<AgentRotationEntry>();
 
-            return agents.Any(a => a.UserId == userId)
+            // Only consider the agent in rotation if they exist AND are active
+            return agents.Any(a => a.UserId == userId && a.IsActive)
                 ? RotationCheckResult.InRotation
                 : RotationCheckResult.NotInRotation;
         }
@@ -65,5 +90,6 @@ public class AssignmentRotationClient : IAssignmentRotationClient
         public int Id { get; set; }
         public int UserId { get; set; }
         public int DisplayOrder { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

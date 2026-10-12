@@ -99,6 +99,7 @@ public class AssignmentsController : ControllerBase
                     Id = a.Id,
                     UserId = a.UserId,
                     DisplayOrder = a.DisplayOrder,
+                    IsActive = a.IsActive
                 })
                 .ToList();
 
@@ -203,6 +204,7 @@ public class AssignmentsController : ControllerBase
                 Id = agent.Id,
                 UserId = agent.UserId,
                 DisplayOrder = agent.DisplayOrder,
+                IsActive = agent.IsActive
             };
 
             return StatusCode(StatusCodes.Status201Created, response);
