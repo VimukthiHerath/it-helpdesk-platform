@@ -54,6 +54,8 @@ public sealed class AdminSlaController : ControllerBase
 
         var adminId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
 
+        var previousDuration = policy.DurationMinutes;
+
         policy.DurationMinutes = request.DurationMinutes;
         policy.LastUpdatedAtUtc = DateTime.UtcNow;
         policy.UpdatedByAdminId = adminId;
@@ -63,8 +65,9 @@ public sealed class AdminSlaController : ControllerBase
         var cacheKey = $"SlaTier_{policy.TierName.ToUpper()}";
         _memoryCache.Remove(cacheKey);
 
-        _logger.LogInformation("Admin {AdminId} updated SLA Tier {TierName} to {DurationMinutes} minutes.",
-            adminId, policy.TierName, policy.DurationMinutes);
+        _logger.LogInformation(
+            "Admin {AdminId} updated SLA Tier {TierName}. Previous Duration: {PreviousDuration} minutes, New Duration: {NewDuration} minutes at {Timestamp}",
+            adminId, policy.TierName, previousDuration, policy.DurationMinutes, policy.LastUpdatedAtUtc);
 
         return Ok(policy);
     }

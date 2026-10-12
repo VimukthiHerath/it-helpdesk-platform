@@ -155,7 +155,7 @@ public class SlaTierConfigurationTests
         // To do this strictly in standard test we can reflect or make the method public for testing
         // As TicketCreatedConsumer.ProcessSlaAsync is private, we will reflect into it.
         var consumer = new TicketCreatedConsumer(new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object, new NullLogger<TicketCreatedConsumer>(), scopeFactoryMock.Object, cache);
-        var ticketEvent = new TicketCreatedEvent { TicketId = 10, Urgency = 3, CreatedAtUtc = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc) };
+        var ticketEvent = new TicketCreatedEvent { TicketId = 10, Urgency = 2, CreatedAtUtc = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc) };
         
         var methodInfo = typeof(TicketCreatedConsumer).GetMethod("ProcessSlaAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         
@@ -202,5 +202,109 @@ public class SlaTierConfigurationTests
         var existingTicket = await context.TicketSlas.FirstOrDefaultAsync(t => t.TicketId == 20);
         Assert.NotNull(existingTicket);
         Assert.Equal(originalTime.AddMinutes(60), existingTicket.TargetResolutionTimeUtc);
+    }
+
+    [Fact]
+    public async Task UpdateTier_LogsPreviousAndNewDuration_Correctly()
+    {
+        // Arrange
+        using var context = CreateInMemoryDbContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var tier = await context.SlaTierPolicies.FirstAsync(p => p.TierName == "LOW");
+        var originalDuration = tier.DurationMinutes;
+
+        var loggerMock = new Mock<Microsoft.Extensions.Logging.ILogger<AdminSlaController>>();
+        var controller = new AdminSlaController(context, cache, loggerMock.Object);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "Admin999"),
+            new Claim(ClaimTypes.Role, "Administrator")
+        };
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth")) }
+        };
+
+        var request = new UpdateTierRequest { DurationMinutes = originalDuration + 60 };
+
+        // Act
+        var result = await controller.UpdateTier("LOW", request, CancellationToken.None);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(result);
+
+        loggerMock.Verify(
+            x => x.Log(
+                Microsoft.Extensions.Logging.LogLevel.Information,
+                It.IsAny<Microsoft.Extensions.Logging.EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains("Previous Duration") &&
+                    v.ToString()!.Contains(originalDuration.ToString()) &&
+                    v.ToString()!.Contains((originalDuration + 60).ToString())),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task TicketCreatedConsumer_MapsUrgency0ToLow_AndUrgency3ToCritical()
+    {
+        // Arrange
+        using var context = CreateInMemoryDbContext();
+        var cache = new MemoryCache(new MemoryCacheOptions());
+
+        var scopeFactoryMock = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
+        var scopeMock = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScope>();
+        var serviceProviderMock = new Mock<IServiceProvider>();
+
+        serviceProviderMock.Setup(sp => sp.GetService(typeof(SlaDbContext))).Returns(context);
+        scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
+        scopeFactoryMock.Setup(sf => sf.CreateScope()).Returns(scopeMock.Object);
+
+        var consumer = new TicketCreatedConsumer(
+            new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object,
+            new NullLogger<TicketCreatedConsumer>(),
+            scopeFactoryMock.Object,
+            cache);
+
+        var methodInfo = typeof(TicketCreatedConsumer).GetMethod(
+            "ProcessSlaAsync",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        var baseTime = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+
+        var lowPolicy = await context.SlaTierPolicies.FirstAsync(p => p.TierName == "LOW");
+        var criticalPolicy = await context.SlaTierPolicies.FirstAsync(p => p.TierName == "CRITICAL");
+
+        var eventUrgency0 = new TicketCreatedEvent
+        {
+            TicketId = 101,
+            Urgency = 0,
+            CreatedAtUtc = baseTime
+        };
+
+        var eventUrgency3 = new TicketCreatedEvent
+        {
+            TicketId = 102,
+            Urgency = 3,
+            CreatedAtUtc = baseTime
+        };
+
+        // Act
+        var task0 = (Task)methodInfo!.Invoke(consumer, new object[] { eventUrgency0 })!;
+        await task0;
+
+        var task3 = (Task)methodInfo!.Invoke(consumer, new object[] { eventUrgency3 })!;
+        await task3;
+
+        // Assert
+        var sla101 = await context.TicketSlas.FirstOrDefaultAsync(ts => ts.TicketId == 101);
+        Assert.NotNull(sla101);
+        Assert.Equal(baseTime.AddMinutes(lowPolicy.DurationMinutes), sla101.TargetResolutionTimeUtc);
+
+        var sla102 = await context.TicketSlas.FirstOrDefaultAsync(ts => ts.TicketId == 102);
+        Assert.NotNull(sla102);
+        Assert.Equal(baseTime.AddMinutes(criticalPolicy.DurationMinutes), sla102.TargetResolutionTimeUtc);
     }
 }

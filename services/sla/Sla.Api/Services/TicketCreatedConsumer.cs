@@ -143,10 +143,10 @@ public sealed class TicketCreatedConsumer : BackgroundService
     {
         string urgencyStr = ticketEvent.Urgency switch
         {
-            1 => "LOW",
-            2 => "MEDIUM",
-            3 => "HIGH",
-            4 => "CRITICAL",
+            0 => "LOW",
+            1 => "MEDIUM",
+            2 => "HIGH",
+            3 => "CRITICAL",
             _ => "MEDIUM"
         };
         var cacheKey = $"SlaTier_{urgencyStr}";
