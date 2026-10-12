@@ -48,6 +48,92 @@
                     }
                 }
             }
+        },
+        "/api/Sla/admin/tiers": {
+            "get": {
+                "summary": "List SLA tier durations",
+                "operationId": "slaListTiers",
+                "tags": [
+                    "SLA Admin"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SLA tier policies"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden (Administrator only)"
+                    }
+                }
+            }
+        },
+        "/api/Sla/admin/tiers/{tierName}": {
+            "put": {
+                "summary": "Update an SLA tier duration",
+                "operationId": "slaUpdateTier",
+                "tags": [
+                    "SLA Admin"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "tierName",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "durationMinutes"
+                                ],
+                                "properties": {
+                                    "durationMinutes": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 43200
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tier updated"
+                    },
+                    "400": {
+                        "description": "Invalid duration"
+                    },
+                    "404": {
+                        "description": "Tier not found"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden (Administrator only)"
+                    }
+                }
+            }
         }
     },
     "components": {
