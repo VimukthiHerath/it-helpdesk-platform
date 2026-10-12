@@ -8,9 +8,8 @@ using Ticket.Api.Data;
 using Ticket.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
 // [ApiController] auto-returns its own ValidationProblem shape (an "errors"
 // dictionary, no top-level "message") the instant ModelState is invalid -
@@ -32,10 +31,20 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
     return new ProducerBuilder<string, string>(producerConfig).Build();
 });
 
+var connectionString = builder.Configuration.GetConnectionString("TicketDb");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("TicketDb"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("TicketDb"))));
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)));
+
+builder.Services.AddDbContext<TicketDbContext>(options =>
+{
+    options.UseMySql(
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)
+    );
+});
 
 builder.Services.AddScoped<TicketAssignmentSyncService>();
 builder.Services.AddHostedService<TicketAssignedConsumer>();
@@ -159,6 +168,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 // Also exposed under the controller base path so it's reachable through the
 // WSO2 gateway, which forwards every "/ticket/v1/*" request to {endpoint}/api/Ticket/*
