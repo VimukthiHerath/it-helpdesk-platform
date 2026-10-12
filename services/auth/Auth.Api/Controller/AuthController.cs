@@ -164,6 +164,7 @@ namespace Auth.Api.Controller
                     new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                     new Claim(JwtRegisteredClaimNames.Email, user.Email),
                     new Claim(ClaimTypes.Role, user.Role.ToString()),
+                    new Claim("SecurityStamp", user.SecurityStamp ?? string.Empty),
                 };
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtkey!));
