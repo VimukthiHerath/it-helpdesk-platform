@@ -56,6 +56,138 @@
                 }
             }
         },
+        "/queue": {
+            "get": {
+                "summary": "Get queue for the authenticated agent",
+                "operationId": "assignmentQueue",
+                "tags": [
+                    "Assignments"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent queue list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/agents": {
+            "get": {
+                "summary": "Get rotation agents",
+                "operationId": "assignmentGetAgents",
+                "tags": [
+                    "Agents"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent rotation list"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            },
+            "post": {
+                "summary": "Add agent to rotation (admin)",
+                "operationId": "assignmentAddAgent",
+                "tags": [
+                    "Agents"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "userId"
+                                ],
+                                "properties": {
+                                    "userId": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Agent added"
+                    },
+                    "400": {
+                        "description": "Invalid user or role"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "409": {
+                        "description": "Agent already in rotation"
+                    }
+                }
+            }
+        },
+        "/agents/{userId}": {
+            "delete": {
+                "summary": "Remove agent from rotation (admin)",
+                "operationId": "assignmentRemoveAgent",
+                "tags": [
+                    "Agents"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Agent removed"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Agent not found"
+                    }
+                }
+            }
+        },
         "/{id}": {
             "get": {
                 "summary": "Get assignment by ticket ID",
@@ -87,6 +219,68 @@
                     },
                     "404": {
                         "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/{ticketId}/reassign": {
+            "patch": {
+                "summary": "Reassign ticket (admin)",
+                "operationId": "assignmentReassign",
+                "tags": [
+                    "Assignments"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "ticketId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "newAgentUserId"
+                                ],
+                                "properties": {
+                                    "newAgentUserId": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ticket reassigned"
+                    },
+                    "400": {
+                        "description": "Invalid agent"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Ticket not found"
+                    },
+                    "409": {
+                        "description": "Already assigned to that agent"
                     }
                 }
             }

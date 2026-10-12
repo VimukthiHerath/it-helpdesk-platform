@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import './myTickets.css';
 
-const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket/mine`;
+const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1/mine`;
 
 const urgencyLabels = ['Within 1 hour', 'Within 6 hours', 'Within 12 hours', 'Within 24 hours'];
 const statusLabels = ['Unassigned', 'Assigned', 'Resolved'];

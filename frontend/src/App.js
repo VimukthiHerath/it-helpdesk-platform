@@ -4,14 +4,18 @@ import LoginPage from './features/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
 import MyTickets from './pages/myTickets';
 import AgentQueue from './pages/agentQueue';
-import AdminUsersPage from './features/admin/pages/AdminUsersPage';
+import TicketAssignments from './pages/ticketAssignments';
+import AdminAccountsPage from './features/admin/pages/AdminAccountsPage';
+import AdminCreateUserPage from './features/admin/pages/AdminCreateUserPage';
+import AdminRotationPage from './features/admin/pages/AdminRotationPage';
+import AdminReportPage from './pages/adminReport';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import { decodeToken, isAdmin, isAgent } from './shared/authToken';
 
 import './App.css';
 
-const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/me`;
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/me`;
 
 const isAuthenticated = async () => {
   const token = localStorage.getItem('token');

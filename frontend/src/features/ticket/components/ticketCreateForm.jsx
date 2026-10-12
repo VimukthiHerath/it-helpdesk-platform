@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import './ticketCreateForm.css';
 
-const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
+const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1`;
 
 const initialForm = {
     issueType: '',

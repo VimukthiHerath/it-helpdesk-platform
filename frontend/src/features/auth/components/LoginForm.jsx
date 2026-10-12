@@ -9,7 +9,7 @@ import './LoginForm.css';
 // there's no token-trust mismatch to worry about here. See
 // docs/WSO2_API_GATEWAY.md for why every other, *protected* call still goes
 // directly to its service instead.
-const AUTH_API_URL = `${process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/login`;
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/login`;
 
 const LoginForm = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });

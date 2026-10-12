@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../../../shared/authToken';
 import './AgentRotationPanel.css';
 
-const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/agents`;
-const USERS_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/users`;
+const AGENTS_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/assignment/v1/agents`;
+const USERS_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/users`;
 
 const AgentRotationPanel = () => {
     const [agents, setAgents] = useState([]);

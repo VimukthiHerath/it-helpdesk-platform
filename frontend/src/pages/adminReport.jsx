@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../shared/authToken';
 import './adminReport.css';
 
-const REPORT_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket/report`;
+const REPORT_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1/report`;
 
 const STATUS_OPTIONS = [
     { label: 'All statuses', value: '' },

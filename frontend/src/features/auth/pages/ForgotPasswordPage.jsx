@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import '../components/LoginForm.css';
 
-const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || 'http://localhost:5033'}/api/auth/forgot-password`;
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8280'}/auth/v1/forgot-password`;
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');

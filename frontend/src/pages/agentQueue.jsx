@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../shared/authToken';
 import './agentQueue.css';
 
-const ASSIGNMENT_QUEUE_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL}/api/assignments/queue`;
-const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
+const ASSIGNMENT_QUEUE_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/assignment/v1/queue`;
+const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1`;
 
 // TicketStatus ordinals (Ticket.Api/Model/TicketStatus.cs) - only the two an
 // agent can set from here. No "in progress" button: once the planned
