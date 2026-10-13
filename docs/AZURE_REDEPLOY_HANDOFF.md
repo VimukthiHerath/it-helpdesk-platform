@@ -81,9 +81,12 @@ the gateway can be bypassed. Decide this with the team before the demo.
    Only pushes to `develop` can log in as it. To allow another branch, add another
    federated credential with that branch in the subject.
 2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**
-   (these are IDs, not passwords): `AZURE_CLIENT_ID` = `f0c24a18-189f-4ff3-a442-417de5728143`,
-   `AZURE_TENANT_ID` = `44e3cf94-19c9-4e32-96c3-14f5bf01391a`, `AZURE_SUBSCRIPTION_ID` =
-   `7e76da9f-fdb8-43bd-9551-28bc90afcd2f`. **Status: being added by Vimukthi.**
+   (these are IDs, not passwords): `AZURE_NEW_CLIENT_ID` = `f0c24a18-189f-4ff3-a442-417de5728143`,
+   `AZURE_NEW_TENANT_ID` = `44e3cf94-19c9-4e32-96c3-14f5bf01391a`, `AZURE_NEW_SUBSCRIPTION_ID` =
+   `7e76da9f-fdb8-43bd-9551-28bc90afcd2f`. The names are deliberately different from the
+   old `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` secrets, which hold
+   values for the old, dead subscription and are no longer used by the workflows.
+   **Status: being added by Vimukthi.**
 3. Get the config commits into `develop`: the workflows must point at
    `ithelpdeskacr02` (they still say `ithelpdeskacr01` on `develop`).
 4. Only a **push to `develop`** deploys. Each service workflow builds, pushes, then

@@ -42,9 +42,9 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
 
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
