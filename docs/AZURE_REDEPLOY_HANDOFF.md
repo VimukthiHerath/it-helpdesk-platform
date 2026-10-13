@@ -44,7 +44,15 @@ was run on the new subscription, and where reality differed from the plan
 - Auth now has migration `AddPasswordResetFields` — **it must be applied by hand**
   (auth never migrates at startup). Assignment and SLA migrate themselves.
 
-**Sprint 4 deploy checklist (settings that do not exist in Azure yet)**
+**Status 2026-10-13 (evening): preparation is done, nothing is running.** CI/CD works
+(all workflows green on `develop`, Azure runs the CI-built images). The settings and
+secrets in the table below **are now applied** to the five apps, and the auth migration
+`AddPasswordResetFields` **is applied** to Azure MySQL. Still to do: bring the apps up,
+re-publish the WSO2 APIs, decide the WSO2 token approach (see "Open WSO2 risk"), run the
+smoke tests, then scale back to 0. Old accounts get a security stamp on their next login,
+so the existing admin keeps working.
+
+**Sprint 4 deploy checklist (settings that did not exist in Azure before 2026-10-13)**
 
 `<D>` = `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io`. Store keys and
 passwords as Container App secrets and reference them with `secretref:`.
