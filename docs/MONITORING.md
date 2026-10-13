@@ -66,6 +66,20 @@ Created by `./scripts/deploy-monitoring.sh` (add `--dry-run` to only validate). 
   `alertFrequency` in the template or pass `--emails "a@x.lk,b@x.lk"`.
 - To remove the alerts: delete the four rules and the action group in the portal (Monitor > Alerts), or delete the deployment's resources.
 
-## Not done yet
+## Browser monitoring (frontend)
 
-- Frontend JavaScript SDK. It needs the gateway to allow the `traceparent` header in CORS before browser-to-backend linking is switched on.
+The React app uses the Application Insights JavaScript SDK (`frontend/src/shared/telemetry.js`). It records page views
+(route changes included), JavaScript errors and the outcome of calls to the gateway.
+
+- **Switched on at build time** by `REACT_APP_APPINSIGHTS_CONNECTION_STRING`. The CI build passes it from the GitHub secret
+  `APPINSIGHTS_CONNECTION_STRING` through a Docker build argument (`frontend/Dockerfile`). With no secret, the SDK does nothing.
+  A browser connection string can only send data, not read it, but it is still kept out of git.
+  **One-time step:** GitHub > Settings > Secrets and variables > Actions > New repository secret, name `APPINSIGHTS_CONNECTION_STRING`,
+  value from `az monitor app-insights component show -a ithelpdesk-appinsights -g it-helpdesk-rg --query connectionString -o tsv`.
+- **Privacy:** page views keep only the path (no query string or fragment); anything that looks like `token=...` is blanked
+  (password reset links); no cookies are used; the only extra detail attached is the role (for example `Agent`), never a name or email.
+- **No browser-to-backend trace link, on purpose.** The gateway's CORS list (`Authorization, Content-Type, SOAPAction, apikey, Internal-Key`)
+  does not allow the `traceparent` header, so a browser sending it would fail every call at the preflight check.
+  The SDK therefore runs with `enableCorsCorrelation: false`. To link the two later, the gateway's allowed headers must be extended first.
+- Where to look: `ithelpdesk-appinsights` > Usage > Page views, Failures > Browser, and Logs (`pageViews`, `browserTimings`, `exceptions`).
+- Cost: the SDK adds roughly 60 kB (gzipped) to the app bundle.
