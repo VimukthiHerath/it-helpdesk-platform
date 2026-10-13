@@ -95,7 +95,8 @@
                     "401": {
                         "description": "Unauthorized"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/register": {
@@ -143,7 +144,8 @@
                     "409": {
                         "description": "Email already registered"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/forgot-password": {
@@ -180,7 +182,8 @@
                     "400": {
                         "description": "Invalid request"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/reset-password": {
@@ -225,7 +228,8 @@
                     "400": {
                         "description": "Invalid token or password"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/me": {
@@ -247,7 +251,8 @@
                     "401": {
                         "description": "Unauthorized"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/users": {
@@ -272,7 +277,8 @@
                     "403": {
                         "description": "Forbidden – insufficient role"
                     }
-                }
+                },
+                "x-auth-type": "None"
             },
             "post": {
                 "summary": "Create user (admin)",
@@ -332,7 +338,8 @@
                     "409": {
                         "description": "Email already exists"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/users/{id}": {
@@ -392,7 +399,8 @@
                     "404": {
                         "description": "User not found"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/users/{id}/deactivate": {
@@ -430,7 +438,8 @@
                     "404": {
                         "description": "User not found"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/health": {
@@ -445,7 +454,8 @@
                     "200": {
                         "description": "Healthy"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         }
     },

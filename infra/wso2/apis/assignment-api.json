@@ -53,7 +53,8 @@
                     "401": {
                         "description": "Unauthorized"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/queue": {
@@ -78,7 +79,8 @@
                     "403": {
                         "description": "Forbidden"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/agents": {
@@ -100,7 +102,8 @@
                     "401": {
                         "description": "Unauthorized"
                     }
-                }
+                },
+                "x-auth-type": "None"
             },
             "post": {
                 "summary": "Add agent to rotation (admin)",
@@ -147,7 +150,8 @@
                     "409": {
                         "description": "Agent already in rotation"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/agents/{userId}": {
@@ -185,7 +189,8 @@
                     "404": {
                         "description": "Agent not found"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/{id}": {
@@ -220,7 +225,8 @@
                     "404": {
                         "description": "Not found"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/{ticketId}/reassign": {
@@ -282,7 +288,8 @@
                     "409": {
                         "description": "Already assigned to that agent"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/health": {
@@ -297,7 +304,8 @@
                     "200": {
                         "description": "Healthy"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         }
     },

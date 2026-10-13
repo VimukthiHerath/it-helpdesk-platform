@@ -46,7 +46,8 @@
                     "200": {
                         "description": "Healthy"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/api/Sla/admin/tiers": {
@@ -71,7 +72,8 @@
                     "403": {
                         "description": "Forbidden (Administrator only)"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         },
         "/api/Sla/admin/tiers/{tierName}": {
@@ -132,7 +134,8 @@
                     "403": {
                         "description": "Forbidden (Administrator only)"
                     }
-                }
+                },
+                "x-auth-type": "None"
             }
         }
     },
