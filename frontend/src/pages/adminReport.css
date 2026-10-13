@@ -54,10 +54,27 @@
     gap: 6px;
 }
 
+/* same label look as every other form (.field > label in theme.css) */
+.report-filters__label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+}
+
+/* selects and date inputs render at different heights by default; give them all one height */
+.report-filters__field .input {
+    height: 48px;
+}
+
 .report-filters__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     align-items: center;
+    padding-top: 4px;
 }
 
 /* ── Result count ──────────────────────────────────────── */
