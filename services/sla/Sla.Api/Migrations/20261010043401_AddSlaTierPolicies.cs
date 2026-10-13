@@ -22,8 +22,11 @@ public partial class AddSlaTierPolicies : Migration
             },
             constraints: table => table.PrimaryKey("PK_SlaTierPolicies", x => x.TierName));
 
+        // Column types are given explicitly: this migration has no Designer file, so EF has no
+        // target model to look the types up in and InsertData would throw without them.
         migrationBuilder.InsertData("SlaTierPolicies",
             new[] { "TierName", "DurationMinutes", "LastUpdatedAtUtc" },
+            new[] { "varchar(255)", "int", "datetime(6)" },
             new object[,]
             {
                 { "LOW", 2880, new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc) },
