@@ -73,14 +73,17 @@ they already do — but then the services must be made **internal-only**, otherw
 the gateway can be bypassed. Decide this with the team before the demo.
 
 **CI/CD setup (what is needed, in order)**
-1. In Azure (needs someone allowed to create role assignments): create the managed
-   identity `github-actions-identity`, add a federated credential for
-   `repo:VimukthiHerath/it-helpdesk-platform:ref:refs/heads/develop`, and give it
-   **Contributor** on `it-helpdesk-rg` plus **AcrPush** on `ithelpdeskacr02`.
-2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**:
-   `AZURE_CLIENT_ID` (the identity's client id), `AZURE_TENANT_ID`
-   (`44e3cf94-19c9-4e32-96c3-14f5bf01391a`), `AZURE_SUBSCRIPTION_ID`
-   (`7e76da9f-fdb8-43bd-9551-28bc90afcd2f`).
+1. **Done in Azure on 2026-10-13:** managed identity `github-actions-identity`
+   (client id `f0c24a18-189f-4ff3-a442-417de5728143`, principal id
+   `2f069003-3df9-4a99-b2f6-6ebe13af4f37`) with a federated credential `github-develop`
+   for `repo:VimukthiHerath/it-helpdesk-platform:ref:refs/heads/develop`, plus
+   **Contributor** on `it-helpdesk-rg` and **AcrPush** on `ithelpdeskacr02`.
+   Only pushes to `develop` can log in as it. To allow another branch, add another
+   federated credential with that branch in the subject.
+2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**
+   (these are IDs, not passwords): `AZURE_CLIENT_ID` = `f0c24a18-189f-4ff3-a442-417de5728143`,
+   `AZURE_TENANT_ID` = `44e3cf94-19c9-4e32-96c3-14f5bf01391a`, `AZURE_SUBSCRIPTION_ID` =
+   `7e76da9f-fdb8-43bd-9551-28bc90afcd2f`. **Status: being added by Vimukthi.**
 3. Get the config commits into `develop`: the workflows must point at
    `ithelpdeskacr02` (they still say `ithelpdeskacr01` on `develop`).
 4. Only a **push to `develop`** deploys. Each service workflow builds, pushes, then
