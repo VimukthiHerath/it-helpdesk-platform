@@ -26,6 +26,6 @@ Never put the connection string in git.
 
 ## Not done yet
 
-- Kafka trace propagation, so one ticket can be followed across services.
+- (done in code) Kafka trace propagation: producers add a `traceparent` header and consumers continue the trace (`Observability/KafkaTracing.cs` in each service).
 - Frontend JavaScript SDK.
 - Dashboard and alerts.

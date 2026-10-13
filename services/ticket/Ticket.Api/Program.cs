@@ -14,8 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 // so local runs and tests send nothing. Health probes are left out so they don't cost ingestion.
 if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
 {
-    builder.Services.AddOpenTelemetry().UseAzureMonitor(o =>
-        o.SamplingRatio = builder.Configuration.GetValue("APPINSIGHTS_SAMPLING_RATIO", 1.0f));
+    builder.Services.AddOpenTelemetry()
+        .WithTracing(t => t.AddSource(ItHelpdesk.Observability.KafkaTracing.SourceName))
+        .UseAzureMonitor(o => o.SamplingRatio = builder.Configuration.GetValue("APPINSIGHTS_SAMPLING_RATIO", 1.0f));
     builder.Services.Configure<OpenTelemetry.Instrumentation.AspNetCore.AspNetCoreTraceInstrumentationOptions>(o =>
         o.Filter = ctx => !ctx.Request.Path.Value!.EndsWith("/health", StringComparison.OrdinalIgnoreCase));
 }

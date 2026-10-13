@@ -1,3 +1,4 @@
+using ItHelpdesk.Observability;
 using System.Text.Json;
 using Confluent.Kafka;
 
@@ -53,7 +54,7 @@ public sealed class KafkaPasswordResetPublisher : IPasswordResetPublisher, IDisp
 
             _producer.Value.Produce(
                 _topic,
-                new Message<string, string> { Key = userId.ToString(), Value = payload },
+                new Message<string, string> { Headers = KafkaTracing.CurrentHeaders(), Key = userId.ToString(), Value = payload },
                 report =>
                 {
                     if (report.Error.IsError)

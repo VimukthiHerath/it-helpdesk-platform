@@ -1,3 +1,4 @@
+using ItHelpdesk.Observability;
 using System.Text.Json;
 using Sla.Api.DTO;
 using Confluent.Kafka;
@@ -61,6 +62,7 @@ public sealed class TicketCreatedConsumer : BackgroundService
                 try
                 {
                     var result = consumer.Consume(stoppingToken);
+                    using var traceActivity = KafkaTracing.StartConsume(result);
 
                     if (string.IsNullOrWhiteSpace(result.Message.Value))
                     {
