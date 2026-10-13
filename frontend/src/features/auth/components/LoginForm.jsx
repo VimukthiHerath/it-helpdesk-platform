@@ -4,11 +4,9 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './LoginForm.css';
 
-// Routed through the WSO2 API Gateway rather than Auth.Api directly - this is
-// a genuinely public, unauthenticated operation (authType: None in WSO2), so
-// there's no token-trust mismatch to worry about here. See
-// docs/WSO2_API_GATEWAY.md for why every other, *protected* call still goes
-// directly to its service instead.
+// Every API call, this one included, goes through the WSO2 API Gateway
+// (see docs/ARCHITECTURE_AND_END_TO_END_FLOW.md). The gateway only routes the
+// request; each service checks the JWT itself.
 const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/login`;
 
 const LoginForm = () => {

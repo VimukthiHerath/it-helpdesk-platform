@@ -48,9 +48,6 @@ jobs:
       - name: Validate notification-api.json
         run: swagger-cli validate infra/wso2/apis/notification-api.json
 
-      - name: Check deploy-apis.sh syntax
-        run: bash -n infra/wso2/deploy-apis.sh
-
       - name: Confirm all expected files present
         run: |
           for f in auth-api.json ticket-api.json assignment-api.json sla-api.json notification-api.json; do

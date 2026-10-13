@@ -13,17 +13,19 @@ export const decodeToken = (token) => {
 
 export const getStoredToken = () => localStorage.getItem('token');
 
-// ASP.NET's JwtSecurityTokenHandler writes ClaimTypes.Role out under its
-// full claim-type URI, not the short "role" name.
-const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+// Auth.Api now builds the token with SecurityTokenDescriptor, which writes the
+// role under the short name "role". Before the RS256 change the token was
+// built from a plain claim list, which wrote the full claim-type URI instead.
+// Read the short name first and keep the long one so a token issued by the
+// older build still works until it expires.
+const LEGACY_ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
 
 export const getUserRole = () => {
     const payload = decodeToken(getStoredToken());
-    return payload?.[ROLE_CLAIM] ?? null;
+    return payload?.role ?? payload?.[LEGACY_ROLE_CLAIM] ?? null;
 };
 
-// The "sub" claim is a registered JWT claim, written under its short name
-// as-is (unlike the role claim above, which gets expanded to a long URI).
+// The "sub" claim is a registered JWT claim, written under its short name.
 export const getUserId = () => {
     const payload = decodeToken(getStoredToken());
     const sub = payload?.sub;

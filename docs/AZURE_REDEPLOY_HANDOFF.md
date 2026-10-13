@@ -44,7 +44,39 @@ was run on the new subscription, and where reality differed from the plan
 - Auth now has migration `AddPasswordResetFields` — **it must be applied by hand**
   (auth never migrates at startup). Assignment and SLA migrate themselves.
 
-**Sprint 4 deploy checklist (settings that do not exist in Azure yet)**
+**Status 2026-10-13 (evening): preparation is done, nothing is running.** CI/CD works
+(all workflows green on `develop`, Azure runs the CI-built images). The settings and
+secrets in the table below **are now applied** to the five apps, and the auth migration
+`AddPasswordResetFields` **is applied** to Azure MySQL. Still to do: bring the apps up,
+re-publish the WSO2 APIs, decide the WSO2 token approach (see "Open WSO2 risk"), run the
+smoke tests, then scale back to 0. Old accounts get a security stamp on their next login,
+so the existing admin keeps working.
+
+**Gateway token approach — decided and tested 2026-10-13 (supersedes "Open WSO2 risk" below)**
+- Tried: a WSO2 Key Manager that trusts Auth's issuer. WSO2 rejects Auth's RS256 tokens on
+  protected routes (`900901 Invalid Credentials`), and creating a custom Key Manager failed
+  (`901401 Required Key Manager configuration missing`; the needed settings are not
+  documented for this edition). WSO2 also wants each token tied to a registered application,
+  which Auth's tokens do not have. Stopped there.
+- **In use: the gateway only routes; the services check the JWT.** All 5 APIs are published
+  with every operation set to `x-auth-type: None`. The services already validate Auth's RS256
+  token through its JWKS URL. Tested through the gateway: valid admin token returns 200
+  (`/ticket/v1/report`, `/auth/v1/me`, `/auth/v1/users`); no token and a tampered token
+  return 401; login, register, forgot-password and the health routes are public.
+- Auth advertises its key URL as `http://` behind Azure's ingress; the services follow the
+  redirect to `https://`, so nothing needs changing.
+- **Consequence:** auth, ticket and assignment still have public URLs, so someone can call a
+  service without the gateway (they still need a valid token). To make "everything goes
+  through the gateway" literally true, switch those three to internal ingress and update the
+  gateway backend URLs, `Jwt__JwksUri`, `AuthApiUrl` and `AssignmentApi__BaseUrl` to the
+  `.internal.` hostnames. Not done yet.
+- **Re-publishing the APIs** (needed only if the share is wiped, or the specs change): the
+  specs live in `infra/wso2/apis/`. Stage them on the file share, run a `curl`-only script
+  inside the gateway with `az containerapp exec` that deletes the old APIs, then imports each
+  spec with its backend URL, publishes it and deploys a revision (sections 6 item 8 and 8.7).
+  `DELETE /apis/{id}` works on published APIs, so no lifecycle change is needed first.
+
+**Sprint 4 deploy checklist (settings that did not exist in Azure before 2026-10-13)**
 
 `<D>` = `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io`. Store keys and
 passwords as Container App secrets and reference them with `secretref:`.
@@ -80,6 +112,12 @@ the gateway can be bypassed. Decide this with the team before the demo.
    **Contributor** on `it-helpdesk-rg` and **AcrPush** on `ithelpdeskacr02`.
    Only pushes to `develop` can log in as it. To allow another branch, add another
    federated credential with that branch in the subject.
+   **Gotcha (found 2026-10-13):** this repository's OIDC subject includes numeric ids,
+   so the name-style subject above never matches and every deploy fails at "Log in to
+   Azure" with `AADSTS700213 No matching federated identity record`. The subject GitHub
+   actually presents is `repo:VimukthiHerath@176001576/it-helpdesk-platform@1338640258:ref:refs/heads/develop`,
+   so the credential must use that exact string. Read the real subject from the error
+   in the failed run's annotations if it ever changes.
 2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**
    (these are IDs, not passwords): `AZURE_NEW_CLIENT_ID` = `f0c24a18-189f-4ff3-a442-417de5728143`,
    `AZURE_NEW_TENANT_ID` = `44e3cf94-19c9-4e32-96c3-14f5bf01391a`, `AZURE_NEW_SUBSCRIPTION_ID` =
@@ -373,6 +411,11 @@ Management for real numbers):
 
 Budget alerts exist ($5 and $15, emails to `it24101497@my.sliit.lk`) but they
 only **warn**; they do not stop anything.
+
+> **Use the scripts instead of the manual commands below:** `scripts/stop-all` and `scripts/start-all`
+> (PowerShell `.ps1` and bash `.sh`). They follow all the rules in this section, check the result, and
+> `scripts/README.md` also explains how to do it by hand in the Azure portal. The commands below are kept
+> as the reference for what the scripts do.
 
 ### Stop everything (do this after every session)
 
