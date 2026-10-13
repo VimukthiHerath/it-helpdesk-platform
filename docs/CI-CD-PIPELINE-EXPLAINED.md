@@ -13,8 +13,8 @@ should come next.
 This is a **monorepo** containing five independent .NET 8 microservices
 (Auth, Ticket, Assignment, Notification, SLA) and one React frontend, each
 with its **own CI/CD pipeline**. There is no single "build everything"
-pipeline — instead, six separate GitHub Actions workflows live in
-`.github/workflows/`, one per service:
+pipeline — instead, seven separate GitHub Actions workflows live in
+`.github/workflows/`, one per service plus the repository-level quality gate:
 
 ```
 .github/workflows/
@@ -23,7 +23,8 @@ pipeline — instead, six separate GitHub Actions workflows live in
 ├── assignment-ci.yml
 ├── notification-ci.yml
 ├── sla-ci.yml
-└── frontend-ci.yml
+├── frontend-ci.yml
+└── sonarcloud.yml
 ```
 
 Each workflow is **path-filtered** — it only runs when files under its own
@@ -145,7 +146,62 @@ names match").
 
 ---
 
-## 3. The Dockerfiles
+## 3. Tests, coverage, and SonarCloud
+
+Every backend workflow restores and builds the service's adjacent `*.Tests`
+project, runs it before building the Docker image, and fails the workflow if
+any test fails. The frontend workflow runs the existing Create React App
+tests in non-watch mode before its production build.
+The test jobs provision fresh MySQL databases and apply the checked-in
+migrations before test execution; the Ticket workflow pins `TZ=UTC` so
+date-boundary tests are deterministic.
+
+The repository-level `.github/workflows/sonarcloud.yml` runs the five backend
+test projects and the frontend tests with coverage, then performs one
+SonarCloud analysis for the monorepo. A single analysis avoids concurrent
+updates to one SonarCloud project when several service paths change in the
+same commit. Configure these repository settings before enabling the required
+check:
+
+| Setting | Type | Purpose |
+|---|---|---|
+| `SONAR_PROJECT_KEY` | Actions variable | SonarCloud project key |
+| `SONAR_ORGANIZATION` | Actions variable | SonarCloud organization key |
+| `SONAR_TOKEN` | Actions secret | SonarCloud authentication token |
+
+The quality gate is configured with `sonar.qualitygate.wait=true`, so a
+failed SonarCloud gate fails CI. Pull requests only receive read access to
+repository contents and never receive Azure or database credentials.
+
+## 4. Automated database migrations
+
+Each backend service has checked-in EF Core migrations. Services do not apply
+schema changes during application startup; the relevant service workflow runs
+`dotnet ef database update` after Azure OIDC login and before
+pushing/updating the Container App. This explicit release step avoids
+multiple application replicas racing to migrate and keeps test hosts isolated.
+
+The migration step is gated to pushes on `develop`, exactly like image push
+and deployment. A migration failure stops the workflow before the new image
+is deployed. EF's migration history makes successfully applied migrations
+idempotent across retries. Configure these repository secrets with the
+connection string for each deployed database:
+
+| Secret | Service/database |
+|---|---|
+| `AUTH_DB_CONNECTION_STRING` | Auth |
+| `TICKET_DB_CONNECTION_STRING` | Ticket |
+| `ASSIGNMENT_DB_CONNECTION_STRING` | Assignment |
+| `SLA_DB_CONNECTION_STRING` | SLA |
+| `NOTIFICATION_DB_CONNECTION_STRING` | Notification |
+
+Connection strings are passed to the EF CLI through the step environment and
+are never echoed. Pull requests do not run migration steps and cannot access
+these secrets. Database backups and a tested rollback procedure remain an
+operational responsibility; rolling back an image does not automatically
+reverse an already-applied schema migration.
+
+## 5. The Dockerfiles
 
 ### Backend services (identical multi-stage pattern, 5x)
 
@@ -244,7 +300,7 @@ and `build` for the same reason.
 
 ---
 
-## 4. `docker-compose.yml` — local development only
+## 6. `docker-compose.yml` — local development only
 
 ```yaml
 services:
@@ -291,7 +347,7 @@ change).
 
 ---
 
-## 5. Azure infrastructure — what the pipelines actually deploy to
+## 7. Azure infrastructure — what the pipelines actually deploy to
 
 | Piece | Name / detail |
 |---|---|
@@ -333,7 +389,7 @@ Students grant). MySQL is left running always (free under the grant).
 
 ---
 
-## 6. A real incident — worth telling in a viva as a concrete story
+## 8. A real incident — worth telling in a viva as a concrete story
 
 This project actually hit a production CI/CD-adjacent incident, which is
 good material to talk through because it shows real operational
@@ -377,7 +433,7 @@ deploy automatically via the path-filtered CD steps.
 
 ---
 
-## 7. Gaps and future improvements (honest assessment)
+## 9. Gaps and future improvements (honest assessment)
 
 These are real, current limitations — good to know for a viva since
 "what would you improve" is a near-guaranteed question.
