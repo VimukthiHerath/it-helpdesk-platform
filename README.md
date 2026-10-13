@@ -52,9 +52,10 @@ calling each other directly.
 | ORM | **Entity Framework Core** + Pomelo's MySQL provider |
 | Database | **MySQL 8** — one schema per service, no shared database |
 | Messaging | **Apache Kafka** (KRaft mode — no ZooKeeper) |
-| Auth | **JWT bearer tokens**, validated independently by every service |
+| Auth | **JWT (RS256)**: Auth signs tokens with a private key, the other services verify them with its public key (JWKS) |
+| API gateway | **WSO2 API Manager 4.3**: the single entry point for every browser call |
 | Frontend | **React** (Create React App), React Router, plain `fetch` — no state library |
-| Local orchestration | **Docker Compose** (MySQL + Kafka + Kafka UI) |
+| Local orchestration | **Docker Compose** (MySQL + Kafka + Kafka UI + WSO2 gateway) |
 | CI/CD | **GitHub Actions** — one path-filtered workflow per service |
 | Container registry | **Azure Container Registry** |
 | Hosting | **Azure Container Apps** (serverless containers, scale-to-zero) |
@@ -63,54 +64,60 @@ calling each other directly.
 
 ## Architecture
 
-Five services, each with its own database, talking to each other almost
-entirely through Kafka events rather than direct calls to one another:
+The browser talks to **one** place, the WSO2 API Gateway. Behind it sit five services, each with
+its own database. They communicate in three different ways:
 
 ```mermaid
-flowchart LR
-    FE["Frontend<br/>(React)"]
+flowchart TB
+    FE["Frontend (React)<br/>served by nginx"]
+    GW["WSO2 API Gateway<br/>the only door for API calls"]
+    Kafka{{"Apache Kafka"}}
 
-    subgraph Auth["Auth.Api"]
-        AuthDB[(auth_db)]
-    end
-    subgraph Ticket["Ticket.Api"]
-        TicketDB[(ticket_db)]
-    end
-    subgraph Assignment["Assignment.Api"]
-        AssignDB[(assignment_db)]
-    end
-    subgraph SLA["Sla.Api"]
-        SlaDB[(sla_db)]
-    end
-    subgraph Notif["Notification.Api"]
-        NotifDB[(notification_db)]
+    subgraph Services["Five .NET services, one database each"]
+        direction LR
+        Auth["Auth<br/>auth_db"]
+        Ticket["Ticket<br/>ticket_db"]
+        Assignment["Assignment<br/>assignment_db"]
+        SLA["SLA<br/>sla_db"]
+        Notif["Notification<br/>notification_db"]
     end
 
-    Kafka{{kafka-broker}}
+    FE -- "every API call + JWT" --> GW
+    GW --> Auth
+    GW --> Ticket
+    GW --> Assignment
+    GW --> SLA
+    GW --> Notif
 
-    FE -->|login / manage users| Auth
-    FE -->|submit / view tickets| Ticket
-    FE -->|queue / reassign| Assignment
+    Auth -. "direct: still in rotation?" .-> Assignment
+    Assignment -. "direct: user list" .-> Auth
+    Notif -. "direct: email addresses" .-> Auth
 
-    Auth -.->|"one exception:<br/>is this agent still<br/>in rotation?"| Assignment
-
-    Ticket -->|publishes ticket-created| Kafka
-    Kafka -->|consumes ticket-created| Assignment
-    Assignment -->|publishes ticket-assigned| Kafka
-    Kafka -->|consumes ticket-assigned| Ticket
-    Kafka -->|consumes ticket-created| SLA
-    Kafka -->|consumes ticket-created| Notif
+    Ticket -- "ticket-created, ticket-resolved" --> Kafka
+    Assignment -- "ticket-assigned" --> Kafka
+    SLA -- "sla-breached" --> Kafka
+    Auth -- "password-reset-requested" --> Kafka
+    Kafka --> Assignment
+    Kafka --> Ticket
+    Kafka --> SLA
+    Kafka --> Notif
 ```
 
-**The one deliberate exception** to "services never call each other
-directly": Auth.Api makes a single synchronous HTTP call to Assignment.Api
-before letting an admin deactivate or re-role an active agent, to check
-whether they're still holding live tickets. Fail-closed — if that call
-can't be reached, the action is blocked, not silently allowed.
+1. **Browser to gateway.** Every API call goes through the gateway, which routes by path
+   (`/auth/v1`, `/ticket/v1`, `/assignment/v1`, ...). The gateway only routes; each service verifies the
+   JWT itself.
+2. **Direct calls** between services, for questions that need an answer right now (the three dotted lines,
+   plus Notification sending email through SMTP). They never start in a browser.
+3. **Kafka events**, for "this happened" facts that other services react to without the user waiting
+   (a new ticket is assigned, gets an SLA deadline and a confirmation email in parallel).
 
-Every service validates JWTs completely on its own (same signing
-key/issuer/audience everywhere) — there's no central gateway or auth
-service round-trip on every request.
+**Authentication.** Auth is the only service that can create a token: it signs with a private RSA key
+(RS256) and publishes the public key at `/.well-known/jwks.json`. The other services only *verify* tokens
+with that public key, so no secret is shared between them (before Sprint 4 every service held the same
+HS256 secret).
+
+The full explanation, with the complete user journey from login to logout, is in
+[`docs/ARCHITECTURE_AND_END_TO_END_FLOW.md`](docs/ARCHITECTURE_AND_END_TO_END_FLOW.md).
 
 ---
 
@@ -124,8 +131,10 @@ services/
   notification/Notification.Api
   sla/Sla.Api
 frontend/                   # React app (Create React App)
-docker-compose.yml           # local MySQL + Kafka + Kafka UI
-docs/                        # CI/CD, deployment, and troubleshooting guides
+infra/wso2/                  # the gateway's API definitions and Azure definitions
+scripts/                     # start-all / stop-all for the Azure deployment (see scripts/README.md)
+docker-compose.yml           # local MySQL + Kafka + Kafka UI + WSO2 gateway
+docs/                        # architecture, CI/CD, deployment, and troubleshooting guides
 ```
 
 Every backend service follows the same internal shape:
@@ -151,9 +160,15 @@ docker compose up -d
 ```
 
 This brings up local MySQL (port **3307**, not the default 3306, so it
-won't clash with anything else you have running) and Kafka (port
-**9092**), plus a Kafka UI dashboard at **http://localhost:8081** for
-browsing topics and messages while you develop.
+won't clash with anything else you have running), Kafka (port
+**9092**), a Kafka UI dashboard at **http://localhost:8081**, and the
+**WSO2 gateway** (port **8280**; its admin console is on 9443).
+
+> **The frontend talks to the gateway, not to the services.** In development
+> `frontend/.env.development` points every call at `http://localhost:8280`, so the
+> gateway needs the five APIs published before the UI can reach any service. The
+> steps are in section 7 of [`docs/WSO2_API_GATEWAY.md`](docs/WSO2_API_GATEWAY.md). Without
+> them you can still run and test each service on its own port.
 
 ### 2. Run each backend service
 
@@ -179,8 +194,8 @@ npm install
 npm start
 ```
 
-Opens at **http://localhost:3000**, already pointed at the local backend
-ports via `.env.development`.
+Opens at **http://localhost:3000**, already pointed at the local gateway via
+`.env.development`.
 
 ### 4. Create your first account
 
@@ -243,6 +258,8 @@ currently no UI to remove the old placeholders — do that directly in
 | MySQL | `localhost:3307` (root / `localdevpassword`) |
 | Kafka | `localhost:9092` |
 | Kafka UI | http://localhost:8081 |
+| WSO2 gateway (API calls) | http://localhost:8280 |
+| WSO2 admin console | https://localhost:9443 (`admin` / `admin`, local only) |
 
 ---
 
@@ -263,13 +280,14 @@ dotnet test services/assignment/Assignment.Api.Tests
 
 ## Further documentation
 
-- [Architectural evolution and final state](docs/architecture/evolution.md).
-- [Architecture diagrams](docs/architecture/diagrams.md).
+- [`docs/ARCHITECTURE_AND_END_TO_END_FLOW.md`](docs/ARCHITECTURE_AND_END_TO_END_FLOW.md) - **start here**: the architecture explained and the full user journey, with the JWT/JWKS authentication in detail.
+- [Architectural evolution and final state](docs/architecture/evolution.md) and [architecture diagrams](docs/architecture/diagrams.md).
 - [Architecture decision records](docs/adr/).
-- [`docs/CI-CD-PIPELINE-EXPLAINED.md`](docs/CI-CD-PIPELINE-EXPLAINED.md) — how the GitHub Actions pipelines, Dockerfiles, and Azure infrastructure fit together.
-- [`docs/PRODUCTION_DEPLOYMENT_GUIDE.md`](docs/PRODUCTION_DEPLOYMENT_GUIDE.md) — the manual steps CI/CD doesn't cover (migrations, ingress/CORS, secrets, seed data) — read this before shipping anything beyond plain app logic.
-- [`docs/DEPLOY_KAFKA_UI.md`](docs/DEPLOY_KAFKA_UI.md) — how the production Kafka UI dashboard was set up.
-- [`docs/LOCAL_DEV_TROUBLESHOOTING.md`](docs/LOCAL_DEV_TROUBLESHOOTING.md) — common local setup issues and fixes.
+- [`scripts/README.md`](scripts/README.md) - start and stop the Azure deployment (scripts, and by hand in the Azure portal).
+- [`docs/AZURE_REDEPLOY_HANDOFF.md`](docs/AZURE_REDEPLOY_HANDOFF.md) - what is deployed on Azure, how it is configured, costs, access and troubleshooting.
+- [`docs/WSO2_API_GATEWAY.md`](docs/WSO2_API_GATEWAY.md) - the gateway: setup, the problems met, and how APIs are published.
+- [`docs/CI-CD-PIPELINE-EXPLAINED.md`](docs/CI-CD-PIPELINE-EXPLAINED.md) - how the GitHub Actions pipelines, Dockerfiles, and Azure infrastructure fit together.
+- [`docs/LOCAL_DEV_TROUBLESHOOTING.md`](docs/LOCAL_DEV_TROUBLESHOOTING.md) - common local setup issues and fixes.
 
 ---
 
