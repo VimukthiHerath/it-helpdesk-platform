@@ -80,6 +80,12 @@ the gateway can be bypassed. Decide this with the team before the demo.
    **Contributor** on `it-helpdesk-rg` and **AcrPush** on `ithelpdeskacr02`.
    Only pushes to `develop` can log in as it. To allow another branch, add another
    federated credential with that branch in the subject.
+   **Gotcha (found 2026-10-13):** this repository's OIDC subject includes numeric ids,
+   so the name-style subject above never matches and every deploy fails at "Log in to
+   Azure" with `AADSTS700213 No matching federated identity record`. The subject GitHub
+   actually presents is `repo:VimukthiHerath@176001576/it-helpdesk-platform@1338640258:ref:refs/heads/develop`,
+   so the credential must use that exact string. Read the real subject from the error
+   in the failed run's annotations if it ever changes.
 2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**
    (these are IDs, not passwords): `AZURE_NEW_CLIENT_ID` = `f0c24a18-189f-4ff3-a442-417de5728143`,
    `AZURE_NEW_TENANT_ID` = `44e3cf94-19c9-4e32-96c3-14f5bf01391a`, `AZURE_NEW_SUBSCRIPTION_ID` =
