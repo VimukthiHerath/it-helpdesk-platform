@@ -1,9 +1,9 @@
-location: southeastasia
+location: centralindia
 name: wso2-config-helper
 resourceGroup: it-helpdesk-rg
 type: Microsoft.App/containerApps
 properties:
-  managedEnvironmentId: /subscriptions/0e4a7888-eeba-499e-9e68-0bcffb2db727/resourceGroups/it-helpdesk-rg/providers/Microsoft.App/managedEnvironments/it-helpdesk-env
+  managedEnvironmentId: /subscriptions/7e76da9f-fdb8-43bd-9551-28bc90afcd2f/resourceGroups/it-helpdesk-rg/providers/Microsoft.App/managedEnvironments/it-helpdesk-envstd
   configuration:
     activeRevisionsMode: Single
   template:
