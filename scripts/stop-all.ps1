@@ -9,7 +9,8 @@
       3. deactivates the WSO2 gateway revision (it is never changed with "update")
       4. waits and CHECKS that no replica is left running anywhere; if an app does not
          go down by itself (Kafka sometimes does not), its revision is deactivated
-      5. stops the MySQL server (unless -KeepMySql)
+      5. stops the MySQL server (unless -KeepMySql); the request is sent early so it runs
+         in parallel with the apps shutting down, and is checked at the end
 
     Why the check matters: "az ... update --min-replicas 0" only tells Azure that zero is
     allowed. Replicas are removed a few minutes later, and a stuck app keeps running and
@@ -30,6 +31,9 @@
 .PARAMETER TimeoutMinutes
     How long to wait for replicas to disappear (default 15).
 
+.PARAMETER NudgeMinutes
+    After this many minutes, an app that did not scale down by itself is deactivated (default 4).
+
 .EXAMPLE
     .\scripts\stop-all.ps1
     .\scripts\stop-all.ps1 -KeepMySql
@@ -47,7 +51,8 @@ param(
     [string]$ResourceGroup  = $(if ($env:HELPDESK_RG)              { $env:HELPDESK_RG }              else { 'it-helpdesk-rg' }),
     [string]$Subscription   = $(if ($env:HELPDESK_SUBSCRIPTION_ID) { $env:HELPDESK_SUBSCRIPTION_ID } else { '7e76da9f-fdb8-43bd-9551-28bc90afcd2f' }),
     [string]$MySql          = $(if ($env:HELPDESK_MYSQL)           { $env:HELPDESK_MYSQL }           else { 'it-helpdesk-mysql02' }),
-    [int]$TimeoutMinutes    = $(if ($env:HELPDESK_TIMEOUT_MIN)     { [int]$env:HELPDESK_TIMEOUT_MIN } else { 15 })
+    [int]$TimeoutMinutes    = $(if ($env:HELPDESK_TIMEOUT_MIN)     { [int]$env:HELPDESK_TIMEOUT_MIN } else { 15 }),
+    [int]$NudgeMinutes      = $(if ($env:HELPDESK_NUDGE_MIN)       { [int]$env:HELPDESK_NUDGE_MIN }   else { 4 })
 )
 
 $ErrorActionPreference = 'Continue'      # az writes warnings to stderr; they must not stop the script
@@ -147,7 +152,7 @@ function Stop-Apps {
 function Confirm-Zero {
     Step "Checking that nothing is running (up to $TimeoutMinutes minutes)"
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
-    $nudgeAt  = (Get-Date).AddMinutes($TimeoutMinutes / 2)
+    $nudgeAt  = (Get-Date).AddMinutes($NudgeMinutes)
     $nudged   = $false
     while ($true) {
         $up = @{}
@@ -171,26 +176,32 @@ function Confirm-Zero {
             }
         }
         Say "  still running: $list"
-        Start-Sleep -Seconds 30
+        Start-Sleep -Seconds 20
     }
 }
 
-function Stop-MySql {
+# Ask Azure to stop MySQL right away: it takes a few minutes, so it runs while the apps drain.
+# (The apps are being stopped anyway; a few database errors while they wind down are harmless.)
+function Request-MySqlStop {
     Step "MySQL server ($MySql)"
-    if ($KeepMySql) { Say "  left running (-KeepMySql). It keeps billing; stop it later with: az mysql flexible-server stop -g $ResourceGroup -n $MySql"; return $true }
-    $started = $false
+    if ($KeepMySql) { Say "  left running (-KeepMySql). It keeps billing; stop it later with: az mysql flexible-server stop -g $ResourceGroup -n $MySql"; return }
+    $s = Azq mysql flexible-server show -g $ResourceGroup -n $MySql --query state -o tsv
+    switch -Regex ($s) {
+        '^Ready$'              { Say '  asking Azure to stop it...'; Invoke-Az mysql flexible-server stop -g $ResourceGroup -n $MySql --no-wait | Out-Null }
+        '^(Stopped|Disabled)$' { Say '  already stopped.' }
+        '^$'                   { Say "  ! cannot read the state of MySQL server '$MySql'"; Fail 'mysql' }
+        default                { Say "  state: $s (it is changing already; will check at the end)" }
+    }
+}
+
+function Wait-MySqlStopped {
+    if ($KeepMySql) { return $true }
+    Step 'Checking that MySQL is stopped'
     for ($i = 0; $i -lt 40; $i++) {        # up to ~10 minutes
         $s = Azq mysql flexible-server show -g $ResourceGroup -n $MySql --query state -o tsv
         switch -Regex ($s) {
             '^(Stopped|Disabled)$' { Say '  Stopped. (Azure starts it again by itself after 7 days - run this script again then.)'; return $true }
-            '^Ready$' {
-                if (-not $started) {
-                    Say '  stopping...'
-                    Invoke-Az mysql flexible-server stop -g $ResourceGroup -n $MySql --no-wait | Out-Null
-                    $started = $true
-                    if ($DryRun) { return $true }
-                }
-            }
+            '^Ready$' { Say '  still Ready, asking again...'; Invoke-Az mysql flexible-server stop -g $ResourceGroup -n $MySql --no-wait | Out-Null }
             '^$' { Say "  ! cannot read the state of MySQL server '$MySql'"; Fail 'mysql'; return $false }
             default { Say "  state: $s (waiting)" }
         }
@@ -209,16 +220,16 @@ function Show-Summary {
 Test-Setup
 Stop-Apps
 Stop-Gateway
+Request-MySqlStop
 if ($DryRun) {
-    Stop-MySql | Out-Null
+    # nothing more to do: the commands above were only printed
 }
 elseif (-not $NoWait) {
     Confirm-Zero | Out-Null
-    Stop-MySql | Out-Null
+    Wait-MySqlStopped | Out-Null
     Show-Summary
 }
 else {
-    if (-not $KeepMySql) { Invoke-Az mysql flexible-server stop -g $ResourceGroup -n $MySql --no-wait | Out-Null }
     Say '  (-NoWait: stop commands sent, nothing was verified. Check the Azure portal, or run this script again.)'
 }
 Write-Host ''

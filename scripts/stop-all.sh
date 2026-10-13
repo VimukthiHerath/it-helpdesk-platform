@@ -8,7 +8,8 @@
 #   3. deactivates the WSO2 gateway revision (it is never changed with "update")
 #   4. waits and CHECKS that no replica is left running anywhere; if an app does not
 #      go down by itself (Kafka sometimes does not), its revision is deactivated
-#   5. stops the MySQL server (unless --keep-mysql)
+#   5. stops the MySQL server (unless --keep-mysql); the request is sent early so it runs
+#      in parallel with the apps shutting down, and is checked at the end
 #
 # Why the check matters: "az ... update --min-replicas 0" only tells Azure that zero
 # is allowed. Replicas are removed a few minutes later, and a stuck app keeps running
@@ -21,7 +22,8 @@
 #
 # Settings (environment variables, defaults are for this project):
 #   HELPDESK_RG, HELPDESK_SUBSCRIPTION_ID, HELPDESK_MYSQL,
-#   HELPDESK_TIMEOUT_MIN (how long to wait for replicas to disappear, default 15)
+#   HELPDESK_TIMEOUT_MIN (how long to wait for replicas to disappear, default 15),
+#   HELPDESK_NUDGE_MIN (after how many minutes an app that will not scale down is deactivated, default 4)
 #
 # Exit code: 0 = verified stopped, 1 = something is still running, 2 = could not start.
 # Note: Azure restarts a stopped MySQL server by itself after 7 days. Run this again.
@@ -32,6 +34,7 @@ RG="${HELPDESK_RG:-it-helpdesk-rg}"
 SUBSCRIPTION="${HELPDESK_SUBSCRIPTION_ID:-7e76da9f-fdb8-43bd-9551-28bc90afcd2f}"
 MYSQL="${HELPDESK_MYSQL:-it-helpdesk-mysql02}"
 TIMEOUT_MIN="${HELPDESK_TIMEOUT_MIN:-15}"
+NUDGE_MIN="${HELPDESK_NUDGE_MIN:-4}"     # after this long, apps that did not scale down by themselves are deactivated
 GATEWAY_APP="wso2-gateway"
 
 DRY_RUN=0
@@ -120,11 +123,11 @@ stop_apps() {
   done
 }
 
-# poll until every app has zero replicas; deactivate stragglers after half the time
+# poll until every app has zero replicas; deactivate stragglers after NUDGE_MIN minutes
 verify_zero() {
   step "Checking that nothing is running (up to $TIMEOUT_MIN minutes)"
   local deadline=$(( $(date +%s) + TIMEOUT_MIN * 60 ))
-  local nudge_at=$(( $(date +%s) + TIMEOUT_MIN * 30 )) nudged=0
+  local nudge_at=$(( $(date +%s) + NUDGE_MIN * 60 )) nudged=0
   local app n up
   while : ; do
     up=""
@@ -141,22 +144,35 @@ verify_zero() {
       for item in $up; do name=${item%%=*}; for r in $(active_names "$name"); do run containerapp revision deactivate -g "$RG" -n "$name" --revision "$r"; done; done
     fi
     say "  still running:$up"
-    sleep 30
+    sleep 20
   done
 }
 
-stop_mysql() {
+# Ask Azure to stop MySQL right away: it takes a few minutes, so it runs while the apps drain.
+# (The apps are being stopped anyway; a few database errors while they wind down are harmless.)
+request_mysql_stop() {
   step "MySQL server ($MYSQL)"
   if [ "$STOP_MYSQL" = 0 ]; then say "  left running (--keep-mysql). It keeps billing; stop it later with: az mysql flexible-server stop -g $RG -n $MYSQL"; return 0; fi
-  local s i started=0
+  local s; s=$(azq mysql flexible-server show -g "$RG" -n "$MYSQL" --query state -o tsv)
+  case "$s" in
+    Ready)            say "  asking Azure to stop it..."; run mysql flexible-server stop -g "$RG" -n "$MYSQL" --no-wait ;;
+    Stopped|Disabled) say "  already stopped." ;;
+    '')               say "  ! cannot read the state of MySQL server '$MYSQL'"; fail mysql ;;
+    *)                say "  state: $s (it is changing already; will check at the end)" ;;
+  esac
+}
+
+wait_mysql_stopped() {
+  [ "$STOP_MYSQL" = 0 ] && return 0
+  step "Checking that MySQL is stopped"
+  local s i
   for i in $(seq 1 40); do        # up to ~10 minutes
     s=$(azq mysql flexible-server show -g "$RG" -n "$MYSQL" --query state -o tsv)
     case "$s" in
       Stopped|Disabled) say "  Stopped. (Azure starts it again by itself after 7 days - run this script again then.)"; return 0 ;;
-      Ready)   if [ $started = 0 ]; then say "  stopping..."; run mysql flexible-server stop -g "$RG" -n "$MYSQL" --no-wait; started=1
-                 [ "$DRY_RUN" = 1 ] && return 0; fi ;;
-      '')      say "  ! cannot read the state of MySQL server '$MYSQL'"; fail mysql; return 1 ;;
-      *)       say "  state: $s (waiting)" ;;
+      Ready)  say "  still Ready, asking again..."; run mysql flexible-server stop -g "$RG" -n "$MYSQL" --no-wait ;;
+      '')     say "  ! cannot read the state of MySQL server '$MYSQL'"; fail mysql; return 1 ;;
+      *)      say "  state: $s (waiting)" ;;
     esac
     sleep 15
   done
@@ -176,14 +192,14 @@ summary() {
 preflight
 stop_apps
 stop_gateway
+request_mysql_stop
 if [ "$DRY_RUN" = 1 ]; then
-  stop_mysql
+  :
 elif [ "$WAIT" = 1 ]; then
   verify_zero
-  stop_mysql
+  wait_mysql_stopped
   summary
 else
-  [ "$STOP_MYSQL" = 1 ] && run mysql flexible-server stop -g "$RG" -n "$MYSQL" --no-wait
   say "  (--no-wait: stop commands sent, nothing was verified. Check the Azure portal, or run this script again.)"
 fi
 echo

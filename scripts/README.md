@@ -33,9 +33,9 @@ The `.ps1` and `.sh` versions do exactly the same thing; use whichever fits wher
 **Windows PowerShell**
 
 ```powershell
-.\scripts\start-all.ps1          # bring everything up (about 8-10 minutes)
+.\scripts\start-all.ps1          # bring everything up (about 6-8 minutes)
 # ... use the system ...
-.\scripts\stop-all.ps1           # shut everything down and verify (about 7-10 minutes)
+.\scripts\stop-all.ps1           # shut everything down and verify (about 8-12 minutes)
 ```
 
 If PowerShell refuses to run scripts ("running scripts is disabled on this system"), run them like this instead:
@@ -65,6 +65,7 @@ in every app.
 | `-NoWait` | `--no-wait` | Send the commands and return immediately, without waiting or checking |
 | `-KeepMySql` (stop only) | `--keep-mysql` | Leave the MySQL server running (it keeps billing about $12-15 a month) |
 | `-TimeoutMinutes 20` | `HELPDESK_TIMEOUT_MIN=20` | How long to wait for health / for replicas to disappear (default 15) |
+| `-NudgeMinutes 4` (stop only) | `HELPDESK_NUDGE_MIN=4` | After this long, an app that will not scale down by itself is deactivated (default 4) |
 | `-ResourceGroup`, `-Subscription`, `-MySql`, `-Environment` | `HELPDESK_RG`, `HELPDESK_SUBSCRIPTION_ID`, `HELPDESK_MYSQL`, `HELPDESK_ENV` | Use other names if the deployment is ever recreated (the defaults are this project's) |
 
 **Exit codes:** `0` success, `1` something did not come up / is still running (the message says what),
@@ -93,9 +94,13 @@ in every app.
 3. **Deactivates** the WSO2 gateway's revision.
 4. **Checks** every few seconds until no app has a running replica. Azure removes replicas some minutes
    after a scale-to-zero request (Kafka is the slowest, up to about 5 minutes after the services
-   disconnect). If an app has not gone down halfway through the wait, the script deactivates its
+   disconnect). If an app has not gone down after 4 minutes, the script deactivates its
    revision, and it only reports success after it has *seen* zero replicas.
-5. **Stops MySQL** and confirms it is `Stopped`.
+5. **MySQL:** the stop is requested at the very start (Azure needs a few minutes for it, so it runs while the
+   apps drain) and confirmed `Stopped` at the end.
+
+**Measured timings:** start about 6 minutes (real run, everything answering 200 including the gateway's routes); stop about
+8-12 minutes, almost all of it Azure removing replicas and stopping MySQL. The scripts poll, so they are not frozen.
 
 Both scripts are **safe to run twice** and safe to interrupt (Ctrl+C): run them again to finish the job.
 
