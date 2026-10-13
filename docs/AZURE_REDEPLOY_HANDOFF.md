@@ -52,6 +52,30 @@ re-publish the WSO2 APIs, decide the WSO2 token approach (see "Open WSO2 risk"),
 smoke tests, then scale back to 0. Old accounts get a security stamp on their next login,
 so the existing admin keeps working.
 
+**Gateway token approach — decided and tested 2026-10-13 (supersedes "Open WSO2 risk" below)**
+- Tried: a WSO2 Key Manager that trusts Auth's issuer. WSO2 rejects Auth's RS256 tokens on
+  protected routes (`900901 Invalid Credentials`), and creating a custom Key Manager failed
+  (`901401 Required Key Manager configuration missing`; the needed settings are not
+  documented for this edition). WSO2 also wants each token tied to a registered application,
+  which Auth's tokens do not have. Stopped there.
+- **In use: the gateway only routes; the services check the JWT.** All 5 APIs are published
+  with every operation set to `x-auth-type: None`. The services already validate Auth's RS256
+  token through its JWKS URL. Tested through the gateway: valid admin token returns 200
+  (`/ticket/v1/report`, `/auth/v1/me`, `/auth/v1/users`); no token and a tampered token
+  return 401; login, register, forgot-password and the health routes are public.
+- Auth advertises its key URL as `http://` behind Azure's ingress; the services follow the
+  redirect to `https://`, so nothing needs changing.
+- **Consequence:** auth, ticket and assignment still have public URLs, so someone can call a
+  service without the gateway (they still need a valid token). To make "everything goes
+  through the gateway" literally true, switch those three to internal ingress and update the
+  gateway backend URLs, `Jwt__JwksUri`, `AuthApiUrl` and `AssignmentApi__BaseUrl` to the
+  `.internal.` hostnames. Not done yet.
+- **Re-publishing the APIs** (needed only if the share is wiped, or the specs change): the
+  specs live in `infra/wso2/apis/`. Stage them on the file share, run a `curl`-only script
+  inside the gateway with `az containerapp exec` that deletes the old APIs, then imports each
+  spec with its backend URL, publishes it and deploys a revision (sections 6 item 8 and 8.7).
+  `DELETE /apis/{id}` works on published APIs, so no lifecycle change is needed first.
+
 **Sprint 4 deploy checklist (settings that did not exist in Azure before 2026-10-13)**
 
 `<D>` = `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io`. Store keys and
