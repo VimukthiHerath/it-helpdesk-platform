@@ -1,0 +1,188 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Dashboard (workbook), email action group and alert rules for the IT Helpdesk Application Insights resource."
+  },
+  "parameters": {
+    "appInsightsName": {
+      "type": "string",
+      "defaultValue": "ithelpdesk-appinsights"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "centralindia"
+    },
+    "alertEmails": {
+      "type": "array",
+      "metadata": { "description": "Addresses that receive alert emails." }
+    },
+    "workbookData": {
+      "type": "string",
+      "metadata": { "description": "Contents of workbook.json." }
+    },
+    "alertFrequency": {
+      "type": "string",
+      "defaultValue": "PT15M",
+      "metadata": { "description": "How often each alert query runs. Longer is cheaper." }
+    }
+  },
+  "variables": {
+    "appInsightsId": "[resourceId('microsoft.insights/components', parameters('appInsightsName'))]",
+    "actionGroupName": "ithelpdesk-alerts",
+    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('actionGroupName')]",
+      "location": "global",
+      "properties": {
+        "groupShortName": "helpdesk",
+        "enabled": true,
+        "copy": [
+          {
+            "name": "emailReceivers",
+            "count": "[length(parameters('alertEmails'))]",
+            "input": {
+              "name": "[concat('email-', copyIndex('emailReceivers'))]",
+              "emailAddress": "[parameters('alertEmails')[copyIndex('emailReceivers')]]",
+              "useCommonAlertSchema": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/workbooks",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, 'ithelpdesk-workbook')]",
+      "location": "[parameters('location')]",
+      "kind": "shared",
+      "properties": {
+        "displayName": "IT Helpdesk health",
+        "category": "workbook",
+        "version": "Notebook/1.0",
+        "sourceId": "[variables('appInsightsId')]",
+        "serializedData": "[parameters('workbookData')]"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2022-06-15",
+      "name": "helpdesk-server-errors",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[variables('actionGroupId')]" ],
+      "properties": {
+        "displayName": "Helpdesk: server errors (HTTP 5xx)",
+        "description": "Three or more requests answered with a 5xx status in the window.",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "[parameters('alertFrequency')]",
+        "windowSize": "[parameters('alertFrequency')]",
+        "scopes": [ "[variables('appInsightsId')]" ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "query": "requests | where toint(resultCode) >= 500",
+              "timeAggregation": "Count",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 3,
+              "failingPeriods": { "numberOfEvaluationPeriods": 1, "minFailingPeriodsToAlert": 1 }
+            }
+          ]
+        },
+        "actions": { "actionGroups": [ "[variables('actionGroupId')]" ] }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2022-06-15",
+      "name": "helpdesk-logged-errors",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[variables('actionGroupId')]" ],
+      "properties": {
+        "displayName": "Helpdesk: errors and exceptions in any service",
+        "description": "Five or more error logs or exceptions in the window. The harmless 'Unknown topic or partition' Kafka message at start-up is ignored.",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "[parameters('alertFrequency')]",
+        "windowSize": "[parameters('alertFrequency')]",
+        "scopes": [ "[variables('appInsightsId')]" ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "query": "union (traces | where severityLevel >= 3 | project timestamp, message), (exceptions | project timestamp, message = outerMessage) | where message !has 'Unknown topic or partition'",
+              "timeAggregation": "Count",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 5,
+              "failingPeriods": { "numberOfEvaluationPeriods": 1, "minFailingPeriodsToAlert": 1 }
+            }
+          ]
+        },
+        "actions": { "actionGroups": [ "[variables('actionGroupId')]" ] }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2022-06-15",
+      "name": "helpdesk-notification-failures",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[variables('actionGroupId')]" ],
+      "properties": {
+        "displayName": "Helpdesk: notification service failed to process a message",
+        "description": "Any error logged by notification-service (for example an email that could not be sent).",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "[parameters('alertFrequency')]",
+        "windowSize": "[parameters('alertFrequency')]",
+        "scopes": [ "[variables('appInsightsId')]" ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "query": "traces | where cloud_RoleName == 'notification-service' and severityLevel >= 3 | where message !has 'Unknown topic or partition'",
+              "timeAggregation": "Count",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 1,
+              "failingPeriods": { "numberOfEvaluationPeriods": 1, "minFailingPeriodsToAlert": 1 }
+            }
+          ]
+        },
+        "actions": { "actionGroups": [ "[variables('actionGroupId')]" ] }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2022-06-15",
+      "name": "helpdesk-slow-requests",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[variables('actionGroupId')]" ],
+      "properties": {
+        "displayName": "Helpdesk: slow responses",
+        "description": "The 95th percentile response time is above 5 seconds with at least 10 requests in the window.",
+        "severity": 3,
+        "enabled": true,
+        "evaluationFrequency": "[parameters('alertFrequency')]",
+        "windowSize": "[parameters('alertFrequency')]",
+        "scopes": [ "[variables('appInsightsId')]" ],
+        "autoMitigate": true,
+        "criteria": {
+          "allOf": [
+            {
+              "query": "requests | where itemType == 'request' | where name !has 'process' | summarize n = count(), p95 = percentile(duration, 95) | where n >= 10 and p95 > 5000",
+              "timeAggregation": "Count",
+              "operator": "GreaterThanOrEqual",
+              "threshold": 1,
+              "failingPeriods": { "numberOfEvaluationPeriods": 1, "minFailingPeriodsToAlert": 1 }
+            }
+          ]
+        },
+        "actions": { "actionGroups": [ "[variables('actionGroupId')]" ] }
+      }
+    }
+  ]
+}
