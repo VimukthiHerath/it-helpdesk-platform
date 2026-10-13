@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Navbar from '../components/layout/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../shared/authToken';
 import './adminReport.css';
@@ -24,11 +25,6 @@ const URGENCY_OPTIONS = [
 
 const AdminReportPage = () => {
     const navigate = useNavigate();
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login', { replace: true });
-    };
 
     const [filters, setFilters] = useState({ status: '', urgency: '', startDate: '', endDate: '' });
     const [tickets, setTickets] = useState([]);
@@ -75,33 +71,10 @@ const AdminReportPage = () => {
 
     return (
         <main className="report-page">
-            <div className="app-bar">
-                <span className="app-bar__brand">IT Helpdesk</span>
-                <div className="app-bar__actions">
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/accounts')}>
-                        All accounts
-                    </button>
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
-                        All tickets
-                    </button>
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/')}>
-                        Dashboard
-                    </button>
-                    <button type="button" className="btn btn--ghost" onClick={handleLogout}>
-                        Log out
-                    </button>
-                </div>
-            </div>
+            <Navbar />
 
-            <div className="report-page__header">
-                <button type="button" className="btn btn--ghost report-page__back" onClick={() => navigate('/')}>
-                    ← Dashboard
-                </button>
-                <p className="eyebrow">Administrator</p>
-                <h1>Ticket Report</h1>
-                <p className="report-page__subtitle">
-                    Filter by status, urgency, or date range to review team performance.
-                </p>
+            <div className="page-header">
+                <h1>Ticket report</h1>
             </div>
 
             <section className="report-filters panel">

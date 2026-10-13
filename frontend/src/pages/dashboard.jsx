@@ -1,103 +1,46 @@
 import { useNavigate } from 'react-router-dom';
 import TicketCreateForm from '../features/ticket/components/ticketCreateForm';
 import Navbar from '../components/layout/Navbar';
-import { isAdmin, isAgent, getUserRole } from '../shared/authToken';
+import { getUserRole } from '../shared/authToken';
 import './dashboard.css';
+
+// Admins and agents have nothing to submit, so their home screen is a list of
+// equal-size bars, one per place they work in.
+const BARS_BY_ROLE = {
+    Administrator: [
+        { to: '/admin/accounts', label: 'All accounts' },
+        { to: '/admin/users/new', label: 'Create user' },
+        { to: '/admin/rotation', label: 'Agent rotation' },
+        { to: '/admin/report', label: 'Reports' },
+        { to: '/tickets', label: 'All tickets' },
+    ],
+    Agent: [
+        { to: '/agent/queue', label: 'My queue' },
+        { to: '/tickets', label: 'All tickets' },
+    ],
+};
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const isEmployee = getUserRole() === 'Employee';
-    const isAgentUser = isAgent();
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login', { replace: true });
-    };
+    const role = getUserRole();
+    const bars = BARS_BY_ROLE[role] || [];
 
     return (
         <main className="dashboard-shell">
-            <Navbar>
-                {isAdmin() && (
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/accounts')}>
-                        All accounts
-                    </button>
-                )}
-                {isAdmin() && (
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
-                        Reports
-                    </button>
-                )}
-                {isEmployee && (
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/my-tickets')}>
-                        My tickets
-                    </button>
-                )}
-                {isAgentUser && (
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/agent/queue')}>
-                        My queue
-                    </button>
-                )}
-                {(isAgentUser || isAdmin()) && (
-                    <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
-                        All tickets
-                    </button>
-                )}
-                <button type="button" className="btn btn--ghost" onClick={handleLogout}>
-                    Log out
-                </button>
-            </Navbar>
+            <Navbar />
 
-            <div className="dashboard-header">
-                <p className="eyebrow">Dashboard</p>
-                <h1>Welcome back</h1>
-                <p className="dashboard-welcome">
-                    {isEmployee && 'Keep an eye on your requests and get support moving.'}
-                    {isAgentUser && 'Check your queue to see what needs your attention.'}
-                    {!isEmployee && !isAgentUser && 'Ticket submission is for employees only.'}
-                </p>
-            </div>
-
-            {isEmployee && <TicketCreateForm />}
-
-            {isAgentUser && (
-                <section className="dashboard-empty panel">
-                    <div className="panel__body">
-                        <p>Nothing to submit here — head to My queue to see your assigned tickets.</p>
-                        <div className="dashboard-empty__actions">
-                            <button type="button" className="btn btn--primary" onClick={() => navigate('/agent/queue')}>
-                                My queue
-                            </button>
-                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
-                                All tickets
-                            </button>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {!isEmployee && !isAgentUser && isAdmin() && (
-                <section className="dashboard-empty panel">
-                    <div className="panel__body">
-                        <p>Nothing to submit here — manage accounts or check on tickets instead.</p>
-                        <div className="dashboard-empty__actions">
-                            <button type="button" className="btn btn--primary" onClick={() => navigate('/admin/accounts')}>
-                                All accounts
-                            </button>
-                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/users/new')}>
-                                Create user
-                            </button>
-                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/rotation')}>
-                                Agent rotation
-                            </button>
-                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/admin/report')}>
-                                Reports
-                            </button>
-                            <button type="button" className="btn btn--secondary" onClick={() => navigate('/tickets')}>
-                                All tickets
-                            </button>
-                        </div>
-                    </div>
-                </section>
+            {role === 'Employee' ? (
+                <TicketCreateForm />
+            ) : (
+                <nav className="action-bars" aria-label="Home">
+                    <h1 className="sr-only">Home</h1>
+                    {bars.map((bar) => (
+                        <button key={bar.to} type="button" className="action-bar" onClick={() => navigate(bar.to)}>
+                            <span>{bar.label}</span>
+                            <span aria-hidden="true">→</span>
+                        </button>
+                    ))}
+                </nav>
             )}
         </main>
     );

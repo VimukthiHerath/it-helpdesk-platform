@@ -124,19 +124,11 @@ const TicketAssignments = () => {
 
     return (
         <main className="assignments-page">
-            <Navbar>
-                <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-                    Back to dashboard
-                </button>
-            </Navbar>
+            <Navbar />
 
-            <header className="assignments-page__header">
-                <p className="eyebrow">Support desk / All tickets</p>
-                <h1>Ticket assignments</h1>
-                <p className="assignments-page__summary">
-                    {admin ? 'See every ticket, who has it, and reassign it if needed.' : 'See every ticket and who currently has it.'}
-                </p>
-            </header>
+            <div className="page-header">
+                <h1>All tickets</h1>
+            </div>
 
             {state.loading && <div className="assignments-message panel">Loading tickets...</div>}
             {!state.loading && state.error && (

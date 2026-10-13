@@ -57,7 +57,9 @@ const MyTickets = () => {
                 }
 
                 const data = await response.json();
-                const loadedTickets = Array.isArray(data) ? data : [];
+                const loadedTickets = (Array.isArray(data) ? data : [])
+                    .slice()
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                 setState({ loading: false, tickets: loadedTickets, error: '' });
                 setSelectedTicket(loadedTickets[0] || null);
             } catch (err) {
@@ -70,17 +72,11 @@ const MyTickets = () => {
 
     return (
         <main className="tickets-page">
-            <Navbar>
-                <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-                    Back to dashboard
-                </button>
-            </Navbar>
+            <Navbar />
 
-            <header className="tickets-page__header">
-                <p className="eyebrow">Support desk / Your activity</p>
+            <div className="page-header">
                 <h1>My tickets</h1>
-                <p className="tickets-page__summary">A read-only view of every request you have raised.</p>
-            </header>
+            </div>
 
             {state.loading && <div className="tickets-message panel">Loading your tickets...</div>}
             {!state.loading && state.error && (
