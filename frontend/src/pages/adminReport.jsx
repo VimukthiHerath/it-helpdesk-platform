@@ -77,11 +77,14 @@ const AdminReportPage = () => {
                 <h1>Ticket report</h1>
             </div>
 
-            <section className="report-filters panel">
-                <form className="report-filters__form" onSubmit={handleSearch}>
+            <section className="report-filters panel" aria-label="Report filters">
+                <div className="panel__titlebar">
+                    <span>Filters</span>
+                </div>
+                <form className="report-filters__form panel__body" onSubmit={handleSearch}>
                     <div className="report-filters__grid">
                         <div className="report-filters__field">
-                            <label htmlFor="report-status" className="label">Status</label>
+                            <label htmlFor="report-status" className="report-filters__label">Status</label>
                             <select
                                 id="report-status"
                                 name="status"
@@ -96,7 +99,7 @@ const AdminReportPage = () => {
                         </div>
 
                         <div className="report-filters__field">
-                            <label htmlFor="report-urgency" className="label">Urgency</label>
+                            <label htmlFor="report-urgency" className="report-filters__label">Urgency</label>
                             <select
                                 id="report-urgency"
                                 name="urgency"
@@ -111,7 +114,7 @@ const AdminReportPage = () => {
                         </div>
 
                         <div className="report-filters__field">
-                            <label htmlFor="report-startDate" className="label">From date</label>
+                            <label htmlFor="report-startDate" className="report-filters__label">From date</label>
                             <input
                                 id="report-startDate"
                                 name="startDate"
@@ -123,7 +126,7 @@ const AdminReportPage = () => {
                         </div>
 
                         <div className="report-filters__field">
-                            <label htmlFor="report-endDate" className="label">To date</label>
+                            <label htmlFor="report-endDate" className="report-filters__label">To date</label>
                             <input
                                 id="report-endDate"
                                 name="endDate"
