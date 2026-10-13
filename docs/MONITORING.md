@@ -3,6 +3,45 @@
 The five .NET services send traces, requests, dependency calls, exceptions and logs to one
 Application Insights resource through OpenTelemetry (`Azure.Monitor.OpenTelemetry.AspNetCore`).
 
+## In plain words
+
+The helpdesk is five small services that talk to each other, some of them through Kafka messages. When something goes wrong,
+the problem can be several steps away from what the user sees. Monitoring answers three questions without reading logs by hand:
+
+1. **What is happening now?** The dashboard and Application map.
+2. **What happened to this one ticket?** A single trace that follows it through all the services.
+3. **Tell me when it breaks.** Email alerts.
+
+The tool is **Azure Application Insights**. Each service and the website send small reports to it. We never run a monitoring server.
+
+## How we got here, step by step
+
+1. **Created the place to store the data.** One Application Insights resource, `ithelpdesk-appinsights`, attached to the log workspace we already had. A daily limit of 0.5 GB stops it ever costing much.
+2. **Taught each service to report.** We added one library (OpenTelemetry for Azure) to the five services. It records every request, every call to another service or the database, errors and log messages. It ignores the `/health` checks, and it stays off on a developer laptop.
+3. **Connected the services to the resource.** Each running app got the resource's connection string as a secret, plus its own name (for example `ticket-service`) so it shows up by name.
+4. **Made one ticket show up as one story.** Messages through Kafka lose the trail by default. We attach the trail to every Kafka message, and the receiving service continues it. Now creating a ticket shows as one connected trace across Ticket, SLA, Assignment and Notification.
+5. **Proved it with a real flow.** We registered users, created a ticket and watched it appear in Application Insights from all five services.
+6. **Built the dashboard.** A workbook called "IT Helpdesk health": requests, errors and speed per service, the slowest endpoints, Kafka messages handled and the most common errors.
+7. **Added email alerts.** Four rules email the team: server errors, a burst of errors in any service, any failure in the notification service, and slow responses. Each checks every 15 minutes. There is deliberately no "service is down" alert, because the apps scale to zero when idle.
+8. **Added browser monitoring.** The website reports page views and JavaScript errors too, with the privacy rules below. It is switched on by a GitHub secret at build time.
+
+Everything is repeatable from the repo: `scripts/deploy-monitoring.sh` recreates the dashboard and alerts.
+
+## How to demo it (about 5 minutes)
+
+Before you start: run `./scripts/start-all.sh`, wait for "Everything is now running", and sign in to the Azure portal.
+
+1. **Say what it is (30 seconds).** "Five services plus Kafka. Application Insights shows what each one does and how a ticket moves between them."
+2. **Make some traffic.** Open the live site, log in as an employee, create a ticket, then log in as an admin and open All tickets. Wait 2 to 3 minutes for the data to arrive.
+3. **Application map.** Portal > `ithelpdesk-appinsights` > **Application map**. Point out the five services and the arrows between them, with call counts and average times.
+4. **One ticket end to end.** **Transaction search** > search "POST" > open the ticket creation request. The end-to-end view shows the web request, then the Kafka messages handled by SLA, Assignment and Notification, then the assignment coming back. This is the main point to show.
+5. **The dashboard.** **Workbooks** > **IT Helpdesk health**. Show the service summary table, the requests chart and the Kafka messages table.
+6. **Ask it a question.** **Logs** > run `requests | summarize count() by cloud_RoleName`, then `exceptions | take 10`.
+7. **The website side.** **Usage** > **Page views** (or Logs: `pageViews | summarize count() by name`). This shows which pages were opened, and `exceptions | where client_Type == "Browser"` shows browser errors.
+8. **Alerts.** **Alerts** > **Alert rules**. Show the four rules and the email group. Say the rules email four team addresses, and nothing fires while the system is healthy.
+
+When you are done: `./scripts/stop-all.sh` so nothing keeps costing money.
+
 ## How it is wired
 
 - Resource: `ithelpdesk-appinsights` (centralindia, resource group `it-helpdesk-rg`), workspace-based,
