@@ -504,3 +504,8 @@ vimukthis-dev-docs/
 
 # Selenium test suite - kept locally, not tracked in the repo
 selenium-tests/
+
+# Personal / course files, not part of the repo
+SE3112_*.pdf
+docs/QA_report_IT24101503_Group02.pdf
+docs/DEPLOYMENT_HANDOVER.md
