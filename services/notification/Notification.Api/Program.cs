@@ -29,12 +29,6 @@ builder.Services.AddHostedService<TicketAssignedConsumer>();
 var app = builder.Build();
 
 // Auto-apply any pending migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
-    db.Database.Migrate();
-}
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
