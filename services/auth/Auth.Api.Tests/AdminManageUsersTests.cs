@@ -54,7 +54,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Employee"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Employee"));
 
         var response = await client.GetAsync("/api/auth/users");
 
@@ -66,7 +66,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.GetAsync("/api/auth/users");
 
@@ -78,7 +78,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
     {
         var client = WithStubbedAssignmentApi(NotInRotation).CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PutAsJsonAsync("/api/auth/users/99999999", new
         {
@@ -96,7 +96,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         var factory = WithStubbedAssignmentApi(NotInRotation);
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var takenEmail = $"taken-{Guid.NewGuid():N}@example.com";
         var otherUserId = await CreateEmployeeAsync(factory, takenEmail);
@@ -120,7 +120,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         var adminId = await CreateUserAsync(factory, $"self-admin-{Guid.NewGuid():N}@example.com", UserRole.Administrator);
 
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: adminId, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: adminId, role: "Administrator"));
 
         var response = await client.PutAsJsonAsync($"/api/auth/users/{adminId}", new
         {
@@ -140,7 +140,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PutAsJsonAsync($"/api/auth/users/{agentId}", new
         {
@@ -162,7 +162,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var newEmail = $"promoted-{Guid.NewGuid():N}@example.com";
         var response = await client.PutAsJsonAsync($"/api/auth/users/{agentId}", new
@@ -186,7 +186,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PutAsJsonAsync($"/api/auth/users/{agentId}", new
         {
@@ -206,7 +206,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: adminId, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: adminId, role: "Administrator"));
 
         var response = await client.PatchAsync($"/api/auth/users/{adminId}/deactivate", content: null);
 
@@ -221,7 +221,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var first = await client.PatchAsync($"/api/auth/users/{userId}/deactivate", content: null);
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
@@ -248,7 +248,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PatchAsync($"/api/auth/users/{agentId}/deactivate", content: null);
 
@@ -273,7 +273,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PatchAsync($"/api/auth/users/{agentId}/deactivate", content: null);
 
@@ -290,7 +290,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
 
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var response = await client.PatchAsync($"/api/auth/users/{agentId}/deactivate", content: null);
 
@@ -356,12 +356,20 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         Content = new StringContent(json, Encoding.UTF8, "application/json"),
     };
 
+    // Makes sure the acting user exists with the test stamp, then returns a token for it.
+    private async Task<string> TokenAsync(int userId, string role)
+    {
+        await TestUsers.EnsureAsync(_factory.Services, userId, Enum.Parse<UserRole>(role));
+        return CreateToken(userId, role);
+    }
+
     private static string CreateToken(int userId, string role)
     {
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(ClaimTypes.Role, role),
+            new Claim("SecurityStamp", TestUsers.Stamp),
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));

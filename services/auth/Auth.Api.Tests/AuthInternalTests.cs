@@ -48,9 +48,12 @@ public class AuthInternalTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task GetUserEmail_WithValidInternalKey_Returns200()
     {
+        // Make sure user 2 exists instead of relying on whatever the database already holds.
+        await TestUsers.EnsureAsync(_factory.Services, 2, Auth.Api.Model.UserRole.Administrator);
+
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Internal-Key", "Helpdesk-Internal-Secret-DevKey-2026!");
-        var response = await client.GetAsync("/api/auth/internal/users/2/email"); // 2 is typically the admin seed user
+        var response = await client.GetAsync("/api/auth/internal/users/2/email");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 

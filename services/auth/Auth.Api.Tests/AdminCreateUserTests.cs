@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using Auth.Api.Data;
+using Auth.Api.Model;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Employee"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Employee"));
 
         var response = await client.PostAsJsonAsync("/api/auth/users", new
         {
@@ -68,7 +69,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var email = $"admin-created-{Guid.NewGuid():N}@example.com";
         var response = await client.PostAsJsonAsync("/api/auth/users", new
@@ -94,7 +95,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var email = $"duplicate-{Guid.NewGuid():N}@example.com";
         var payload = new
@@ -118,7 +119,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var email = $"login-after-create-{Guid.NewGuid():N}@example.com";
         const string password = "Password123!";
@@ -146,7 +147,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 7, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 7, role: "Administrator"));
 
         var email = $"audit-trail-{Guid.NewGuid():N}@example.com";
         var response = await client.PostAsJsonAsync("/api/auth/users", new
@@ -195,7 +196,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
 
         var email = $"hash-check-{Guid.NewGuid():N}@example.com";
         const string password = "Password123!";
@@ -231,12 +232,20 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         public int? CreatedBy { get; set; }
     }
 
+    // Makes sure the acting user exists with the test stamp, then returns a token for it.
+    private async Task<string> TokenAsync(int userId, string role)
+    {
+        await TestUsers.EnsureAsync(_factory.Services, userId, Enum.Parse<UserRole>(role));
+        return CreateToken(userId, role);
+    }
+
     private static string CreateToken(int userId, string role)
     {
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(ClaimTypes.Role, role),
+            new Claim("SecurityStamp", TestUsers.Stamp),
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));

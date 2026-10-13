@@ -74,9 +74,10 @@ namespace Auth.Api.Tests
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var client = _factory.CreateClient();
 
-            var user = await SetupUserAsync(db, "token@example.com", "Password123!");
+            var email = $"token-{Guid.NewGuid():N}@example.com";
+            var user = await SetupUserAsync(db, email, "Password123!");
             
-            var req = new { email = "token@example.com" };
+            var req = new { email };
             await client.PostAsJsonAsync("/api/auth/forgot-password", req);
 
             var updatedUser = await GetFreshUserAsync(user.Id);
@@ -93,9 +94,10 @@ namespace Auth.Api.Tests
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var client = _factory.CreateClient();
 
-            var user = await SetupUserAsync(db, "ratelimit@example.com", "Password123!");
+            var email = $"ratelimit-{Guid.NewGuid():N}@example.com";
+            var user = await SetupUserAsync(db, email, "Password123!");
             
-            var req = new { email = "ratelimit@example.com" };
+            var req = new { email };
             for(int i = 0; i < 4; i++) {
                 await client.PostAsJsonAsync("/api/auth/forgot-password", req);
             }
