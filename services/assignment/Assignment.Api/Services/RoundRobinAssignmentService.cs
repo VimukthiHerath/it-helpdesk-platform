@@ -1,3 +1,4 @@
+using ItHelpdesk.Observability;
 using System.Text.Json;
 using Assignment.Api.Data;
 using Assignment.Api.DTO;
@@ -107,7 +108,7 @@ public class RoundRobinAssignmentService
         var payload = JsonSerializer.Serialize(ticketAssignedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         await _producer.ProduceAsync(topic, new Message<string, string>
-        {
+        { Headers = KafkaTracing.CurrentHeaders(),
             Key = ticketId.ToString(),
             Value = payload,
         }, cancellationToken);

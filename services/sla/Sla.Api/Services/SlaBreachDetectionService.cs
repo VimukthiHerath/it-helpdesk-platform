@@ -1,3 +1,4 @@
+using ItHelpdesk.Observability;
 using System.Text.Json;
 using Confluent.Kafka;
 using Sla.Api.Data;
@@ -59,7 +60,7 @@ public class SlaBreachDetectionService
             try
             {
                 var result = await _producer.ProduceAsync(topic, new Message<string, string>
-                {
+                { Headers = KafkaTracing.CurrentHeaders(),
                     Key = ticket.TicketId.ToString(),
                     Value = messageString
                 }, cancellationToken);

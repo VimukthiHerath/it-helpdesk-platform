@@ -1,3 +1,4 @@
+using ItHelpdesk.Observability;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
@@ -112,7 +113,7 @@ public class TicketController : ControllerBase
             var eventPayload = JsonSerializer.Serialize(ticketCreatedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
             await _kafkaProducer.ProduceAsync(topicName, new Message<string, string>
-            {
+            { Headers = KafkaTracing.CurrentHeaders(),
                 Key = ticket.Id.ToString(),
                 Value = eventPayload
             });
@@ -210,7 +211,7 @@ public class TicketController : ControllerBase
                 var eventPayload = JsonSerializer.Serialize(resolvedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
                 await _kafkaProducer.ProduceAsync(topicName, new Message<string, string>
-                {
+                { Headers = KafkaTracing.CurrentHeaders(),
                     Key = updated.Id.ToString(),
                     Value = eventPayload
                 });
