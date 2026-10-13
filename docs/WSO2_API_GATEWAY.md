@@ -36,27 +36,15 @@ It ships as a single Docker image (`wso2/wso2am:4.3.0`) that bundles all four
 of the above into one process for a "hybrid" single-node deployment, which is
 what this project runs in `docker-compose.yml`.
 
-### Why WSO2, and not just the existing custom gateway?
+### Why WSO2, and what happened to the earlier gateway
 
-This repo actually had **two** gateways added in the same sprint:
+In Sprint 3 the repo briefly had **two** gateways: a small custom one built with
+.NET and YARP, and WSO2 API Manager. WSO2 was chosen as the standard gateway
+(see `docs/adr/0003-replace-yarp-with-wso2-gateway.md`) and the YARP project,
+its CI pipeline and its docker-compose service were **removed** in Sprint 4.
+WSO2 is the only gateway: clients, the frontend and all documentation point at it.
 
-1. A small custom gateway (`src/ApiGateway/`) built with .NET/YARP by the dev.
-2. WSO2 API Manager (`wso2-gateway` in `docker-compose.yml`, config in
-   `infra/wso2/`), set up separately by DevOps.
-
-**The team's decision: WSO2 is the standard, authoritative gateway.** The
-YARP gateway (`src/ApiGateway/`) is kept in the repo as a reference/fallback
-implementation only — it is not the live routing path, should not be assumed
-to receive real production traffic, and should not be extended going
-forward. Both gateways were fixed and independently verified working during
-this sprint (see `git log` for `fix(gateway):` commits for the YARP side),
-so the fallback is a working one, not dead code — but WSO2 is what clients
-should be pointed at, and what future gateway work should happen in.
-
-This document covers the WSO2 side only. If the team later decides to drop
-the fallback entirely, remove `src/ApiGateway/` and its CI/CD pipeline
-(`.github/workflows/gateway-ci-cd.yml`) in one clean commit — but that's a
-separate, deliberate decision, not something to do incidentally.
+This document covers the WSO2 side.
 
 ---
 
@@ -293,9 +281,8 @@ called directly. `/sla/v1/health` and `/notification/v1/health` also 404'd.
    be changed. Instead, added a second health route in each service's
    `Program.cs`, mapped under that same controller prefix
    (`/api/Auth/health`, `/api/Ticket/health`, `/api/Assignments/health`),
-   alongside the existing root `/health` (kept as-is, since the YARP
-   gateway's active health check, Docker health checks, and direct
-   developer checks all rely on it).
+   alongside the existing root `/health` (kept as-is, since Docker health
+   checks and direct developer checks rely on it).
 
 ---
 
