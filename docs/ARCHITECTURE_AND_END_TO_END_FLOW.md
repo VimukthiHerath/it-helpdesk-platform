@@ -10,10 +10,9 @@ This document explains the system in two parts:
 2. **A complete walk-through** of what happens from the moment a user opens the site
    until they log out, with the technical detail behind every step (sections 3–7).
 
-It replaces the architecture description in the old `README.md`, which still says
-"every service validates JWTs completely on its own with the same signing key" and
-"there is no central gateway". Both statements were true in Sprint 3 and are **not** true
-any more (see section 3.1).
+It replaces the Sprint 3 architecture description. Back then every service validated JWTs with the
+same shared signing key and there was no central gateway; both are different now (see section 3.1).
+The `README.md` has been updated to match.
 
 > **How much of this was tested?** Read it as two levels of confidence.
 > *Tested live on Azure on 2026-10-13:* login through the gateway, the RS256 token and its
@@ -458,10 +457,11 @@ The React app decodes the token's payload and shows buttons according to the rol
 This is **only for convenience** — hiding a button is not security. Real enforcement happens
 in the services, which check the token's role on every call (section 3.4).
 
-> **Known problem (found while writing this):** the frontend looks for the role under the
-> long name `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`, but the Sprint 4
-> token writes it as plain `role`. As the code stands the UI cannot find anyone's role.
-> Details and the one-line fix are in section 9 (item 1). The backend is not affected.
+> **Fixed after this was first written:** the frontend used to look for the role only under the
+> long name `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`, while the Sprint 4
+> token writes it as plain `role`, so the UI could not find anyone's role. It now reads `role`
+> first and still accepts the long name (`frontend/src/shared/authToken.js`, with unit tests).
+> See section 9, item 1.
 
 ### 4.4 Mia creates a ticket (the longest path)
 
@@ -793,7 +793,10 @@ by events and the direct calls in section 2.4.
 * **Azure Files** holds WSO2's own database so its API definitions survive restarts.
 * **Secrets** (database password, signing key, internal key, SMTP password) are Container App
   secrets, referenced by the apps, never written into code.
-* Operations (start, stop, costs, access, troubleshooting) are in
+* **Starting and stopping** (to avoid paying for idle compute): `scripts/start-all` and
+  `scripts/stop-all` (PowerShell `.ps1` and bash `.sh`), documented in `scripts/README.md` together with
+  the same steps by hand in the Azure portal.
+* Everything else about operations (costs, access, troubleshooting) is in
   `docs/AZURE_REDEPLOY_HANDOFF.md`.
 
 ### 8.2 CI/CD
@@ -815,20 +818,19 @@ frontend with `npm start`.
 ## 9. Known problems and limitations
 
 These were found by reading the code while writing this document. Most are untested in the
-running system; the first two have simple, known fixes. Severity is the author's judgement.
+running system. Items 1 and 2 have since been fixed (marked below). Severity is the author's judgement.
 
-1. **UI cannot read the user's role — High (breaks the demo).** The frontend
-   (`frontend/src/shared/authToken.js`) reads the role from the long claim name
-   `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`. The Sprint 4 token writes
-   it as `role` (verified by creating a token with Auth's exact code). So `isAdmin()` and
-   `isAgent()` are false for everyone, the dashboard shows no buttons, and admin pages
-   redirect away. The backend is unaffected. *Fix:* read `payload.role` first, e.g.
-   `payload?.role ?? payload?.[ROLE_CLAIM] ?? null`.
-2. **An open endpoint leaks password hashes — Critical.** `GET /api/User` in the Auth
-   service has no authorisation and returns whole user records (password hash, reset-token
-   hash, security stamp). A hotfix commit exists (`7aa1e0b`, 17 September, "remove
-   unauthenticated endpoint leaking password hashes") but **was never merged into `develop`**.
-   It is not behind the gateway, but the Auth service has a public URL.
+1. **UI could not read the user's role - FIXED.** The frontend read the role only from the long claim
+   name `http://schemas.microsoft.com/ws/2008/06/identity/claims/role`, but the Sprint 4 token writes
+   it as `role` (verified by creating a token with Auth's exact code), so `isAdmin()` / `isAgent()` were
+   false for everyone and the dashboard showed no buttons. `getUserRole()` now reads `role` first and
+   keeps the long name as a fallback; six unit tests cover it. The backend was never affected.
+2. **An open endpoint leaked password hashes - FIXED.** `GET /api/User` in the Auth service had no
+   authorisation and returned whole user records (password hash, reset-token hash, security stamp).
+   The team's hotfix commit (`7aa1e0b`, "remove unauthenticated endpoint leaking password hashes") had
+   never been merged into `develop`; it is now applied and `UserController` is gone. **Anyone who ran
+   the deployed Sprint 4 build before this fix should treat the exposed hashes as leaked** (the
+   deployed Azure images were built before the fix) and have users reset their passwords.
 3. **Anyone can register as an Administrator — High.** `POST /auth/v1/register` is public and
    accepts a `role`. Public sign-up should create Employees only.
 4. **Revocation only works inside Auth.** See section 3.5: after a password reset or
@@ -841,11 +843,11 @@ running system; the first two have simple, known fixes. Severity is the author's
    To make "everything goes through the gateway" literally true, switch those three to
    internal ingress and update the gateway's backend URLs, `Jwt__JwksUri`, `AuthApiUrl` and
    `AssignmentApi__BaseUrl` to the internal hostnames.
-7. **The repo's WSO2 deploy scripts do not match Azure.** `infra/wso2/deploy-apis.sh` and
-   `.ps1` publish protected routes *with* WSO2's own OAuth check, which rejects Auth's
-   tokens (`900901`). The Azure gateway was published with every route set to "no gateway
-   auth". Run against a local gateway, the scripts will give a gateway that rejects every
-   protected call until they are changed to match.
+7. **WSO2 API publishing is manual.** The old `deploy-apis` scripts (which published protected routes
+   with WSO2's own OAuth check, so Auth's tokens were rejected with `900901`) were removed. The
+   procedure is written out as plain REST calls in `docs/WSO2_API_GATEWAY.md`, section 7. Every
+   operation must be published with `x-auth-type: None`, because the gateway only routes. A replacement
+   script would make local development with the UI (which now needs the gateway) much easier.
 8. **A ticket can be saved without its event.** If Kafka is unreachable when a ticket is
    created, the row is saved and the user gets a 503; no assignment, SLA record or email
    follows, and retrying creates a second ticket. (An outbox table would fix this.)
@@ -861,7 +863,7 @@ running system; the first two have simple, known fixes. Severity is the author's
 12. **Token storage.** The token is in `localStorage`, readable by any script that runs on the
     page (cross-site-scripting risk), and there is no refresh token or server-side logout.
 13. **Mixed Kafka commit modes** (section 6) and a **single non-persistent broker**.
-14. **The old `README.md` is out of date** (it describes the pre-gateway, shared-key design).
+14. **Test coverage in CI.** The workflows only build; they do not run the tests, so a failing test does not block a deploy.
 
 ---
 

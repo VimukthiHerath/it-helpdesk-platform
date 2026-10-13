@@ -412,6 +412,11 @@ Management for real numbers):
 Budget alerts exist ($5 and $15, emails to `it24101497@my.sliit.lk`) but they
 only **warn**; they do not stop anything.
 
+> **Use the scripts instead of the manual commands below:** `scripts/stop-all` and `scripts/start-all`
+> (PowerShell `.ps1` and bash `.sh`). They follow all the rules in this section, check the result, and
+> `scripts/README.md` also explains how to do it by hand in the Azure portal. The commands below are kept
+> as the reference for what the scripts do.
+
 ### Stop everything (do this after every session)
 
 ```bash
