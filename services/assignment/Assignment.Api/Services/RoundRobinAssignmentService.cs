@@ -36,6 +36,7 @@ public class RoundRobinAssignmentService
     public async Task AssignAsync(TicketCreatedEvent ticketEvent, CancellationToken cancellationToken)
     {
         var agents = await _context.Agents
+            .Where(a => a.IsActive)
             .OrderBy(a => a.DisplayOrder)
             .ToListAsync(cancellationToken);
 

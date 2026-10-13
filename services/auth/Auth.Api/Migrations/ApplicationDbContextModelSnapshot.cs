@@ -46,6 +46,10 @@ namespace Auth.Api.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("last_login_at");
 
+                    b.Property<DateTime?>("LastPasswordResetRequestedAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("last_password_reset_requested_at_utc");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -56,9 +60,31 @@ namespace Auth.Api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
+                    b.Property<int>("ResetRequestCountInWindow")
+                        .HasColumnType("int")
+                        .HasColumnName("reset_request_count_in_window");
+
+                    b.Property<DateTime?>("ResetTokenExpiresAtUtc")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("reset_token_expires_at_utc");
+
+                    b.Property<string>("ResetTokenHash")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("reset_token_hash");
+
+                    b.Property<bool>("ResetTokenUsed")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("reset_token_used");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("varchar(50)");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("security_stamp");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")

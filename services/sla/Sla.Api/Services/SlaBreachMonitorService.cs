@@ -35,6 +35,7 @@ public sealed class SlaBreachMonitorService : BackgroundService
             }
         }
         catch (OperationCanceledException)
+        when (stoppingToken.IsCancellationRequested)
         {
             _logger.LogInformation("SLA Breach Monitor Service is stopping.");
         }

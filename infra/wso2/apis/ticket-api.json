@@ -73,25 +73,19 @@
                             "schema": {
                                 "type": "object",
                                 "required": [
-                                    "title",
                                     "description",
-                                    "priority"
+                                    "issueType",
+                                    "urgency"
                                 ],
                                 "properties": {
-                                    "title": {
-                                        "type": "string"
-                                    },
                                     "description": {
                                         "type": "string"
                                     },
-                                    "priority": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Low",
-                                            "Medium",
-                                            "High",
-                                            "Critical"
-                                        ]
+                                    "issueType": {
+                                        "type": "string"
+                                    },
+                                    "urgency": {
+                                        "type": "integer"
                                     }
                                 }
                             }
@@ -133,6 +127,67 @@
                 }
             }
         },
+        "/report": {
+            "get": {
+                "summary": "Get dynamic ticket report (admin)",
+                "operationId": "ticketReport",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "urgency",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "startDate",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "endDate",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Report generated"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
         "/{id}": {
             "get": {
                 "summary": "Get ticket by ID",
@@ -158,6 +213,100 @@
                 "responses": {
                     "200": {
                         "description": "Ticket details"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/{id}/status": {
+            "patch": {
+                "summary": "Update ticket status",
+                "operationId": "ticketUpdateStatus",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "newStatus"
+                                ],
+                                "properties": {
+                                    "newStatus": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated"
+                    },
+                    "400": {
+                        "description": "Invalid status"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/{id}/status-history": {
+            "get": {
+                "summary": "Get ticket status history",
+                "operationId": "ticketStatusHistory",
+                "tags": [
+                    "Tickets"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Status history returned"
                     },
                     "401": {
                         "description": "Unauthorized"

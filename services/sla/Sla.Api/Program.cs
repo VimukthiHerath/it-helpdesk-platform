@@ -1,11 +1,42 @@
 using Sla.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Sla.Api.Consumers;
 using Sla.Api.Services;
 using Confluent.Kafka;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
+
+var jwtJwksUri = builder.Configuration["Jwt:JwksUri"];
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        if (!string.IsNullOrWhiteSpace(jwtJwksUri))
+        {
+            options.MetadataAddress = jwtJwksUri.EndsWith("/.well-known/openid-configuration")
+                ? jwtJwksUri
+                : jwtJwksUri.Replace("/.well-known/jwks.json", "/.well-known/openid-configuration");
+            options.RequireHttpsMetadata = false;
+        }
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            RequireExpirationTime = true,
+            ClockSkew = TimeSpan.Zero,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"]
+        };
+    });
+builder.Services.AddAuthorization();
 
 builder.Services.AddDbContext<SlaDbContext>(options =>
     options.UseMySql(
@@ -24,6 +55,7 @@ builder.Services.AddScoped<SlaBreachDetectionService>();
 builder.Services.AddScoped<SlaRecordCreationService>();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
+builder.Services.AddHostedService<TicketResolvedConsumer>();
 builder.Services.AddHostedService<SlaBreachMonitorService>();
 
 var app = builder.Build();
@@ -40,5 +72,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "SLA" }));
 app.Run();
+
+public partial class Program { }

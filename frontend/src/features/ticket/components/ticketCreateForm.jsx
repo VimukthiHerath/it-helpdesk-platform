@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import './ticketCreateForm.css';
 
-const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL}/api/ticket`;
+const TICKET_API_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1`;
 
 const initialForm = {
     issueType: '',
@@ -94,21 +95,13 @@ const TicketCreateForm = () => {
         }
 
         if (!response.ok) {
-            // AC1: on a validation failure (400) this is TicketController's
-            // specific, field-named message. On anything else (500) it's
-            // the distinct "something went wrong on our end" wording -
-            // either way, shown exactly as the backend phrased it.
             setStatus({ type: 'error', message: data?.message || 'Unable to create the ticket. Please try again.' });
             setIsSubmitting(false);
             return;
         }
 
-        setFormData(initialForm);
-        setStatus({
-            type: 'success',
-            message: `Ticket #${data.ticketId} created successfully.`,
-        });
-        setIsSubmitting(false);
+        toast.success('Ticket created successfully');
+        navigate('/tickets', { replace: true });
     };
 
     return (
@@ -172,7 +165,14 @@ const TicketCreateForm = () => {
                             {status.message}
                         </div>
                         <button type="submit" className="btn btn--primary" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating ticket...' : 'Create ticket'}
+                            {isSubmitting ? (
+                                <>
+                                    <span className="spinner" aria-hidden="true" />
+                                    Creating ticket...
+                                </>
+                            ) : (
+                                'Create ticket'
+                            )}
                         </button>
                     </div>
                 </form>

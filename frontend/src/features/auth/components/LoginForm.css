@@ -48,8 +48,17 @@
   font-size: 0.9rem;
 }
 
+.text-red-500 {
+  color: #ef4444;
+}
+
+.border-red-500 {
+  border-color: #ef4444 !important;
+}
+
 @media (max-width: 480px) {
   .auth-card .panel__body {
     padding: 24px 20px;
   }
 }
+

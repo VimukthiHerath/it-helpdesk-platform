@@ -21,6 +21,9 @@ builder.Services.AddHttpClient("AssignmentApi", client =>
     client.BaseAddress = new Uri(builder.Configuration["AssignmentApi:BaseUrl"]!);
 });
 builder.Services.AddScoped<IAssignmentRotationClient, AssignmentRotationClient>();
+builder.Services.AddSingleton<IRsaKeyService, RsaKeyService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddSingleton<IPasswordResetPublisher, KafkaPasswordResetPublisher>();
 
 builder.Services.AddCors(options =>
 {
@@ -62,12 +65,26 @@ builder.Services.AddSwaggerGen(options =>
 
 var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
+// Build a temporary service provider to retrieve IRsaKeyService for signing/validation key
+var rsaKeyService = builder.Services.BuildServiceProvider().GetRequiredService<IRsaKeyService>();
+
+var rsaSigningKey = rsaKeyService.GetSigningKey();
+var legacySymmetricKey = !string.IsNullOrEmpty(jwtSetting?.Key) 
+    ? new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key)) 
+    : null;
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>{
+.AddJwtBearer(options => {
+    var validKeys = new List<SecurityKey> { rsaSigningKey };
+    if (legacySymmetricKey != null)
+    {
+        validKeys.Add(legacySymmetricKey);
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -76,9 +93,37 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         RequireExpirationTime = true,
         ClockSkew = TimeSpan.Zero,
-        ValidIssuer = jwtSetting?.Issuer,
-        ValidAudience = jwtSetting?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+        ValidIssuer = jwtSetting?.Issuer ?? "AuthApi",
+        ValidAudience = jwtSetting?.Audience ?? "ItHelpdeskClient",
+        IssuerSigningKeys = validKeys
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var dbContext = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+
+            // Extract User ID and Stamp from incoming token
+            var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? context.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var tokenStamp = context.Principal?.FindFirst("SecurityStamp")?.Value;
+
+            if (!int.TryParse(userIdClaim, out var userId) || string.IsNullOrWhiteSpace(tokenStamp))
+            {
+                context.Fail("This token is missing user identity or session information.");
+                return;
+            }
+
+            // Look up the current user in the database
+            var user = await dbContext.Users.FindAsync(userId);
+
+            // If the user is deleted, inactive, or the security stamp doesn't match, revoke access
+            if (user == null || !user.IsActive || user.SecurityStamp != tokenStamp)
+            {
+                context.Fail("This token is no longer valid due to a password change or session revocation.");
+            }
+        }
     };
 });
 

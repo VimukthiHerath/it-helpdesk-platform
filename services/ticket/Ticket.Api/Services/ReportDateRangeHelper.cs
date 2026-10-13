@@ -6,7 +6,7 @@ namespace Ticket.Api.Services;
 // be unit-tested deterministically, independent of any ticket data.
 public static class ReportDateRangeHelper
 {
-    public static DateTime ToUtcStartBoundary(DateTime startDate) => startDate.ToUniversalTime();
+    public static DateTime ToUtcStartBoundary(DateTime startDate) => DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
 
-    public static DateTime ToUtcEndBoundary(DateTime endDate) => endDate.ToUniversalTime().AddDays(1).AddTicks(-1);
+    public static DateTime ToUtcEndBoundary(DateTime endDate) => DateTime.SpecifyKind(endDate.Date, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
 }

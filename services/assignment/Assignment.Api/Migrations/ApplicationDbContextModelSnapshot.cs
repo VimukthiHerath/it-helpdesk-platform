@@ -29,6 +29,10 @@ namespace Assignment.Api.Migrations
                         .HasColumnType("int")
                         .HasColumnName("display_order");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 

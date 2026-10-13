@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredToken, getUserEmail } from '../../../shared/authToken';
 import './CreateUserForm.css';
 
-const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL}/api/auth/users`;
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/users`;
 
 const roleOptions = [
     { value: 1, label: 'Employee' },

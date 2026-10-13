@@ -6,6 +6,16 @@
 # dotenv files
 .env
 
+# RSA keys and certificates
+*.pem
+**/*.pem
+*.key
+**/*.key
+keys/
+**/keys/
+private.pem
+**/jwt-rsa-private.pem
+
 # User-specific files
 *.rsuser
 *.suo

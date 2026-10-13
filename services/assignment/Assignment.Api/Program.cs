@@ -45,6 +45,12 @@ builder.Services.AddCors(options =>
 // other service, so a token minted at login works here without calling Auth.
 var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
+var legacySymmetricKey = !string.IsNullOrEmpty(jwtSetting?.Key)
+    ? new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key))
+    : null;
+
+builder.Services.AddHttpClient();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -52,6 +58,20 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    if (!string.IsNullOrEmpty(jwtSetting?.JwksUri))
+    {
+        options.MetadataAddress = jwtSetting.JwksUri.EndsWith("/.well-known/openid-configuration") 
+            ? jwtSetting.JwksUri 
+            : jwtSetting.JwksUri.Replace("/.well-known/jwks.json", "/.well-known/openid-configuration");
+        options.RequireHttpsMetadata = false;
+    }
+
+    var validKeys = new List<SecurityKey>();
+    if (legacySymmetricKey != null)
+    {
+        validKeys.Add(legacySymmetricKey);
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -62,7 +82,7 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero,
         ValidIssuer = jwtSetting?.Issuer,
         ValidAudience = jwtSetting?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+        IssuerSigningKeys = validKeys.Count > 0 ? validKeys : null
     };
 });
 

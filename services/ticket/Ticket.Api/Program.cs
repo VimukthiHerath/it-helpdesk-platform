@@ -8,9 +8,8 @@ using Ticket.Api.Data;
 using Ticket.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 
 // [ApiController] auto-returns its own ValidationProblem shape (an "errors"
 // dictionary, no top-level "message") the instant ModelState is invalid -
@@ -32,10 +31,20 @@ builder.Services.AddSingleton<IProducer<string, string>>(_ =>
     return new ProducerBuilder<string, string>(producerConfig).Build();
 });
 
+var connectionString = builder.Configuration.GetConnectionString("TicketDb");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("TicketDb"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("TicketDb"))));
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)));
+
+builder.Services.AddDbContext<TicketDbContext>(options =>
+{
+    options.UseMySql(
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)
+    );
+});
 
 builder.Services.AddScoped<TicketAssignmentSyncService>();
 builder.Services.AddHostedService<TicketAssignedConsumer>();
@@ -53,6 +62,12 @@ builder.Services.AddCors(options =>
 
 var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
+var legacySymmetricKey = !string.IsNullOrEmpty(jwtSetting?.Key)
+    ? new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key))
+    : null;
+
+builder.Services.AddHttpClient();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -60,6 +75,21 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    if (!string.IsNullOrEmpty(jwtSetting?.JwksUri))
+    {
+        // Set metadata address or use JWKS configuration manager
+        options.MetadataAddress = jwtSetting.JwksUri.EndsWith("/.well-known/openid-configuration") 
+            ? jwtSetting.JwksUri 
+            : jwtSetting.JwksUri.Replace("/.well-known/jwks.json", "/.well-known/openid-configuration");
+        options.RequireHttpsMetadata = false;
+    }
+
+    var validKeys = new List<SecurityKey>();
+    if (legacySymmetricKey != null)
+    {
+        validKeys.Add(legacySymmetricKey);
+    }
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -70,7 +100,7 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero,
         ValidIssuer = jwtSetting?.Issuer,
         ValidAudience = jwtSetting?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting!.Key))
+        IssuerSigningKeys = validKeys.Count > 0 ? validKeys : null
     };
 });
 
@@ -138,6 +168,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 // Also exposed under the controller base path so it's reachable through the
 // WSO2 gateway, which forwards every "/ticket/v1/*" request to {endpoint}/api/Ticket/*

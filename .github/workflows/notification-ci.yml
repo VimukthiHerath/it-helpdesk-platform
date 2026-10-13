@@ -36,22 +36,22 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Build Docker image
-        run: docker build -t ithelpdeskacr01.azurecr.io/notification-service:${{ github.sha }} .
+        run: docker build -t ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }} .
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
 
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
-          az acr login --name ithelpdeskacr01
-          docker push ithelpdeskacr01.azurecr.io/notification-service:${{ github.sha }}
+          az acr login --name ithelpdeskacr02
+          docker push ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }}
 
       - name: Deploy to Container Apps
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: az containerapp update --name notification-service --resource-group it-helpdesk-rg --image ithelpdeskacr01.azurecr.io/notification-service:${{ github.sha }}
+        run: az containerapp update --name notification-service --resource-group it-helpdesk-rg --image ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }}

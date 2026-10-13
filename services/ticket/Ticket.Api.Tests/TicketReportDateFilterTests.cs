@@ -1,46 +1,108 @@
-using Ticket.Api.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using Ticket.Api.Data;
+using Ticket.Api.DTO;
+using Ticket.Api.Model;
 using Xunit;
 
 namespace Ticket.Api.Tests;
 
-// REPORT-1 (P2) AC3: filterable by status, urgency, date range.
-// This targets the date-range boundary computation specifically - see
-// docs/TEMP_BUGS_SPRINT3/BUG-07. AC1 (admin-only access) is enforced by the
-// [Authorize] attribute, which is framework middleware rather than logic
-// inside GetReport itself, and is already covered by the manual/live
-// verification in the QA report (a non-admin caller correctly receives 403
-// against the real running service).
-//
-// Note: this bug is inherently host-timezone-dependent - that's the whole
-// defect. This test fails on any machine whose local timezone offset isn't
-// exactly zero (true of most developer laptops, and true of the environment
-// this bug was originally found on: UTC+5:30). On a server actually
-// configured for UTC, this specific failure mode cannot occur - which is a
-// correct, meaningful result, not a flaw in the test.
-public class TicketReportDateFilterTests
+public class TicketReportDateFilterTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    [Fact]
-    public void ToUtcStartBoundary_UnspecifiedKindInput_ShouldBeTreatedAsUtc()
+    private const string SigningKey = "IT24101503IT24100146IT24101500IT24101497";
+    private const string Issuer = "AuthApi";
+    private const string Audience = "ItHelpdeskClient";
+
+    private readonly HttpClient _client;
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public TicketReportDateFilterTests(WebApplicationFactory<Program> factory)
     {
-        // A date-only query string value model-binds with DateTimeKind.Unspecified.
-        // AC3 needs "2026-09-29" to mean midnight UTC on that date - not
-        // midnight in whatever timezone the host server happens to be set to.
-        var input = DateTime.SpecifyKind(new DateTime(2026, 9, 29), DateTimeKind.Unspecified);
-        var expectedUtcBoundary = DateTime.SpecifyKind(input, DateTimeKind.Utc);
-
-        var actualBoundary = ReportDateRangeHelper.ToUtcStartBoundary(input);
-
-        Assert.Equal(expectedUtcBoundary, actualBoundary);
+        _factory = factory;
+        _client = factory.CreateClient();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(userId: 1, role: "Administrator"));
     }
 
     [Fact]
-    public void ToUtcEndBoundary_UnspecifiedKindInput_ShouldBeTreatedAsUtc()
+    public async Task ReportEndpoint_StartDateProvided_ExcludesPriorDay()
     {
-        var input = DateTime.SpecifyKind(new DateTime(2026, 9, 29), DateTimeKind.Unspecified);
-        var expectedUtcBoundary = DateTime.SpecifyKind(input, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var ticketA = new Tickets { Description = "A", IssueType = "HW", Urgency = 0, CreatedBy = 1, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 9, 28, 23, 59, 0), DateTimeKind.Utc) };
+        var ticketB = new Tickets { Description = "B", IssueType = "HW", Urgency = 0, CreatedBy = 1, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 9, 29, 0, 1, 0), DateTimeKind.Utc) };
+        
+        db.Tickets.AddRange(ticketA, ticketB);
+        await db.SaveChangesAsync();
 
-        var actualBoundary = ReportDateRangeHelper.ToUtcEndBoundary(input);
+        try
+        {
+            var response = await _client.GetAsync("/api/Ticket/report?startDate=2026-09-29");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        Assert.Equal(expectedUtcBoundary, actualBoundary);
+            var items = await response.Content.ReadFromJsonAsync<List<TicketReportItemDTO>>();
+            Assert.NotNull(items);
+            Assert.DoesNotContain(items, t => t.TicketId == ticketA.Id);
+            Assert.Contains(items, t => t.TicketId == ticketB.Id);
+        }
+        finally
+        {
+            db.Tickets.Remove(ticketA);
+            db.Tickets.Remove(ticketB);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ReportEndpoint_EndDateProvided_ExcludesNextDay()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        var ticketC = new Tickets { Description = "C", IssueType = "HW", Urgency = 0, CreatedBy = 1, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 9, 29, 23, 30, 0), DateTimeKind.Utc) };
+        var ticketD = new Tickets { Description = "D", IssueType = "HW", Urgency = 0, CreatedBy = 1, CreatedAt = DateTime.SpecifyKind(new DateTime(2026, 9, 30, 0, 5, 0), DateTimeKind.Utc) };
+        
+        db.Tickets.AddRange(ticketC, ticketD);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            var response = await _client.GetAsync("/api/Ticket/report?endDate=2026-09-29");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var items = await response.Content.ReadFromJsonAsync<List<TicketReportItemDTO>>();
+            Assert.NotNull(items);
+            Assert.Contains(items, t => t.TicketId == ticketC.Id);
+            Assert.DoesNotContain(items, t => t.TicketId == ticketD.Id);
+        }
+        finally
+        {
+            db.Tickets.Remove(ticketC);
+            db.Tickets.Remove(ticketD);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    private static string CreateToken(int userId, string role)
+    {
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim(ClaimTypes.Role, role),
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(Issuer, Audience, claims, expires: DateTime.UtcNow.AddMinutes(5), signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

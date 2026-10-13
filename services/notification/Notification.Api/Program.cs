@@ -21,10 +21,12 @@ builder.Services.AddScoped<IUserEmailResolver, AuthApiUserEmailResolver>();
 builder.Services.AddScoped<IAdminEmailResolver, AuthApiAdminEmailResolver>();
 builder.Services.AddScoped<TicketCreatedNotificationService>();
 builder.Services.AddScoped<SlaBreachedNotificationService>();
+builder.Services.AddScoped<PasswordResetNotificationService>();
 
 builder.Services.AddHostedService<TicketCreatedConsumer>();
 builder.Services.AddHostedService<SlaBreachedConsumer>();
 builder.Services.AddHostedService<TicketAssignedConsumer>();
+builder.Services.AddHostedService<PasswordResetConsumer>();
 
 var app = builder.Build();
 

@@ -22,6 +22,30 @@ namespace Sla.Api.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Sla.Api.Models.SlaTierPolicy", b =>
+                {
+                    b.Property<string>("TierName")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastUpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UpdatedByAdminId")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("TierName");
+                    b.ToTable("SlaTierPolicies");
+
+                    b.HasData(
+                        new { TierName = "LOW", DurationMinutes = 2880, LastUpdatedAtUtc = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc) },
+                        new { TierName = "MEDIUM", DurationMinutes = 1440, LastUpdatedAtUtc = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc) },
+                        new { TierName = "HIGH", DurationMinutes = 240, LastUpdatedAtUtc = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc) },
+                        new { TierName = "CRITICAL", DurationMinutes = 60, LastUpdatedAtUtc = new DateTime(2026, 10, 10, 0, 0, 0, DateTimeKind.Utc) });
+                });
+
             modelBuilder.Entity("Sla.Api.Models.ProcessedEvent", b =>
                 {
                     b.Property<int>("Id")
