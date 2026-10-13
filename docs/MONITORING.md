@@ -24,6 +24,25 @@ az containerapp update -n ticket-service -g it-helpdesk-rg --set-env-vars "APPLI
 Repeat for auth, assignment, sla and notification. The CI deploy only changes the image, so these settings stay.
 Never put the connection string in git.
 
+## Following one ticket across services (Kafka)
+
+Producers add a `traceparent` header to each Kafka message and consumers continue that trace
+(`Observability/KafkaTracing.cs` in each service, registered in `Program.cs`). One ticket creation therefore shows as a
+single trace: the HTTP request, then `ticket-created process` in SLA, Assignment and Notification, then
+`ticket-assigned process` in Ticket and Notification. Checked on Azure on 2026-10-13.
+
+## Where to look in the portal
+
+Azure portal > Resource groups > `it-helpdesk-rg` > `ithelpdesk-appinsights`:
+
+- **Application map**: the services and the calls between them.
+- **Transaction search**: individual requests and exceptions. Open one for the end-to-end view.
+- **Failures** and **Performance**: errors and slow endpoints.
+- **Logs**: KQL queries, for example `requests | where toint(resultCode) >= 500`.
+- **Live Metrics**: real time while the apps are running.
+
+Nothing is sent while the apps are scaled to zero.
+
 ## Dashboard and alerts
 
 Created by `./scripts/deploy-monitoring.sh` (add `--dry-run` to only validate). It deploys
