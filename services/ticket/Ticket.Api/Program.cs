@@ -151,12 +151,6 @@ var app = builder.Build();
 var kafkaProducer = app.Services.GetRequiredService<IProducer<string, string>>();
 app.Lifetime.ApplicationStopping.Register(() => kafkaProducer.Flush(TimeSpan.FromSeconds(10)));
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
-}
-
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
