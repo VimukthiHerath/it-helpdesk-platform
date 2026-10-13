@@ -17,6 +17,21 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      ConnectionStrings__TicketDb: Server=127.0.0.1;Port=3306;Database=ticket_db;Uid=root;Pwd=root;
+      TZ: UTC
     defaults:
       run:
         working-directory: services/ticket/Ticket.Api
@@ -30,10 +45,18 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ../Ticket.Api.Tests/Ticket.Api.Tests.csproj
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build ../Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare test database
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          dotnet ef database update --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
+
+      - name: Run unit tests
+        run: dotnet test ../Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=ticket-tests.trx"
 
       - name: Build Docker image
         run: docker build -t ithelpdeskacr01.azurecr.io/ticket-service:${{ github.sha }} .
@@ -45,6 +68,18 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install EF Core CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: dotnet tool install --global dotnet-ef --version 8.0.8
+
+      - name: Apply database migrations
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          TICKET_DB_CONNECTION_STRING: ${{ secrets.TICKET_DB_CONNECTION_STRING }}
+        run: |
+          test -n "$TICKET_DB_CONNECTION_STRING"
+          dotnet ef database update --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$TICKET_DB_CONNECTION_STRING"
 
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
