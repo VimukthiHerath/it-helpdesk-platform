@@ -14,6 +14,82 @@ was run on the new subscription, and where reality differed from the plan
 
 ---
 
+## UPDATE 2026-10-13 — read this first (it overrides anything below that disagrees)
+
+**Current state**
+- **Everything is scaled to 0** (apps and WSO2 revision). Only MySQL, the registry
+  and storage keep running and costing a small amount (section 7). The "running 24/7"
+  statements further down describe 2026-10-11 and are no longer true.
+- **Access:** `it24101503@my.sliit.lk` has **Contributor on `it-helpdesk-rg`**
+  (granted 2026-10-13). Sign in with `az login` (tenant
+  `44e3cf94-19c9-4e32-96c3-14f5bf01391a`) and select subscription
+  `7e76da9f-fdb8-43bd-9551-28bc90afcd2f`. Resource-group-level access shows the
+  group under **Resource groups** in the portal; the subscription itself may not
+  appear in the Subscriptions blade. Budgets and Cost analysis need Reader on the
+  subscription, which was not granted.
+- **Sprint 4 code is on the `QA-Sprint-4` branch** (capital letters; a lowercase
+  `qa-sprint-4` branch existed and was deleted because Windows cannot tell them
+  apart). It is **not deployed** and **not yet merged into `develop`**.
+- **CI/CD (GitHub Actions) is still not set up** — see "CI/CD setup" below.
+
+**What changed in Sprint 4 (all on `QA-Sprint-4`)**
+- Every browser call now goes through the WSO2 gateway (`/auth/v1`, `/ticket/v1`,
+  `/assignment/v1`); the frontend no longer calls services directly.
+- Auth signs tokens with **RS256** and publishes its public key at
+  `/.well-known/jwks.json`. Ticket, Assignment and SLA verify with it.
+- Password reset: Auth publishes a `password-reset-requested` Kafka event and
+  Notification sends the email (the old code only logged the link).
+- Agent roster management, configurable SLA durations (new admin-only SLA routes),
+  per-agent report, Swagger docs. The committed RSA private key was removed from git.
+- Auth now has migration `AddPasswordResetFields` — **it must be applied by hand**
+  (auth never migrates at startup). Assignment and SLA migrate themselves.
+
+**Sprint 4 deploy checklist (settings that do not exist in Azure yet)**
+
+`<D>` = `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io`. Store keys and
+passwords as Container App secrets and reference them with `secretref:`.
+
+| App | Add |
+|---|---|
+| `auth-service` | `Jwt__RsaPrivateKeyPem` (**secret**; a fresh key — never reuse the one that was committed to git), `InternalService__ApiKey` (secret), `PasswordReset__ResetBaseUrl=https://it-helpdesk-frontend.<D>/reset-password`, `Kafka__BootstrapServers=kafka-broker:9092`. Keep the existing `Jwt__Key` (legacy tokens still validate) |
+| `notification-service` | `InternalService__ApiKey` (**same value as auth**) |
+| `ticket-service` | `Jwt__JwksUri=https://auth-service.<D>/.well-known/jwks.json` |
+| `assignment-service` | `Jwt__JwksUri` (as above) and **`AuthApiUrl=https://auth-service.<D>`** (the add-agent call to Auth uses it and it is missing from Azure today, so adding an agent to the rotation fails) |
+| `sla-service` | `Jwt__JwksUri` (as above); SLA now validates JWTs |
+| `it-helpdesk-frontend` | Rebuild the image. `frontend/.env.production` must have **all four** `REACT_APP_*_URL` values set to `https://wso2-gateway.<D>` |
+| `wso2-gateway` | Re-publish the 5 APIs from `infra/wso2/apis/*.json` (the routes changed; see section 6, item 8). Then see "Open WSO2 risk" |
+
+Then apply the auth migration to Azure MySQL (section 8.4), build and push all six
+images (section 8.2), roll each app (section 8.3), start Kafka first, activate
+exactly one WSO2 revision, and run the smoke tests (section 8.6). Scale back to 0
+afterwards (section 7).
+
+**Open WSO2 risk (not verified):** the design says the gateway verifies the JWT
+using a Key Manager pointed at Auth's JWKS (`docs/WSO2_API_GATEWAY.md`, section 12).
+That has never been tried here. WSO2 may also insist on an application
+subscription for each token. If it does not work, the fallback is to register the
+protected routes without WSO2-level auth and let the services enforce the JWT, which
+they already do — but then the services must be made **internal-only**, otherwise
+the gateway can be bypassed. Decide this with the team before the demo.
+
+**CI/CD setup (what is needed, in order)**
+1. In Azure (needs someone allowed to create role assignments): create the managed
+   identity `github-actions-identity`, add a federated credential for
+   `repo:VimukthiHerath/it-helpdesk-platform:ref:refs/heads/develop`, and give it
+   **Contributor** on `it-helpdesk-rg` plus **AcrPush** on `ithelpdeskacr02`.
+2. In GitHub (repo Settings, Secrets and variables, Actions) add three **secrets**:
+   `AZURE_CLIENT_ID` (the identity's client id), `AZURE_TENANT_ID`
+   (`44e3cf94-19c9-4e32-96c3-14f5bf01391a`), `AZURE_SUBSCRIPTION_ID`
+   (`7e76da9f-fdb8-43bd-9551-28bc90afcd2f`).
+3. Get the config commits into `develop`: the workflows must point at
+   `ithelpdeskacr02` (they still say `ithelpdeskacr01` on `develop`).
+4. Only a **push to `develop`** deploys. Each service workflow builds, pushes, then
+   runs `az containerapp update --image`, which swaps the image and keeps every
+   setting above. It does **not** start apps that are scaled to 0 and does not
+   touch WSO2.
+
+---
+
 ## 0. TL;DR
 
 - The whole platform is **deployed and running** on a **new Azure account**
