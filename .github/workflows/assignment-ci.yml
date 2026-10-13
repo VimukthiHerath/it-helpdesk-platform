@@ -55,7 +55,7 @@ jobs:
           dotnet ef database update --project Assignment.Api.csproj --startup-project Assignment.Api.csproj --connection "$ConnectionStrings__AssignmentDb"
 
       - name: Run unit tests
-        run: dotnet test ../Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=assignment-tests.trx"
+        run: dotnet test ../Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-build --configuration Release --filter "Category!=Integration" --logger "trx;LogFileName=assignment-tests.trx"
 
       - name: Build Docker image
         run: docker build -t ithelpdeskacr02.azurecr.io/assignment-service:${{ github.sha }} .

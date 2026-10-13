@@ -497,3 +497,16 @@ existing migrations as applied only when the `Tickets` table is already there, a
 
 Checked on 2026-10-13 against a throwaway MySQL 8: all five services migrate cleanly on an empty database, and the Ticket database
 created the old way migrates after the baseline.
+
+## Tests that need the full local stack are tagged `Integration`
+
+Ten tests were written for the docker-compose setup and cannot pass in CI, which has only a MySQL container:
+
+- Assignment (7): `AddAgent_*`, `RemoveAgent_AsAdministrator_*`, `ReassignTicket_*` and the queue test need a running Auth service on
+  `localhost:5121` and agents with user IDs 3 and 26 already in the database.
+- Ticket (3): `CreateTicket_ValidRequest_Returns201`, `GetStatusHistory_AfterMultipleChanges_*` and
+  `UpdateStatus_Administrator_CanActOnAnyTicketRegardlessOfAssignment` publish to Kafka, so with no broker each hangs for about 5 minutes and times out.
+
+They are marked `[Trait("Category", "Integration")]`, and the Assignment and Ticket CI test steps run with `--filter "Category!=Integration"`.
+With the filter the Assignment suite runs 28 tests and the Ticket suite 22, in seconds. To run everything locally with the stack up:
+`dotnet test` (no filter). To run only the integration tests: `dotnet test --filter "Category=Integration"`.

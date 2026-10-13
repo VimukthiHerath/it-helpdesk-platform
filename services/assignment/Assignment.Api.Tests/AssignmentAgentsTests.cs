@@ -94,6 +94,7 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task AddAgent_AsAdministrator_AppendsToEndOfRotation()
     {
         var client = _factory.CreateClient();
@@ -120,6 +121,7 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task AddAgent_AlreadyInRotation_Returns409()
     {
         var client = _factory.CreateClient();
@@ -171,6 +173,7 @@ public class AssignmentAgentsTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task RemoveAgent_AsAdministrator_RemovesUserAndReturns204()
     {
         var client = _factory.CreateClient();

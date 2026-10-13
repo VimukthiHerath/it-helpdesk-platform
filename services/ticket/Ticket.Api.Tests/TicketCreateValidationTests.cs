@@ -95,6 +95,7 @@ public class TicketCreateValidationTests : IClassFixture<WebApplicationFactory<P
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task CreateTicket_ValidRequest_Returns201()
     {
         var response = await _client.PostAsJsonAsync("/api/ticket", new

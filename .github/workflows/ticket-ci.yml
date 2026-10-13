@@ -56,7 +56,7 @@ jobs:
           dotnet ef database update --context ApplicationDbContext --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
 
       - name: Run unit tests
-        run: dotnet test ../Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=ticket-tests.trx"
+        run: dotnet test ../Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --configuration Release --filter "Category!=Integration" --logger "trx;LogFileName=ticket-tests.trx"
 
       - name: Build Docker image
         run: docker build -t ithelpdeskacr02.azurecr.io/ticket-service:${{ github.sha }} .

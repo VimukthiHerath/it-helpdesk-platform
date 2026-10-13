@@ -90,6 +90,7 @@ public class AssignmentQueueTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task GetQueue_ReturnsOnlyCallersTickets_SortedMostUrgentFirst()
     {
         var ticketIdBase = Random.Shared.Next(1_000_000, 2_000_000);

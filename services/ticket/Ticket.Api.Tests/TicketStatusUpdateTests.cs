@@ -135,6 +135,7 @@ public class TicketStatusUpdateTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task UpdateStatus_Administrator_CanActOnAnyTicketRegardlessOfAssignment()
     {
         var ticketId = await SeedTicketAsync(assignedTo: 5);
@@ -156,6 +157,7 @@ public class TicketStatusUpdateTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task GetStatusHistory_AfterMultipleChanges_ReturnsEveryEntryInOrder()
     {
         var ticketId = await SeedTicketAsync(assignedTo: 5);

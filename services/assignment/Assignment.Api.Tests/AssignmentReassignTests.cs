@@ -113,6 +113,7 @@ public class AssignmentReassignTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ReassignTicket_TargetNotInRotation_Returns400()
     {
         var ticketId = NextTestTicketId();
@@ -135,6 +136,7 @@ public class AssignmentReassignTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ReassignTicket_SameAgent_Returns409()
     {
         var ticketId = NextTestTicketId();
@@ -157,6 +159,7 @@ public class AssignmentReassignTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ReassignTicket_ToAnotherAgent_UpdatesRecordAndMovesBetweenQueues()
     {
         var ticketId = NextTestTicketId();
