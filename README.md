@@ -132,7 +132,7 @@ services/
   sla/Sla.Api
 frontend/                   # React app (Create React App)
 infra/wso2/                  # the gateway's API definitions and Azure definitions
-scripts/                     # start-all / stop-all for the Azure deployment (see scripts/README.md)
+scripts/                     # start-all / stop-all for Azure, publish-wso2-apis (see scripts/README.md)
 docker-compose.yml           # local MySQL + Kafka + Kafka UI + WSO2 gateway
 docs/                        # architecture, CI/CD, deployment, and troubleshooting guides
 ```
@@ -166,9 +166,10 @@ won't clash with anything else you have running), Kafka (port
 
 > **The frontend talks to the gateway, not to the services.** In development
 > `frontend/.env.development` points every call at `http://localhost:8280`, so the
-> gateway needs the five APIs published before the UI can reach any service. The
-> steps are in section 7 of [`docs/WSO2_API_GATEWAY.md`](docs/WSO2_API_GATEWAY.md). Without
-> them you can still run and test each service on its own port.
+> gateway needs the five APIs published before the UI can reach any service. Once the
+> WSO2 container is healthy, run `./scripts/publish-wso2-apis.sh` (Windows:
+> `.\scripts\publish-wso2-apis.ps1`); details in [`scripts/README.md`](scripts/README.md).
+> Without it you can still run and test each service on its own port.
 
 ### 2. Run each backend service
 

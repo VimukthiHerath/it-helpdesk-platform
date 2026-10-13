@@ -10,6 +10,8 @@ These scripts do both safely, and prove the result.
 | `stop-all.ps1` | Windows PowerShell | Scales everything to zero, switches the gateway off, **checks** that nothing is left running, stops MySQL |
 | `start-all.sh` | Git Bash, Linux, macOS, **Azure Cloud Shell** | Same as `start-all.ps1` |
 | `stop-all.sh` | Git Bash, Linux, macOS, **Azure Cloud Shell** | Same as `stop-all.ps1` |
+| `publish-wso2-apis.ps1` / `.sh` | Windows / bash | Publishes the five APIs into the WSO2 gateway, locally or on Azure (section 8) |
+| `lib/wso2-publish-core.sh` | (used by the two above) | The publishing steps themselves; runs *inside* the WSO2 container |
 
 The `.ps1` and `.sh` versions do exactly the same thing; use whichever fits where you are.
 
@@ -212,3 +214,42 @@ az mysql flexible-server stop  -g $RG -n it-helpdesk-mysql02
 | Storage account, Log Analytics | a few cents | a few cents |
 
 Budget alerts exist ($5 and $15, emailed to the account owner) but they only warn; they do not stop anything.
+
+---
+
+## 8. Publishing the APIs into the WSO2 gateway
+
+The gateway only routes a path once its API has been **published and deployed** in WSO2. A fresh local
+gateway has none, and an Azure gateway loses them if its database is reset. `publish-wso2-apis` does it
+for all five APIs (`infra/wso2/apis/*.json`):
+
+```powershell
+# Local: after  docker compose up -d
+.\scripts\publish-wso2-apis.ps1                # same as:  .\scripts\publish-wso2-apis.ps1 local
+./scripts/publish-wso2-apis.sh                  # bash
+
+# Azure: the gateway must be running (start-all first)
+.\scripts\publish-wso2-apis.ps1 azure
+./scripts/publish-wso2-apis.sh azure
+```
+
+| Option | Meaning |
+|---|---|
+| `local` (default) | The WSO2 container from docker-compose (`local-wso2-gateway`). The APIs point at the services on your machine (auth 5121, ticket 5164, assignment 5067, sla 5262, notification 5214) |
+| `azure` | The deployed gateway. Its management port is never exposed, so the script stages the files on the gateway's Azure Files share and runs the publishing steps **inside** the container with `az containerapp exec`. The APIs point at the Azure services |
+| `-DryRun` / `--dry-run` | Show the plan, change nothing |
+| `-CheckBackends` / `--check-backends` | Also call each service's `/health` through the gateway. **On Azure this wakes every service that is scaled to zero** (and needs MySQL running), so it is off by default |
+
+What it does: waits for WSO2, gets a token, **deletes any existing copy of these five APIs**, then for each API
+imports it, publishes it, creates a revision and deploys it. Finally it asks the gateway whether each route
+exists (a CORS preflight, which the gateway answers itself without touching any service).
+
+Good to know:
+
+* It is **safe to run again**; the old copies are replaced. Run it after editing any `infra/wso2/apis/*.json`.
+* Every operation is published with `x-auth-type: None`: the **gateway only routes** and each service checks the
+  JWT itself (`docs/ARCHITECTURE_AND_END_TO_END_FLOW.md`, section 3.4). That marker lives in the API files.
+* The admin login is `admin` / `admin` unless you set `WSO2_ADMIN_USER` / `WSO2_ADMIN_PASSWORD`.
+* **Local needs Docker; Azure needs the Azure CLI and Contributor access** (it reads the storage key to stage the files).
+* If the route check shows 404 for a route straight after publishing, wait a minute and run the check again;
+  WSO2 loads deployed APIs a few seconds after the deployment call returns.
