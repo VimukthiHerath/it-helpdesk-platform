@@ -64,10 +64,10 @@ docker-compose.yml               # defines the `wso2-gateway` service
 .github/workflows/wso2-gateway-ci.yml   # CI: validates the OpenAPI files + boot-tests WSO2
 ```
 
-> **Sprint 4 note:** the `deploy-apis.sh` / `deploy-apis.ps1` scripts that used to
-> publish these files were removed from the repository. Sections 3-6 below are the
-> story of how they were built and still name them; the procedure they automated is
-> written out as plain REST calls in section 7.
+> **Sprint 4 note:** the old `deploy-apis.sh` / `deploy-apis.ps1` scripts were replaced by
+> `scripts/publish-wso2-apis` (see `scripts/README.md`, section 8). Sections 3-6 below are the
+> story of how the old scripts were built and still name them; the steps are written out
+> as plain REST calls in section 7.
 
 Each `apis/*.json` file is a standard OpenAPI 3.0 document with WSO2-specific
 `x-wso2-*` vendor extensions describing where the real backend lives
@@ -323,7 +323,9 @@ docker inspect --format='{{.State.Health.Status}}' local-wso2-gateway
 cd services/auth/Auth.Api
 dotnet run
 
-# 4. Publish all 5 API definitions into WSO2 (REST calls, see below)
+# 4. Publish all 5 API definitions into WSO2
+cd ../../..
+./scripts/publish-wso2-apis.sh     # or on Windows:  .\scripts\publish-wso2-apis.ps1
 
 # 5. Call a route through the gateway
 curl -X POST http://localhost:8280/auth/v1/login \
@@ -331,7 +333,7 @@ curl -X POST http://localhost:8280/auth/v1/login \
   -d '{"email":"user@example.com","password":"secret"}'
 ```
 
-**Publishing an API (the steps the removed scripts performed).** Do this for each of
+**What `scripts/publish-wso2-apis` does (the steps, if you ever need to do them by hand).** Do this for each of
 the five files in `infra/wso2/apis/`, with the admin account of the WSO2 you are
 publishing to (`admin` / `admin` locally). The management port is `9443`; on Azure it is
 not exposed, so run the same calls with `curl` from inside the container using

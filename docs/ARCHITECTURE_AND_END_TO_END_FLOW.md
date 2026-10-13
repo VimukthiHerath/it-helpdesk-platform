@@ -843,11 +843,10 @@ running system. Items 1 and 2 have since been fixed (marked below). Severity is 
    To make "everything goes through the gateway" literally true, switch those three to
    internal ingress and update the gateway's backend URLs, `Jwt__JwksUri`, `AuthApiUrl` and
    `AssignmentApi__BaseUrl` to the internal hostnames.
-7. **WSO2 API publishing is manual.** The old `deploy-apis` scripts (which published protected routes
-   with WSO2's own OAuth check, so Auth's tokens were rejected with `900901`) were removed. The
-   procedure is written out as plain REST calls in `docs/WSO2_API_GATEWAY.md`, section 7. Every
-   operation must be published with `x-auth-type: None`, because the gateway only routes. A replacement
-   script would make local development with the UI (which now needs the gateway) much easier.
+7. **WSO2 API publishing - now scripted.** The old `deploy-apis` scripts published protected routes with WSO2's
+   own OAuth check, so Auth's tokens were rejected with `900901`; they were replaced by
+   `scripts/publish-wso2-apis` (local Docker and Azure), which publishes every operation with
+   `x-auth-type: None` because the gateway only routes. The marker is stored in `infra/wso2/apis/*.json`.
 8. **A ticket can be saved without its event.** If Kafka is unreachable when a ticket is
    created, the row is saved and the user gets a 503; no assignment, SLA record or email
    follows, and retrying creates a second ticket. (An outbox table would fix this.)
