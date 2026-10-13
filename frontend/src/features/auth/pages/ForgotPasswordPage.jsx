@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import '../components/LoginForm.css';
 
 const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8280'}/auth/v1/forgot-password`;
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
+    const [emailError, setEmailError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!email.trim()) {
-            toast.error('Email is required');
+            setEmailError('Email is required.');
+            return;
+        }
+        if (!/\S+@\S+\.\S+/.test(email)) {
+            setEmailError('Please enter a valid email address.');
             return;
         }
 
@@ -47,34 +52,36 @@ const ForgotPasswordPage = () => {
 
     return (
         <div className="auth-shell">
-            <ToastContainer />
             <h1 className="auth-brand">IT Helpdesk</h1>
             <div className="auth-card panel">
                 <div className="panel__body">
                     <h2>Reset Password</h2>
-                    <p>Enter your email address and we'll send you a link to reset your password.</p>
+                    <p className="auth-help">Enter your email and we will send you a reset link.</p>
 
                     <form onSubmit={handleSubmit} className="auth-form" noValidate>
                         <div className="field">
-                            <label htmlFor="email">Email</label>
+                            <label htmlFor="email">Email<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="email"
                                 type="email"
                                 value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="input"
-                                placeholder="you@example.com"
+                                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                                className={emailError ? 'input input--error' : 'input'}
+                                placeholder="Enter your email"
                                 autoComplete="email"
+                                aria-required="true"
+                                aria-invalid={Boolean(emailError)}
                             />
+                            {emailError && <span className="error-text">{emailError}</span>}
                         </div>
 
                         <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
-                            {isLoading ? 'Sending...' : 'Request Reset Link'}
+                            {isLoading ? 'Sending...' : 'Send reset link'}
                         </button>
                     </form>
 
-                    <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Back to Login</a>
+                    <div className="auth-footer-link">
+                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>back to login</a>
                     </div>
                 </div>
             </div>

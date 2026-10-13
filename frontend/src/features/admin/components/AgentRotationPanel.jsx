@@ -151,11 +151,6 @@ const AgentRotationPanel = () => {
             </div>
 
             <div className="panel__body">
-                <p className="admin-create-panel__intro">
-                    Tickets are assigned to agents in this order. Select an active agent
-                    from the list below to put them into the rotation.
-                </p>
-
                 {state.loading && <p>Loading rotation...</p>}
                 {!state.loading && state.error && <span className="error-text">{state.error}</span>}
 
