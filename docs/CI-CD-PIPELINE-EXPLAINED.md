@@ -325,11 +325,13 @@ talks to `local-kafka`.
 
 ### Cost control: scale-to-zero
 
-Container Apps bill primarily for active replica time. Two scripts,
-`start-all.bat` / `stop-all.bat`, toggle every Container App between
-`min-replicas: 1` (running) and `min-replicas: 0` (idle, no billing) —
-useful on a constrained budget (this project runs on an Azure for
-Students grant). MySQL is left running always (free under the grant).
+Container Apps bill primarily for active replica time. Two scripts in
+`scripts/` (`start-all` / `stop-all`, each as `.ps1` and `.sh`) move every
+Container App between running and `min-replicas: 0` (idle, no compute billing),
+deactivate the WSO2 gateway revision, and start/stop the MySQL server. How to
+use them, and how to do the same by hand in the Azure portal, is in
+`scripts/README.md`. MySQL is **not** free: it bills for every hour it is
+running, so `stop-all` stops it too (it restarts by itself after 7 days).
 
 ---
 

@@ -58,12 +58,16 @@ infra/wso2/
 │   ├── assignment-api.json
 │   ├── sla-api.json
 │   └── notification-api.json
-├── deploy-apis.sh              # Bash: imports + publishes all 5 APIs into WSO2
-└── deploy-apis.ps1             # PowerShell equivalent, for Windows
+└── azure/                      # Container App definitions for the Azure deployment
 
 docker-compose.yml               # defines the `wso2-gateway` service
 .github/workflows/wso2-gateway-ci.yml   # CI: validates the OpenAPI files + boot-tests WSO2
 ```
+
+> **Sprint 4 note:** the `deploy-apis.sh` / `deploy-apis.ps1` scripts that used to
+> publish these files were removed from the repository. Sections 3-6 below are the
+> story of how they were built and still name them; the procedure they automated is
+> written out as plain REST calls in section 7.
 
 Each `apis/*.json` file is a standard OpenAPI 3.0 document with WSO2-specific
 `x-wso2-*` vendor extensions describing where the real backend lives
@@ -319,17 +323,47 @@ docker inspect --format='{{.State.Health.Status}}' local-wso2-gateway
 cd services/auth/Auth.Api
 dotnet run
 
-# 4. Publish all 5 API definitions into WSO2
-cd ../../../infra/wso2
-./deploy-apis.ps1        # Windows
-# or
-bash deploy-apis.sh      # Linux/macOS/WSL
+# 4. Publish all 5 API definitions into WSO2 (REST calls, see below)
 
 # 5. Call a route through the gateway
 curl -X POST http://localhost:8280/auth/v1/login \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"secret"}'
 ```
+
+**Publishing an API (the steps the removed scripts performed).** Do this for each of
+the five files in `infra/wso2/apis/`, with the admin account of the WSO2 you are
+publishing to (`admin` / `admin` locally). The management port is `9443`; on Azure it is
+not exposed, so run the same calls with `curl` from inside the container using
+`az containerapp exec` (see `docs/AZURE_REDEPLOY_HANDOFF.md`).
+
+1. **Register a client** - `POST /client-registration/v0.17/register` (basic auth) with
+   `{"callbackUrl":"http://localhost","clientName":"publisher","owner":"admin",
+   "grantType":"client_credentials password refresh_token","saasApp":true}`. The reply
+   contains `clientId` and `clientSecret`.
+2. **Get a token** - `POST /oauth2/token` (basic auth with that client) with
+   `grant_type=password&username=admin&password=admin&scope=apim:api_create apim:api_publish apim:api_view apim:api_delete`.
+3. **Prepare the file.** `import-openapi` does not read the `x-wso2-*-endpoints`
+   extensions, so pass the backend as `additionalProperties` instead (below). Because
+   the gateway only routes and each service checks the JWT itself (see
+   `docs/ARCHITECTURE_AND_END_TO_END_FLOW.md`, section 3.4), mark **every** operation in
+   the file with `"x-auth-type": "None"`; otherwise WSO2 rejects Auth's tokens with
+   `900901 Invalid Credentials`.
+4. **Import** - `POST /api/am/publisher/v4/apis/import-openapi`, multipart: `file` = the
+   JSON file, `additionalProperties` =
+   `{"name":"<title>","context":"/<auth|ticket|assignment|sla|notification>","version":"v1","policies":["Unlimited"],"endpointConfig":{"endpoint_type":"http","production_endpoints":{"url":"<backend>"},"sandbox_endpoints":{"url":"<backend>"}}}`.
+   The context must have no version in it (WSO2 adds `/v1`). The reply contains the API `id`.
+5. **Publish** - `POST /api/am/publisher/v4/apis/change-lifecycle?action=Publish&apiId=<id>`.
+6. **Create and deploy a revision** (published is not the same as live) -
+   `POST /api/am/publisher/v4/apis/<id>/revisions` with `{"description":"deploy"}`, then
+   `POST /api/am/publisher/v4/apis/<id>/deploy-revision?revisionId=<revId>` with
+   `[{"name":"Default","vhost":"localhost","displayOnDevportal":true}]`.
+
+To re-publish, delete the old definition first: `DELETE /api/am/publisher/v4/apis/<id>`
+(this works on published APIs).
+
+Backends: auth `.../api/Auth`, ticket `.../api/Ticket`, assignment `.../api/Assignments`,
+sla and notification at their service root.
 
 Publisher UI: `https://localhost:9443/publisher`
 DevPortal: `https://localhost:9443/devportal`
@@ -442,6 +476,14 @@ work since it's outside the gateway's own scope.
 ---
 
 ## 12. SCRUM-61: Routing Protected Frontend Calls Through WSO2 (RS256 & JWKS)
+
+> **Update after the Sprint 4 Azure deployment:** the Key Manager approach in the last
+> part of this section was tried and **not adopted**. WSO2 rejected Auth's tokens on
+> protected routes (`900901`), creating a custom Key Manager failed (`901401 Required Key
+> Manager configuration missing`), and WSO2 also expects every token to belong to a
+> registered application. The gateway therefore only **routes**, and Ticket, Assignment
+> and SLA verify the RS256 token themselves through Auth's JWKS. See
+> `docs/ARCHITECTURE_AND_END_TO_END_FLOW.md`, section 3.4.
 
 ### Architecture Transition
 Previously, `Auth.Api` minted tokens with symmetric HMAC-SHA256 (`HS256`). Because WSO2 Gateway verifies tokens independently at the gateway edge before forwarding requests, using asymmetric RS256 with a published JSON Web Key Set (JWKS) is standard:

@@ -40,7 +40,7 @@ properties:
           # under repository/ (webapps/, axis2services/, etc.) is WSO2's own
           # static, never-modified image content - mounting an external
           # volume over it risks subtle fidelity loss (see the "server
-          # crashed on deployment/server/webapps" incident - deploy-apis.sh
+          # crashed on deployment/server/webapps" incident - the API publish step
           # runs *after* boot, so it doesn't need webapps/ to be shared at
           # all).
           - volumeName: wso2-data
