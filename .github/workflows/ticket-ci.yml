@@ -53,7 +53,7 @@ jobs:
       - name: Prepare test database
         run: |
           dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
-          dotnet ef database update --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
+          dotnet ef database update --context ApplicationDbContext --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
 
       - name: Run unit tests
         run: dotnet test ../Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=ticket-tests.trx"
@@ -79,7 +79,7 @@ jobs:
           TICKET_DB_CONNECTION_STRING: ${{ secrets.TICKET_DB_CONNECTION_STRING }}
         run: |
           test -n "$TICKET_DB_CONNECTION_STRING"
-          dotnet ef database update --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$TICKET_DB_CONNECTION_STRING"
+          dotnet ef database update --context ApplicationDbContext --project Ticket.Api.csproj --startup-project Ticket.Api.csproj --connection "$TICKET_DB_CONNECTION_STRING"
 
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'

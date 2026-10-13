@@ -484,3 +484,16 @@ These are real, current limitations — good to know for a viva since
 8. **Secrets are OIDC-based (good)**, but there's no secret scanning
    step (e.g. gitleaks) to catch an accidentally-committed credential
    before it ships.
+
+## Ticket database: which context and the one-time baseline
+
+The Ticket service has two EF contexts. Only `ApplicationDbContext` (the `Tickets` and `StatusHistory` tables) is the real schema, so CI runs
+`dotnet ef database update --context ApplicationDbContext`. Without `--context` the command stops with "More than one DbContext was found".
+`TicketDbContext` has a migration that creates a second `Tickets` table and fails on a database that already has one, so it is not applied.
+
+The existing Ticket database was created by `EnsureCreated()` and has no migration history, so the first migration run fails with
+"Table 'Tickets' already exists". Run `services/ticket/baseline-migrations.sql` once against the real ticket database. It marks the three
+existing migrations as applied only when the `Tickets` table is already there, and does nothing on a brand new database. It is safe to run again.
+
+Checked on 2026-10-13 against a throwaway MySQL 8: all five services migrate cleanly on an empty database, and the Ticket database
+created the old way migrates after the baseline.
