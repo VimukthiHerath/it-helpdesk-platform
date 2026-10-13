@@ -40,9 +40,9 @@ const TicketCreateForm = () => {
         const description = formData.description.trim();
         const issueType = formData.issueType.trim();
 
-        if (!issueType) nextErrors.issueType = 'Enter an issue type.';
-        if (!description) nextErrors.description = 'Describe the problem.';
-        if (description.length > 255) nextErrors.description = 'Use 255 characters or fewer.';
+        if (!issueType) nextErrors.issueType = 'Issue type is required.';
+        if (!description) nextErrors.description = 'Description is required.';
+        if (description.length > 255) nextErrors.description = 'Description must be 255 characters or fewer.';
 
         setErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
@@ -101,29 +101,27 @@ const TicketCreateForm = () => {
         }
 
         toast.success('Ticket created successfully');
-        navigate('/tickets', { replace: true });
+        // replace: the form is not left in the history, so Back cannot return to a submitted form
+        navigate('/my-tickets', { replace: true });
     };
 
     return (
         <section className="ticket-panel panel" aria-labelledby="create-ticket-title">
             <div className="panel__titlebar">
                 <span id="create-ticket-title">New ticket</span>
-                <span>Support desk</span>
             </div>
 
             <div className="panel__body">
-                <p className="ticket-panel__intro">Give us the context we need to get the right person on it.</p>
-
                 <form className="ticket-form" onSubmit={handleSubmit} noValidate>
                     <div className="ticket-form__row">
                         <div className="field">
-                            <label htmlFor="issueType">Issue type</label>
+                            <label htmlFor="issueType">Issue type<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="issueType"
                                 name="issueType"
                                 value={formData.issueType}
                                 onChange={handleChange}
-                                placeholder="Issue type"
+                                placeholder="For example, VPN or printer"
                                 maxLength={100}
                                 className={errors.issueType ? 'input input--error' : 'input'}
                                 aria-invalid={Boolean(errors.issueType)}
@@ -143,7 +141,7 @@ const TicketCreateForm = () => {
 
                     <div className="field">
                         <div className="ticket-label-row">
-                            <label htmlFor="description">What is happening?</label>
+                            <label htmlFor="description">Description<span className="required-mark" aria-hidden="true">*</span></label>
                             <span>{formData.description.length}/255</span>
                         </div>
                         <textarea
@@ -151,7 +149,7 @@ const TicketCreateForm = () => {
                             name="description"
                             value={formData.description}
                             onChange={handleChange}
-                            placeholder="Tell us what you were trying to do, what happened, and any error message you saw."
+                            placeholder="Describe what happened and any error message you saw"
                             maxLength={255}
                             rows={6}
                             className={errors.description ? 'input input--error' : 'input'}

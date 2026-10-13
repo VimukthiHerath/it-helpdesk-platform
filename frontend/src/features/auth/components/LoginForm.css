@@ -48,12 +48,25 @@
   font-size: 0.9rem;
 }
 
-.text-red-500 {
-  color: #ef4444;
+/* inline links and minor secondary text are lowercase */
+.forgot-password-field {
+  align-items: flex-end;
 }
 
-.border-red-500 {
-  border-color: #ef4444 !important;
+.forgot-password-link {
+  font-size: 0.9rem;
+}
+
+.auth-help {
+  margin: -14px 0 24px;
+  color: var(--color-ink-muted);
+  font-size: 0.95rem;
+}
+
+.auth-footer-link {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 480px) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Navbar from '../components/layout/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../shared/authToken';
 import './agentQueue.css';
@@ -107,20 +108,11 @@ const AgentQueue = () => {
 
     return (
         <main className="queue-page">
-            <div className="app-bar">
-                <span className="app-bar__brand">IT Helpdesk</span>
-                <div className="app-bar__actions">
-                    <button type="button" className="btn btn--ghost" onClick={() => navigate('/')}>
-                        Back to dashboard
-                    </button>
-                </div>
-            </div>
+            <Navbar />
 
-            <header className="queue-page__header">
-                <p className="eyebrow">Support desk / Your workload</p>
+            <div className="page-header">
                 <h1>My queue</h1>
-                <p className="queue-page__summary">Tickets assigned to you, most urgent first.</p>
-            </header>
+            </div>
 
             {state.loading && <div className="queue-message panel">Loading your queue...</div>}
             {!state.loading && state.error && (

@@ -33,9 +33,10 @@ const CreateUserForm = () => {
 
     const validate = () => {
         const nextErrors = {};
-        if (!formData.name.trim()) nextErrors.name = 'Enter a name.';
-        if (!/\S+@\S+\.\S+/.test(formData.email)) nextErrors.email = 'Enter a valid email address.';
-        if (formData.password.length < 6) nextErrors.password = 'Use at least 6 characters.';
+        if (!formData.name.trim()) nextErrors.name = 'Full name is required.';
+        if (!formData.email.trim()) nextErrors.email = 'Email is required.';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) nextErrors.email = 'Please enter a valid email address.';
+        if (formData.password.length < 6) nextErrors.password = formData.password ? 'Use at least 6 characters.' : 'Password is required.';
 
         setErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
@@ -108,19 +109,15 @@ const CreateUserForm = () => {
             </div>
 
             <div className="panel__body">
-                <p className="admin-create-panel__intro">
-                    Onboard an employee, agent, or another administrator onto the platform.
-                </p>
-
                 <form className="admin-create-form" onSubmit={handleSubmit} noValidate>
                     <div className="field">
-                        <label htmlFor="name">Full name</label>
+                        <label htmlFor="name">Full name<span className="required-mark" aria-hidden="true">*</span></label>
                         <input
                             id="name"
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            placeholder="Jordan Lee"
+                            placeholder="Enter full name"
                             maxLength={100}
                             className={errors.name ? 'input input--error' : 'input'}
                         />
@@ -129,21 +126,21 @@ const CreateUserForm = () => {
 
                     <div className="admin-create-form__row">
                         <div className="field">
-                            <label htmlFor="email">Email</label>
+                            <label htmlFor="email">Email<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="email"
                                 name="email"
                                 type="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                placeholder="jordan@company.com"
+                                placeholder="Enter email"
                                 className={errors.email ? 'input input--error' : 'input'}
                             />
                             {errors.email && <span className="error-text">{errors.email}</span>}
                         </div>
 
                         <div className="field">
-                            <label htmlFor="role">Role</label>
+                            <label htmlFor="role">Role<span className="required-mark" aria-hidden="true">*</span></label>
                             <select id="role" name="role" value={formData.role} onChange={handleChange} className="input">
                                 {roleOptions.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -153,14 +150,14 @@ const CreateUserForm = () => {
                     </div>
 
                     <div className="field">
-                        <label htmlFor="password">Temporary password</label>
+                        <label htmlFor="password">Temporary password<span className="required-mark" aria-hidden="true">*</span></label>
                         <input
                             id="password"
                             name="password"
                             type="password"
                             value={formData.password}
                             onChange={handleChange}
-                            placeholder="At least 6 characters"
+                            placeholder="Enter at least 6 characters"
                             className={errors.password ? 'input input--error' : 'input'}
                         />
                         {errors.password && <span className="error-text">{errors.password}</span>}

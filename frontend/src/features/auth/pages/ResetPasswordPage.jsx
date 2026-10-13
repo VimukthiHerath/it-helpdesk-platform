@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import '../components/LoginForm.css';
 
 const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost:8280'}/auth/v1/reset-password`;
@@ -25,13 +25,15 @@ const ResetPasswordPage = () => {
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
         if (!formData.newPassword) {
-            newErrors.newPassword = 'Password is required';
+            newErrors.newPassword = 'Password is required.';
         } else if (!passwordRegex.test(formData.newPassword)) {
-            newErrors.newPassword = 'Must be at least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character.';
+            newErrors.newPassword = 'Use at least 8 characters with an uppercase letter, a lowercase letter, a number and a special character.';
         }
 
-        if (formData.newPassword !== formData.confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match';
+        if (!formData.confirmPassword) {
+            newErrors.confirmPassword = 'Please confirm your password.';
+        } else if (formData.newPassword !== formData.confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match.';
         }
 
         setErrors(newErrors);
@@ -82,7 +84,6 @@ const ResetPasswordPage = () => {
 
     return (
         <div className="auth-shell">
-            <ToastContainer />
             <h1 className="auth-brand">IT Helpdesk</h1>
             <div className="auth-card panel">
                 <div className="panel__body">
@@ -90,7 +91,7 @@ const ResetPasswordPage = () => {
 
                     <form onSubmit={handleSubmit} className="auth-form" noValidate>
                         <div className="field">
-                            <label htmlFor="newPassword">New Password</label>
+                            <label htmlFor="newPassword">New password<span className="required-mark" aria-hidden="true">*</span></label>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <input
                                     id="newPassword"
@@ -105,7 +106,7 @@ const ResetPasswordPage = () => {
                         </div>
 
                         <div className="field">
-                            <label htmlFor="confirmPassword">Confirm Password</label>
+                            <label htmlFor="confirmPassword">Confirm password<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="confirmPassword"
                                 type={showPassword ? 'text' : 'password'}
@@ -124,16 +125,16 @@ const ResetPasswordPage = () => {
                                 checked={showPassword}
                                 onChange={(e) => setShowPassword(e.target.checked)}
                             />
-                            <label htmlFor="showPassword" style={{ margin: 0, fontWeight: 'normal' }}>Show Password</label>
+                            <label htmlFor="showPassword" style={{ margin: 0, fontWeight: 'normal' }}>Show password</label>
                         </div>
 
                         <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
-                            {isLoading ? 'Resetting...' : 'Reset Password'}
+                            {isLoading ? 'Resetting...' : 'Reset password'}
                         </button>
                     </form>
 
-                    <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Back to Login</a>
+                    <div className="auth-footer-link">
+                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>back to login</a>
                     </div>
                 </div>
             </div>

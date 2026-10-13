@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import './LoginForm.css';
 
 // Every API call, this one included, goes through the WSO2 API Gateway
@@ -72,14 +71,13 @@ const LoginForm = () => {
             }
 
             localStorage.setItem('token', data.token || '');
-            toast.success('Login successful! Redirecting...', {
+            toast.success('Login successful.', {
                 position: 'top-right',
                 autoClose: 1800,
             });
 
             navigate('/', { replace: true });
 
-            console.log('Login successful:', data);
         } catch (error) {
             console.error('Error logging in:', error);
             toast.error(error.message || 'Something went wrong during login.', {
@@ -92,7 +90,6 @@ const LoginForm = () => {
 
     return (
         <div className="auth-shell">
-            <ToastContainer />
             <h1 className="auth-brand">IT Helpdesk</h1>
             <div className="auth-card panel">
                 <div className="panel__body">
@@ -100,43 +97,47 @@ const LoginForm = () => {
 
                     <form onSubmit={handleSubmit} className="auth-form" noValidate>
                         <div className="field">
-                            <label htmlFor="email">Email<span className="text-red-500">*</span></label>
+                            <label htmlFor="email">Email<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="email"
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className={errors.email ? 'input input--error border-red-500' : 'input'}
-                                placeholder="name@company.com"
+                                className={errors.email ? 'input input--error' : 'input'}
+                                placeholder="Enter your email"
                                 autoComplete="email"
+                                aria-required="true"
+                                aria-invalid={Boolean(errors.email)}
                             />
                             {errors.email && <span className="error-text">{errors.email}</span>}
                         </div>
 
                         <div className="field">
-                            <label htmlFor="password">Password<span className="text-red-500">*</span></label>
+                            <label htmlFor="password">Password<span className="required-mark" aria-hidden="true">*</span></label>
                             <input
                                 id="password"
                                 type="password"
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
-                                className={errors.password ? 'input input--error border-red-500' : 'input'}
+                                className={errors.password ? 'input input--error' : 'input'}
                                 placeholder="Enter your password"
                                 autoComplete="current-password"
+                                aria-required="true"
+                                aria-invalid={Boolean(errors.password)}
                             />
                             {errors.password && <span className="error-text">{errors.password}</span>}
                         </div>
 
                         <div className="field forgot-password-field">
                             <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="forgot-password-link">
-                                Forgot Password?
+                                forgot password?
                             </a>
                         </div>
 
                         <button type="submit" className="btn btn--primary auth-submit" disabled={isLoading}>
-                            {isLoading ? 'Logging In...' : 'Log In'}
+                            {isLoading ? 'Logging in...' : 'Log in'}
                         </button>
                     </form>
                 </div>
