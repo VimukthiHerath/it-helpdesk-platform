@@ -509,3 +509,6 @@ selenium-tests/
 SE3112_*.pdf
 docs/QA_report_IT24101503_Group02.pdf
 docs/DEPLOYMENT_HANDOVER.md
+
+# Stray test project at the repo root, kept locally only
+/tests/
