@@ -96,8 +96,9 @@ jobs:
             /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
-            /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info" \
-            /d:sonar.qualitygate.wait=true
+            /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info"
+          # No sonar.qualitygate.wait: the free SonarCloud plan refuses gate data for any branch except the main one (HTTP 403),
+          # which failed this step even though the analysis uploaded fine. Read the gate result on sonarcloud.io instead.
 
       - name: Build backend projects
         run: |
