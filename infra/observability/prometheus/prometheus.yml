@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: api-gateway
+    static_configs:
+      - targets: ["host.docker.internal:5000"]
+        labels:
+          service: api-gateway
+
+  - job_name: auth
+    static_configs:
+      - targets: ["host.docker.internal:5121"]
+        labels:
+          service: auth
+
+  - job_name: ticket
+    static_configs:
+      - targets: ["host.docker.internal:5164"]
+        labels:
+          service: ticket
+
+  - job_name: assignment
+    static_configs:
+      - targets: ["host.docker.internal:5067"]
+        labels:
+          service: assignment
+
+  - job_name: notification
+    static_configs:
+      - targets: ["host.docker.internal:5214"]
+        labels:
+          service: notification
+
+  - job_name: sla
+    static_configs:
+      - targets: ["host.docker.internal:5262"]
+        labels:
+          service: sla

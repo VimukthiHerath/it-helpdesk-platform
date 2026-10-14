@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Notification.Api.Data;
 using Notification.Api.Services;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -28,6 +29,8 @@ builder.Services.AddHostedService<TicketAssignedConsumer>();
 
 var app = builder.Build();
 
+app.UseHttpMetrics();
+
 // Auto-apply any pending migrations on startup
 using (var scope = app.Services.CreateScope())
 {
@@ -41,4 +44,5 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Notification" }));
+app.MapMetrics();
 app.Run();

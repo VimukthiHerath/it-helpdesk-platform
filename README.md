@@ -17,6 +17,7 @@ a React frontend, deployed to Azure Container Apps.
 - [Getting it running locally](#getting-it-running-locally)
 - [Roles, in one table](#roles-in-one-table)
 - [Local URLs, all in one place](#local-urls-all-in-one-place)
+- [Monitoring](#monitoring)
 - [Running the tests](#running-the-tests)
 - [Further documentation](#further-documentation)
 - [Known limitations](#known-limitations)
@@ -155,6 +156,15 @@ won't clash with anything else you have running) and Kafka (port
 **9092**), plus a Kafka UI dashboard at **http://localhost:8081** for
 browsing topics and messages while you develop.
 
+Prometheus and Grafana are also included. They can be started with:
+
+```
+docker compose up -d prometheus grafana
+```
+
+Prometheus is available at **http://localhost:9090** and Grafana at
+**http://localhost:3001** (`admin` / `admin` for local development).
+
 ### 2. Run each backend service
 
 Each one needs its own terminal:
@@ -243,6 +253,15 @@ currently no UI to remove the old placeholders — do that directly in
 | MySQL | `localhost:3307` (root / `localdevpassword`) |
 | Kafka | `localhost:9092` |
 | Kafka UI | http://localhost:8081 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3001 |
+
+## Monitoring
+
+The API Gateway and all backend services expose `/metrics` for Prometheus.
+The local dashboard is provisioned automatically. For Azure Container Apps,
+use Azure Monitor managed Prometheus with Azure Managed Grafana as described
+in [`docs/OBSERVABILITY.md`](docs/OBSERVABILITY.md).
 
 ---
 

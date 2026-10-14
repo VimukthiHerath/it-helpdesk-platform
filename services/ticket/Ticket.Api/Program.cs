@@ -6,6 +6,7 @@ using System.Text;
 using Ticket.Api.Configuration;
 using Ticket.Api.Data;
 using Ticket.Api.Services;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -129,6 +130,7 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
+app.UseHttpMetrics();
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -144,6 +146,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Tick
 // and has no way to special-case a resource onto the service root instead.
 app.MapGet("/api/Ticket/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 app.MapControllers();
+app.MapMetrics();
 app.Run();
 
 public partial class Program { }

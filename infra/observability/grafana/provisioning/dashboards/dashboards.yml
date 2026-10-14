@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: IT Helpdesk
+    orgId: 1
+    folder: IT Helpdesk
+    type: file
+    disableDeletion: false
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

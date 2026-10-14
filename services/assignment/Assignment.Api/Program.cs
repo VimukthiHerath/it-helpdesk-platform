@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -107,6 +108,7 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 }
 
+app.UseHttpMetrics();
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -123,6 +125,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Assi
 // the service root instead.
 app.MapGet("/api/Assignments/health", () => Results.Ok(new { status = "healthy", service = "Assignment" }));
 app.MapControllers();
+app.MapMetrics();
 app.Run();
 
 public partial class Program { }

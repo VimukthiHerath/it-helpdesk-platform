@@ -5,6 +5,7 @@ using System.Text;
 using Auth.Api.Configuration;
 using Auth.Api.Data;
 using Auth.Api.Services;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,6 +101,7 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
+app.UseHttpMetrics();
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -111,6 +113,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapMetrics();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Auth" }));
 // Also exposed under the controller base path so it's reachable through the
 // WSO2 gateway, which forwards every "/auth/v1/*" request to {endpoint}/api/Auth/*

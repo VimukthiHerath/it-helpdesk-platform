@@ -3,6 +3,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Text;
 using System.Text.Json;
 using Yarp.ReverseProxy.Configuration;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,7 @@ var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseCors("GatewayPolicy");
+app.UseHttpMetrics();
 
 // Strip and forward Authorization: Bearer <token> to downstream services.
 // YARP copies all request headers by default (RequestHeadersCopy: true in config),
@@ -95,6 +97,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     }
 });
 
+app.MapMetrics();
 // ── YARP reverse proxy middleware ─────────────────────────────────────────────
 app.MapReverseProxy();
 
