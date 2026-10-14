@@ -25,8 +25,10 @@ authentication or application endpoints.
      environments)
 
    The **IT Helpdesk / IT Helpdesk Overview** dashboard is provisioned
-   automatically. The Prometheus data source and dashboard are defined under
-   `infra/observability/grafana`.
+   automatically. It includes service filtering, target health, request
+   throughput, success rate, p50/p95/p99 latency, status-code distribution,
+   5xx percentage, target availability, and process memory. The Prometheus
+   data source and dashboard are defined under `infra/observability/grafana`.
 
 If `admin` / `admin` is rejected after the stack has already been started,
 the password in the persistent `grafana_data` volume is taking precedence
