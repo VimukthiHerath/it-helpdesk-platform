@@ -196,18 +196,45 @@ Everything is in `it-helpdesk-rg`.
 MySQL could not be created in `centralindia` (the service returned an internal
 server error there), so **MySQL is in `indonesiacentral`**.
 
+Inventory of `it-helpdesk-rg` on 2026-10-14: **23 resources**. (Two leftovers, the `wso2-seed-job` job and the unused Log Analytics
+workspace `workspace-ithelpdeskrgfNeG`, were deleted on 2026-10-14 after checking that nothing used them.)
+
+**Where the app runs**
+
 | Resource | Name | Notes |
 |---|---|---|
-| Container Apps environment | `it-helpdesk-envstd` | Workload-profiles ("standard") type, `centralindia`. Default domain: `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io` |
-| Container Registry | `ithelpdeskacr02` (Basic) | Old name `…01` was taken globally |
-| Identity | `acr-pull-identity` | Has `AcrPull` on the registry; apps use it to pull images |
-| MySQL Flexible Server | `it-helpdesk-mysql02` | Burstable B1ms, 20 GB, MySQL 8.0.21, **indonesiacentral**. DBs: `auth_db`, `ticket_db`, `assignment_db`, `sla_db`, `notification_db` (+ an unused `flexibleserverdb`) |
-| Storage account | `ithelpdeskwso2sb` | File share `wso2-data` holds WSO2's databases. Mounted into the environment as `wso2-data-storage` |
-| Log Analytics workspace | auto-named `workspace-ithelpdeskrg…` | Created with the environment |
-| Container Apps Job | `wso2-seed-job` | **Leftover** one-shot helper (section 6, item 4). Costs nothing; safe to delete |
-| Budgets | `budget-5`, `budget-15` | Subscription level; email alerts at 50/90/100% to `it24101497@my.sliit.lk` |
+| Container Apps environment | `it-helpdesk-envstd` | Workload-profiles ("standard") type, `centralindia`. Default domain: `proudsmoke-64e7a7a1.centralindia.azurecontainerapps.io`. Sends its logs to `workspace-ithelpdeskrgMgIe` |
+| Container apps (8) | `kafka-broker`, `auth-service`, `ticket-service`, `assignment-service`, `sla-service`, `notification-service`, `wso2-gateway`, `it-helpdesk-frontend` | Details in the table below. Scale to zero when stopped |
 
-### Container Apps (all currently scaled to 1 replica = running)
+**Where things are stored**
+
+| Resource | Name | Notes |
+|---|---|---|
+| Container Registry | `ithelpdeskacr02` (Basic) | Holds the images CI builds. The main fixed cost, about $0.17 a day. Old name `…01` was taken globally |
+| MySQL Flexible Server | `it-helpdesk-mysql02` | Burstable B1ms, 20 GB, MySQL 8.0.21, **indonesiacentral**. DBs: `auth_db`, `ticket_db`, `assignment_db`, `sla_db`, `notification_db` (+ an unused `flexibleserverdb`). Stopped when not in use |
+| Storage account | `ithelpdeskwso2sb` | File share `wso2-data` holds WSO2's databases. Mounted into the environment as `wso2-data-storage` |
+| Log Analytics workspace | `workspace-ithelpdeskrgMgIe` | The live workspace: container logs, and the store behind Application Insights |
+
+**Monitoring** (see `docs/MONITORING.md`)
+
+| Resource | Name | Notes |
+|---|---|---|
+| Application Insights | `ithelpdesk-appinsights` | Telemetry from the five services and the browser. Daily cap 0.5 GB |
+| Workbook (dashboard) | name is a GUID, title "IT Helpdesk health" | Deployed by `scripts/deploy-monitoring.sh` |
+| Alert rules (4) | `helpdesk-server-errors`, `helpdesk-logged-errors`, `helpdesk-notification-failures`, `helpdesk-slow-requests` | Checked every 15 minutes, about $0.004 a day each |
+| Action group | `ithelpdesk-alerts` | Emails the four team addresses |
+| Action group | `Application Insights Smart Detection` | Created by Azure itself, free |
+
+**Identities (no passwords stored)**
+
+| Resource | Name | Notes |
+|---|---|---|
+| Managed identity | `acr-pull-identity` | Has `AcrPull` on the registry; apps use it to pull images |
+| Managed identity | `github-actions-identity` | Federated credential that GitHub Actions uses to sign in to Azure and deploy (the `AZURE_NEW_*` secrets) |
+
+Outside the resource group: budgets `budget-5` and `budget-15` at subscription level (email alerts at 50/90/100% to `it24101497@my.sliit.lk`).
+
+### Container Apps (1 replica after `start-all`, 0 after `stop-all`)
 
 | App | Ingress | URL / host |
 |---|---|---|
@@ -360,9 +387,9 @@ Read this before following the old doc, or you will repeat our mistakes.
    `repository/database` hides them → boot fails with
    `Table "UM_DOMAIN" not found (this database is empty)`. We fixed it by
    copying the image's real `database/` and `synapse-configs/` onto the share
-   with a one-shot Container Apps Job (`wso2-seed-job`). The share is now seeded;
-   you do not need to redo this unless the share is wiped. If you must, the job
-   is the pattern to copy.
+   with a one-shot Container Apps Job (`wso2-seed-job`, since deleted on 2026-10-14).
+   The share is now seeded; you do not need to redo this unless the share is
+   wiped. If you must, recreate a one-off job of the same shape.
 4. **ACR cloud builds are blocked** on this subscription (`TasksOperationsNotAllowed`).
    `az acr build` fails. You must **build images locally with Docker Desktop** and
    push. (Docker must be running.)
@@ -590,6 +617,6 @@ must stay **identical on auth, ticket and assignment** or tokens stop working.
    admin password.
 4. **Merge the sprint work** and apply the section 5 checklist.
 5. **Scale down** after each session (section 7) and verify.
-6. Optional tidy-up: delete the `wso2-seed-job` Container Apps Job; correct
-   `DEPLOYMENT_HANDOVER.md` with the section 6 findings; rotate the Gmail app
-   password.
+6. Optional tidy-up: correct `DEPLOYMENT_HANDOVER.md` with the section 6
+   findings; rotate the Gmail app password. (The `wso2-seed-job` job and the
+   unused workspace were already deleted on 2026-10-14.)
