@@ -111,7 +111,7 @@ jobs:
         run: |
           dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
           dotnet ef database update --project services/auth/Auth.Api/Auth.Api.csproj --startup-project services/auth/Auth.Api/Auth.Api.csproj --connection "$ConnectionStrings__AuthDb"
-          dotnet ef database update --project services/ticket/Ticket.Api/Ticket.Api.csproj --startup-project services/ticket/Ticket.Api/Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
+          dotnet ef database update --context ApplicationDbContext --project services/ticket/Ticket.Api/Ticket.Api.csproj --startup-project services/ticket/Ticket.Api/Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
           dotnet ef database update --project services/assignment/Assignment.Api/Assignment.Api.csproj --startup-project services/assignment/Assignment.Api/Assignment.Api.csproj --connection "$ConnectionStrings__AssignmentDb"
           dotnet ef database update --project services/sla/Sla.Api/Sla.Api.csproj --startup-project services/sla/Sla.Api/Sla.Api.csproj --connection "Server=127.0.0.1;Port=3306;Database=sla_db;Uid=root;Pwd=root;"
           dotnet ef database update --project services/notification/Notification.Api/Notification.Api.csproj --startup-project services/notification/Notification.Api/Notification.Api.csproj --connection "Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;"
@@ -119,8 +119,8 @@ jobs:
       - name: Run backend tests with coverage
         run: |
           dotnet test services/auth/Auth.Api.Tests/Auth.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
-          dotnet test services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
-          dotnet test services/assignment/Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          dotnet test services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --no-restore --configuration Release --filter "Category!=Integration" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          dotnet test services/assignment/Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-build --no-restore --configuration Release --filter "Category!=Integration" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
           ConnectionStrings__DefaultConnection='Server=127.0.0.1;Port=3306;Database=sla_db;Uid=root;Pwd=root;' dotnet test services/sla/Sla.Api.Tests/Sla.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
           ConnectionStrings__DefaultConnection='Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;' dotnet test services/notification/Notification.Api.Tests/Notification.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
