@@ -38,7 +38,7 @@ const AgentQueue = () => {
         const loadQueue = async () => {
             const token = localStorage.getItem('token');
             if (!token) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
 
@@ -50,7 +50,7 @@ const AgentQueue = () => {
 
                 if (response.status === 401) {
                     localStorage.removeItem('token');
-                    navigate('/login', { replace: true });
+                    void navigate('/login', { replace: true });
                     return;
                 }
                 if (!response.ok) throw new Error(data?.message || 'Unable to load your queue.');
@@ -64,7 +64,7 @@ const AgentQueue = () => {
             setState({ loading: false, error: '' });
         };
 
-        loadQueue();
+        void loadQueue();
     }, [navigate]);
 
     const setRowError = (ticketId, message) => setRowErrors((current) => ({ ...current, [ticketId]: message }));
@@ -75,7 +75,7 @@ const AgentQueue = () => {
     const setStatus = async (ticketId, newStatus) => {
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -90,7 +90,7 @@ const AgentQueue = () => {
             const data = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to update this ticket\'s status.');

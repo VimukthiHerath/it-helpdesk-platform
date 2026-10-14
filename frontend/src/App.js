@@ -53,7 +53,7 @@ const ProtectedRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 
   React.useEffect(() => {
-    isAuthenticated().then(setAuthenticated);
+    void isAuthenticated().then(setAuthenticated);
   }, []);
 
   if (authenticated === null) {
@@ -67,7 +67,7 @@ const PublicRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 
   React.useEffect(() => {
-    isAuthenticated().then(setAuthenticated);
+    void isAuthenticated().then(setAuthenticated);
   }, []);
 
   if (authenticated === null) {
@@ -81,7 +81,7 @@ const AdminRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 
   React.useEffect(() => {
-    isAuthenticated().then(setAuthenticated);
+    void isAuthenticated().then(setAuthenticated);
   }, []);
 
   if (authenticated === null) {
@@ -99,7 +99,7 @@ const AgentRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 
   React.useEffect(() => {
-    isAuthenticated().then(setAuthenticated);
+    void isAuthenticated().then(setAuthenticated);
   }, []);
 
   if (authenticated === null) {
@@ -119,7 +119,7 @@ const StaffRoute = ({ children }) => {
   const [authenticated, setAuthenticated] = React.useState(null);
 
   React.useEffect(() => {
-    isAuthenticated().then(setAuthenticated);
+    void isAuthenticated().then(setAuthenticated);
   }, []);
 
   if (authenticated === null) {

@@ -37,7 +37,7 @@ const AdminReportPage = () => {
     const handleSearch = async (e) => {
         e.preventDefault();
         const token = getStoredToken();
-        if (!token) { navigate('/login', { replace: true }); return; }
+        if (!token) { void navigate('/login', { replace: true }); return; }
 
         setState({ loading: true, error: '', searched: false });
 
@@ -52,7 +52,7 @@ const AdminReportPage = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (res.status === 401) { navigate('/login', { replace: true }); return; }
+            if (res.status === 401) { void navigate('/login', { replace: true }); return; }
             if (!res.ok) throw new Error('Failed to load report.');
 
             const data = await res.json();
