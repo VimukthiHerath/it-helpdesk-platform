@@ -39,7 +39,9 @@ jobs:
         run: npm run build
 
       - name: Build Docker image
-        run: docker build --build-arg REACT_APP_APPINSIGHTS_CONNECTION_STRING="${{ secrets.APPINSIGHTS_CONNECTION_STRING }}" -t ithelpdeskacr02.azurecr.io/frontend:${{ github.sha }} .
+        env:
+          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
+        run: docker build --build-arg REACT_APP_APPINSIGHTS_CONNECTION_STRING="$APPINSIGHTS_CONNECTION_STRING" -t ithelpdeskacr02.azurecr.io/frontend:${{ github.sha }} .
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
