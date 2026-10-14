@@ -73,12 +73,6 @@ builder.Services.AddHostedService<SlaBreachMonitorService>();
 var app = builder.Build();
 
 // Automatically apply migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<SlaDbContext>();
-    dbContext.Database.Migrate();
-}
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
