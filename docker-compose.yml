@@ -7,13 +7,33 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9092,INTERNAL://kafka:29092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: local-kafka-ui
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   mysql:
     image: mysql:8.0
@@ -22,3 +42,45 @@ services:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: localdevpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # ── Sprint 3 Addition: WSO2 API Manager 4.3.0 ──────────────────────────────
+  wso2-gateway:
+    image: wso2/wso2am:4.3.0
+    container_name: local-wso2-gateway
+    ports:
+      - "8280:8280" # HTTP  Pass-through Gateway
+      - "8243:8243" # HTTPS Pass-through Gateway
+      - "9443:9443" # Management: Publisher / DevPortal / Admin
+    environment:
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+      # Allow WSO2 to resolve host services via host.docker.internal
+      # (for Linux hosts, add --add-host=host.docker.internal:host-gateway
+      #  or set extra_hosts below)
+    extra_hosts:
+      - "auth-api:host-gateway"
+      - "ticket-api:host-gateway"
+      - "assignment-api:host-gateway"
+      - "sla-api:host-gateway"
+      - "notification-api:host-gateway"
+    volumes:
+      - wso2_data:/home/wso2carbon/wso2am-4.3.0/repository/deployment
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sk https://localhost:9443/api/am/publisher/v4/apis -u admin:admin -o /dev/null -w '%{http_code}' | grep -qE '^[23]'" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    networks:
+      - default
+
+volumes:
+  kafka_data:
+  mysql_data:
+  wso2_data:
+
+networks:
+  default:
+    name: it-helpdesk-net

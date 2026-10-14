@@ -1,8 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles/theme.css';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { initTelemetry } from './shared/telemetry';
+
+initTelemetry();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

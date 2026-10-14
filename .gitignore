@@ -6,6 +6,16 @@
 # dotenv files
 .env
 
+# RSA keys and certificates
+*.pem
+**/*.pem
+*.key
+**/*.key
+keys/
+**/keys/
+private.pem
+**/jwt-rsa-private.pem
+
 # User-specific files
 *.rsuser
 *.suo
@@ -482,3 +492,23 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+
+.claude
+
+# Local-only notes/credentials, never commit
+.local-notes/
+
+# Personal dev working notes, not part of the graded repo
+vimukthis-dev-docs/
+
+# Selenium test suite - kept locally, not tracked in the repo
+selenium-tests/
+
+# Personal / course files, not part of the repo
+SE3112_*.pdf
+docs/QA_report_IT24101503_Group02.pdf
+docs/DEPLOYMENT_HANDOVER.md
+
+# Stray test project at the repo root, kept locally only
+/tests/

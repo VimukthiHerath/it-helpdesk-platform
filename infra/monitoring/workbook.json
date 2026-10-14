@@ -1,0 +1,142 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": { "json": "## IT Helpdesk health\nRequests, failures, slow endpoints, exceptions and Kafka message handling for the five services." },
+      "name": "title"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "a1b2c3d4-0001-4000-8000-000000000001",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": { "durationMs": 86400000 },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000, "displayName": "Last hour" },
+                { "durationMs": 86400000, "displayName": "Last 24 hours" },
+                { "durationMs": 604800000, "displayName": "Last 7 days" }
+              ]
+            }
+          }
+        ]
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Service summary",
+        "query": "requests\n| where name !has 'process'\n| summarize Requests = count(), Failed5xx = countif(toint(resultCode) >= 500), Rejected4xx = countif(toint(resultCode) between (400 .. 499)), AvgMs = round(avg(duration), 0), P95Ms = round(percentile(duration, 95), 0) by Service = cloud_RoleName\n| order by Service asc",
+        "size": 1,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "summary"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Requests over time",
+        "query": "requests\n| where name !has 'process'\n| summarize Requests = count() by bin(timestamp, 15m), Service = cloud_RoleName\n| order by timestamp asc",
+        "size": 0,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "name": "requests-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Server errors (5xx) over time",
+        "query": "requests\n| where toint(resultCode) >= 500\n| summarize Errors = count() by bin(timestamp, 15m), Service = cloud_RoleName\n| order by timestamp asc",
+        "size": 0,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "name": "errors-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Slowest endpoints (95th percentile, ms)",
+        "query": "requests\n| where name !has 'process'\n| summarize Calls = count(), AvgMs = round(avg(duration), 0), P95Ms = round(percentile(duration, 95), 0) by Service = cloud_RoleName, Endpoint = name\n| where Calls >= 2\n| top 15 by P95Ms desc",
+        "size": 0,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "slowest"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Kafka messages handled",
+        "query": "requests\n| where name has 'process'\n| summarize Handled = count(), Failed = countif(success == false), AvgMs = round(avg(duration), 0) by Service = cloud_RoleName, Topic = name\n| order by Service asc, Topic asc",
+        "size": 1,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "kafka"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Most frequent exceptions",
+        "query": "exceptions\n| where outerMessage !has 'Unknown topic or partition'\n| summarize Count = count(), LastSeen = max(timestamp) by Service = cloud_RoleName, Type = type, Message = substring(outerMessage, 0, 120)\n| top 15 by Count desc",
+        "size": 0,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "exceptions"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Recent errors in the logs",
+        "query": "traces\n| where severityLevel >= 3\n| where message !has 'Unknown topic or partition'\n| project timestamp, Service = cloud_RoleName, message = substring(message, 0, 200)\n| top 20 by timestamp desc",
+        "size": 0,
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "log-errors"
+    }
+  ],
+  "isLocked": false,
+  "fallbackResourceIds": []
+}

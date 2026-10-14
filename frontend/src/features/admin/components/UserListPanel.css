@@ -1,0 +1,122 @@
+/* This panel gets its own (wider) container instead of the ~760px
+   .admin-create-panel the create-user form uses - that width was forced
+   for a table with five columns, including a dropdown+two-button actions
+   cell, and was exactly why the table needed a horizontal scrollbar to
+   show everything. */
+.accounts-panel {
+    width: min(100%, 1400px);
+    margin-top: 32px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.user-table-wrap {
+    overflow-x: auto;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-family: var(--font-body);
+}
+
+.user-table__id {
+    width: 6%;
+}
+
+/* The cells only pad their right side, so the first column's text sat flush against the
+   left edge of the (coloured) row. This must be more specific than the th/td rules. */
+.user-table th:first-child,
+.user-table td:first-child {
+    padding-left: 16px;
+}
+
+.user-table__name {
+    width: 15%;
+}
+
+.user-table__email {
+    width: 28%;
+}
+
+.user-table td.user-table__id {
+    /* Monospace, same treatment as the app's other identifiers - this is
+       the number an admin needs to copy into Agent rotation's "user ID to
+       add" field, so it should read like an ID, not blend into prose. */
+    font-family: var(--font-display);
+    color: var(--color-ink-muted);
+}
+
+.user-table th {
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    padding: 0 12px 10px 0;
+    border-bottom: 1px solid var(--color-ink);
+}
+
+.user-table td {
+    padding: 16px 12px 16px 0;
+    border-bottom: 1px solid var(--color-ink);
+    /* Top-aligned, not centered - matches the fix in ticketAssignments.css:
+       a <td> with display:flex on it directly doesn't stretch to the row's
+       full height the way a normal table cell does, so its border-bottom
+       ends up short of the row's real boundary. Moving the flex styling
+       onto an inner <div> (see JSX) and keeping the <td> itself a plain
+       cell fixes that; top-aligning keeps rows with an inline error
+       message lining up the same as rows without one. */
+    vertical-align: top;
+}
+
+.user-table td.user-table__name,
+.user-table td.user-table__email {
+    /* Generated test emails run long - wrapping them here is what lets the
+       table fit its container instead of forcing the whole row wider (and
+       the page into a horizontal scrollbar) to keep one long email on a
+       single line. */
+    overflow-wrap: anywhere;
+}
+
+.user-table__row--admin td {
+    background: var(--color-sage-pale);
+}
+
+.user-table__row--agent td {
+    background: var(--color-amber-bg);
+}
+
+.user-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.user-table td .input {
+    padding: 6px 8px;
+    font-size: 0.9rem;
+}
+
+.user-table__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.user-table__actions-row {
+    display: flex;
+    gap: 8px;
+}
+
+.user-table__actions .btn {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+}
+
+@media (max-width: 700px) {
+    .user-table {
+        min-width: 640px;
+    }
+}

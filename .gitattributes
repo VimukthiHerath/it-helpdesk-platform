@@ -1,0 +1,2 @@
+# Shell scripts must keep Unix line endings, or "bash: No such file" breaks them on Linux and Azure Cloud Shell.
+*.sh text eol=lf

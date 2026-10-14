@@ -1,0 +1,12 @@
+.dashboard-shell {
+    min-height: 100vh;
+    box-sizing: border-box;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    padding-bottom: 48px;
+}
+
+.dashboard-shell .ticket-panel {
+    margin-right: auto;
+    margin-left: auto;
+}

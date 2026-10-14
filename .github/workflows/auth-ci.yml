@@ -1,4 +1,4 @@
-name: Auth Service CI
+name: Auth Service CI/CD
 
 on:
   push:
@@ -10,9 +10,27 @@ on:
     paths:
       - 'services/auth/**'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      ConnectionStrings__AuthDb: Server=127.0.0.1;Port=3306;Database=auth_db;Uid=root;Pwd=root;
     defaults:
       run:
         working-directory: services/auth/Auth.Api
@@ -26,10 +44,48 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ../Auth.Api.Tests/Auth.Api.Tests.csproj
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build ../Auth.Api.Tests/Auth.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare test database
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          dotnet ef database update --project Auth.Api.csproj --startup-project Auth.Api.csproj --connection "$ConnectionStrings__AuthDb"
+
+      - name: Run unit tests
+        run: dotnet test ../Auth.Api.Tests/Auth.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=auth-tests.trx"
 
       - name: Build Docker image
-        run: docker build -t auth-service .
+        run: docker build -t ithelpdeskacr02.azurecr.io/auth-service:${{ github.sha }} .
+
+      - name: Log in to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
+
+      - name: Install EF Core CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: dotnet tool install --global dotnet-ef --version 8.0.8
+
+      - name: Apply database migrations
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          AUTH_DB_CONNECTION_STRING: ${{ secrets.AUTH_DB_CONNECTION_STRING }}
+        run: |
+          test -n "$AUTH_DB_CONNECTION_STRING"
+          dotnet ef database update --project Auth.Api.csproj --startup-project Auth.Api.csproj --connection "$AUTH_DB_CONNECTION_STRING"
+
+      - name: Push image to ACR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: |
+          az acr login --name ithelpdeskacr02
+          docker push ithelpdeskacr02.azurecr.io/auth-service:${{ github.sha }}
+
+      - name: Deploy to Container Apps
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: az containerapp update --name auth-service --resource-group it-helpdesk-rg --image ithelpdeskacr02.azurecr.io/auth-service:${{ github.sha }}

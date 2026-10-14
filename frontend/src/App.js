@@ -1,24 +1,193 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import LoginPage from './features/auth/pages/LoginPage';
+import Dashboard from './pages/dashboard';
+import MyTickets from './pages/myTickets';
+import AgentQueue from './pages/agentQueue';
+import TicketAssignments from './pages/ticketAssignments';
+import AdminAccountsPage from './features/admin/pages/AdminAccountsPage';
+import AdminCreateUserPage from './features/admin/pages/AdminCreateUserPage';
+import AdminRotationPage from './features/admin/pages/AdminRotationPage';
+import AdminReportPage from './pages/adminReport';
+import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
+import { decodeToken, isAdmin, isAgent } from './shared/authToken';
+
 import './App.css';
+
+const AUTH_API_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/me`;
+
+const isAuthenticated = async () => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    return false;
+  }
+
+  try {
+    const payload = decodeToken(token);
+    if (!payload || typeof payload.exp !== 'number' || payload.exp <= Date.now() / 1000) {
+      throw new Error('Invalid or expired token');
+    }
+
+    const response = await fetch(AUTH_API_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Token rejected by API');
+    }
+
+    return true;
+  } catch {
+    localStorage.removeItem('token');
+    return false;
+  }
+};
+
+const ProtectedRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  return authenticated ? children : <Navigate to="/login" replace />;
+};
+
+const PublicRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  return authenticated ? <Navigate to="/" replace /> : children;
+};
+
+const AdminRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return isAdmin() ? children : <Navigate to="/" replace />;
+};
+
+const AgentRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return isAgent() ? children : <Navigate to="/" replace />;
+};
+
+// The read-only "all tickets" overview is viewable by either role, unlike
+// AgentRoute/AdminRoute.
+const StaffRoute = ({ children }) => {
+  const [authenticated, setAuthenticated] = React.useState(null);
+
+  React.useEffect(() => {
+    isAuthenticated().then(setAuthenticated);
+  }, []);
+
+  if (authenticated === null) {
+    return null;
+  }
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (isAgent() || isAdmin()) ? children : <Navigate to="/" replace />;
+};
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <ToastContainer position="top-right" />
+      <Routes>
+        <Route
+          path="/login"
+          element={<PublicRoute><LoginPage /></PublicRoute>}
+        />
+        <Route
+          path="/forgot-password"
+          element={<PublicRoute><ForgotPasswordPage /></PublicRoute>}
+        />
+        <Route
+          path="/reset-password"
+          element={<PublicRoute><ResetPasswordPage /></PublicRoute>}
+        />
+        <Route
+          path="/"
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+        />
+        <Route
+          path="/my-tickets"
+          element={<ProtectedRoute><MyTickets /></ProtectedRoute>}
+        />
+        <Route
+          path="/agent/queue"
+          element={<AgentRoute><AgentQueue /></AgentRoute>}
+        />
+        <Route
+          path="/tickets"
+          element={<StaffRoute><TicketAssignments /></StaffRoute>}
+        />
+        <Route
+          path="/admin/accounts"
+          element={<AdminRoute><AdminAccountsPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/users/new"
+          element={<AdminRoute><AdminCreateUserPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/rotation"
+          element={<AdminRoute><AdminRotationPage /></AdminRoute>}
+        />
+        <Route
+          path="/admin/report"
+          element={<AdminRoute><AdminReportPage /></AdminRoute>}
+        />
+        <Route
+          path="*"
+          element={<ProtectedRoute><Navigate to="/" replace /></ProtectedRoute>}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

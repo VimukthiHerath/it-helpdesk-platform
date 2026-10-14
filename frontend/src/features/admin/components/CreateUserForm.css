@@ -1,0 +1,60 @@
+.admin-create-panel {
+    width: min(100%, 760px);
+    margin-top: 32px;
+}
+
+.admin-create-panel__intro {
+    margin: 0 0 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-ink);
+    color: var(--color-ink-muted);
+    line-height: 1.5;
+}
+
+.admin-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.admin-create-form__row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr;
+    gap: 18px;
+}
+
+.admin-create-form__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 44px;
+}
+
+.admin-create-status {
+    font-size: 0.86rem;
+}
+
+.admin-create-status__success {
+    color: var(--color-sage-deep);
+}
+
+@media (max-width: 600px) {
+    .panel__body {
+        padding: 20px 16px;
+    }
+
+    .admin-create-form__row,
+    .admin-create-form__footer {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-create-form__footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-create-form__footer .btn {
+        width: 100%;
+    }
+}

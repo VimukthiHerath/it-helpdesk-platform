@@ -1,0 +1,141 @@
+name: SonarCloud Quality
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/*.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/sonarcloud.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/*.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/sonarcloud.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyze:
+    name: Test and analyze
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+      ConnectionStrings__AuthDb: Server=127.0.0.1;Port=3306;Database=auth_db;Uid=root;Pwd=root;
+      ConnectionStrings__TicketDb: Server=127.0.0.1;Port=3306;Database=ticket_db;Uid=root;Pwd=root;
+      ConnectionStrings__AssignmentDb: Server=127.0.0.1;Port=3306;Database=assignment_db;Uid=root;Pwd=root;
+      ConnectionStrings__DefaultConnection: Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;
+      TZ: UTC
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner --version 9.0.2
+
+      - name: Restore backend test projects
+        run: |
+          dotnet restore services/auth/Auth.Api.Tests/Auth.Api.Tests.csproj
+          dotnet restore services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj
+          dotnet restore services/assignment/Assignment.Api.Tests/Assignment.Api.Tests.csproj
+          dotnet restore services/sla/Sla.Api.Tests/Sla.Api.Tests.csproj
+          dotnet restore services/notification/Notification.Api.Tests/Notification.Api.Tests.csproj
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Begin SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          test -n "$SONAR_PROJECT_KEY"
+          test -n "$SONAR_ORGANIZATION"
+          test -n "$SONAR_TOKEN"
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /o:"$SONAR_ORGANIZATION" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info"
+          # No sonar.qualitygate.wait: the free SonarCloud plan refuses gate data for any branch except the main one (HTTP 403),
+          # which failed this step even though the analysis uploaded fine. Read the gate result on sonarcloud.io instead.
+
+      - name: Build backend projects
+        run: |
+          dotnet build services/auth/Auth.Api.Tests/Auth.Api.Tests.csproj --no-restore --configuration Release
+          dotnet build services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-restore --configuration Release
+          dotnet build services/assignment/Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-restore --configuration Release
+          dotnet build services/sla/Sla.Api.Tests/Sla.Api.Tests.csproj --no-restore --configuration Release
+          dotnet build services/notification/Notification.Api.Tests/Notification.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare test databases
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          dotnet ef database update --project services/auth/Auth.Api/Auth.Api.csproj --startup-project services/auth/Auth.Api/Auth.Api.csproj --connection "$ConnectionStrings__AuthDb"
+          dotnet ef database update --context ApplicationDbContext --project services/ticket/Ticket.Api/Ticket.Api.csproj --startup-project services/ticket/Ticket.Api/Ticket.Api.csproj --connection "$ConnectionStrings__TicketDb"
+          dotnet ef database update --project services/assignment/Assignment.Api/Assignment.Api.csproj --startup-project services/assignment/Assignment.Api/Assignment.Api.csproj --connection "$ConnectionStrings__AssignmentDb"
+          dotnet ef database update --project services/sla/Sla.Api/Sla.Api.csproj --startup-project services/sla/Sla.Api/Sla.Api.csproj --connection "Server=127.0.0.1;Port=3306;Database=sla_db;Uid=root;Pwd=root;"
+          dotnet ef database update --project services/notification/Notification.Api/Notification.Api.csproj --startup-project services/notification/Notification.Api/Notification.Api.csproj --connection "Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;"
+
+      - name: Run backend tests with coverage
+        run: |
+          dotnet test services/auth/Auth.Api.Tests/Auth.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          dotnet test services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-build --no-restore --configuration Release --filter "Category!=Integration" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          dotnet test services/assignment/Assignment.Api.Tests/Assignment.Api.Tests.csproj --no-build --no-restore --configuration Release --filter "Category!=Integration" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          ConnectionStrings__DefaultConnection='Server=127.0.0.1;Port=3306;Database=sla_db;Uid=root;Pwd=root;' dotnet test services/sla/Sla.Api.Tests/Sla.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+          ConnectionStrings__DefaultConnection='Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;' dotnet test services/notification/Notification.Api.Tests/Notification.Api.Tests.csproj --no-build --no-restore --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+
+      - name: Run frontend tests with coverage
+        working-directory: frontend
+        env:
+          CI: true
+        run: npm test -- --watchAll=false --coverage
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: End SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"

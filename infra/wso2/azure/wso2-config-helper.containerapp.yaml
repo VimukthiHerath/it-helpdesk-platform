@@ -1,0 +1,28 @@
+location: centralindia
+name: wso2-config-helper
+resourceGroup: it-helpdesk-rg
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: /subscriptions/7e76da9f-fdb8-43bd-9551-28bc90afcd2f/resourceGroups/it-helpdesk-rg/providers/Microsoft.App/managedEnvironments/it-helpdesk-envstd
+  configuration:
+    activeRevisionsMode: Single
+  template:
+    containers:
+      - image: ubuntu:22.04
+        name: wso2-config-helper
+        command: ["sleep"]
+        args: ["infinity"]
+        resources:
+          cpu: 0.5
+          memory: 1.0Gi
+        volumeMounts:
+          - volumeName: wso2-data
+            mountPath: /specs
+            subPath: synapse-configs
+    volumes:
+      - name: wso2-data
+        storageType: AzureFile
+        storageName: wso2-data-storage
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
