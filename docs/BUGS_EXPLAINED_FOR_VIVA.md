@@ -51,7 +51,7 @@ and a phishing setup handed to an attacker on a plate.
 **How to show it (do this one against the real Azure deployment — much more
 convincing than localhost):**
 ```bash
-curl https://auth-service.gentlebeach-1f28fec1.southeastasia.azurecontainerapps.io/api/auth/internal/admins/emails
+curl https://<auth-service-host>/api/auth/internal/admins/emails
 ```
 No token, no header, nothing — and it returns a real admin's email straight
 from the live production-ish database. Then show a *correctly* protected
