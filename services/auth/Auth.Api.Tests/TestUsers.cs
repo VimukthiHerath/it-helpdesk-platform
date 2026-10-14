@@ -13,9 +13,27 @@ internal static class TestUsers
 
     private static readonly string PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
 
+    // Test classes run in parallel against the same database and several of them ensure the same
+    // user id. Without this lock two callers can both see "missing" and both insert it, and the
+    // second insert fails with "Duplicate entry '1' for key 'Users.PRIMARY'".
+    private static readonly SemaphoreSlim Gate = new(1, 1);
+
     // Creates the user if it is missing, or makes sure it is active and carries the test
     // stamp, so a token made with the same id and stamp passes the revocation check.
     public static async Task EnsureAsync(IServiceProvider services, int userId, UserRole role)
+    {
+        await Gate.WaitAsync();
+        try
+        {
+            await EnsureCoreAsync(services, userId, role);
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    private static async Task EnsureCoreAsync(IServiceProvider services, int userId, UserRole role)
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
