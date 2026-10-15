@@ -11,7 +11,10 @@ const roleOptions = [
     { value: 3, label: 'Administrator' },
 ];
 
-const initialForm = { name: '', email: '', password: '', role: 1 };
+const initialForm = { name: '', email: '', phone: '', password: '', role: 1 };
+
+// Mirrors Auth.Api's PhoneNumber rule: optional +, then 7-15 digits.
+const PHONE_PATTERN = /^\+?\d{7,15}$/;
 
 const CreateUserForm = () => {
     const [formData, setFormData] = useState(initialForm);
@@ -36,6 +39,8 @@ const CreateUserForm = () => {
         if (!formData.name.trim()) nextErrors.name = 'Full name is required.';
         if (!formData.email.trim()) nextErrors.email = 'Email is required.';
         else if (!/\S+@\S+\.\S+/.test(formData.email)) nextErrors.email = 'Please enter a valid email address.';
+        if (!formData.phone.trim()) nextErrors.phone = 'Phone number is required.';
+        else if (!PHONE_PATTERN.test(formData.phone.trim())) nextErrors.phone = 'Use 7-15 digits, with an optional leading +.';
         if (formData.password.length < 6) nextErrors.password = formData.password ? 'Use at least 6 characters.' : 'Password is required.';
 
         setErrors(nextErrors);
@@ -66,6 +71,7 @@ const CreateUserForm = () => {
                 body: JSON.stringify({
                     name: formData.name.trim(),
                     email: formData.email.trim(),
+                    phone: formData.phone.trim(),
                     password: formData.password,
                     role: formData.role,
                 }),
@@ -147,6 +153,21 @@ const CreateUserForm = () => {
                                 ))}
                             </select>
                         </div>
+                    </div>
+
+                    <div className="field">
+                        <label htmlFor="phone">Phone<span className="required-mark" aria-hidden="true">*</span></label>
+                        <input
+                            id="phone"
+                            name="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            placeholder="e.g. 0771234567 or +94771234567"
+                            maxLength={20}
+                            className={errors.phone ? 'input input--error' : 'input'}
+                        />
+                        {errors.phone && <span className="error-text">{errors.phone}</span>}
                     </div>
 
                     <div className="field">

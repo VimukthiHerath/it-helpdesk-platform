@@ -116,7 +116,8 @@
                                 "required": [
                                     "email",
                                     "password",
-                                    "name"
+                                    "name",
+                                    "phone"
                                 ],
                                 "properties": {
                                     "email": {
@@ -128,6 +129,10 @@
                                     },
                                     "name": {
                                         "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "pattern": "^\\+?[0-9]{7,15}$"
                                     }
                                 }
                             }
@@ -301,7 +306,8 @@
                                     "name",
                                     "email",
                                     "password",
-                                    "role"
+                                    "role",
+                                    "phone"
                                 ],
                                 "properties": {
                                     "name": {
@@ -316,6 +322,10 @@
                                     },
                                     "role": {
                                         "type": "integer"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "pattern": "^\\+?[0-9]{7,15}$"
                                     }
                                 }
                             }
@@ -343,6 +353,43 @@
             }
         },
         "/users/{id}": {
+            "get": {
+                "summary": "Get one user's contact details (agent or admin)",
+                "operationId": "authGetUser",
+                "tags": [
+                    "Users"
+                ],
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User returned"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "x-auth-type": "None"
+            },
             "put": {
                 "summary": "Update user (admin)",
                 "operationId": "authUpdateUser",
@@ -380,8 +427,18 @@
                                     },
                                     "role": {
                                         "type": "integer"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "pattern": "^\\+?[0-9]{7,15}$"
                                     }
-                                }
+                                },
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "phone",
+                                    "role"
+                                ]
                             }
                         }
                     }
@@ -398,6 +455,9 @@
                     },
                     "404": {
                         "description": "User not found"
+                    },
+                    "400": {
+                        "description": "Validation error"
                     }
                 },
                 "x-auth-type": "None"

@@ -5,6 +5,9 @@ import './UserListPanel.css';
 
 const USERS_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/users`;
 
+// Mirrors Auth.Api's PhoneNumber rule: optional +, then 7-15 digits.
+const PHONE_PATTERN = /^\+?\d{7,15}$/;
+
 const roleOptions = [
     { value: 1, label: 'Employee' },
     { value: 2, label: 'Agent' },
@@ -26,7 +29,7 @@ const UserListPanel = () => {
     const [users, setUsers] = useState([]);
     const [state, setState] = useState({ loading: true, error: '' });
     const [editingId, setEditingId] = useState(null);
-    const [editForm, setEditForm] = useState({ name: '', email: '', role: 1 });
+    const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', role: 1 });
     const [rowErrors, setRowErrors] = useState({});
     const [busyId, setBusyId] = useState(null);
     const navigate = useNavigate();
@@ -64,7 +67,7 @@ const UserListPanel = () => {
 
     const startEdit = (user) => {
         setEditingId(user.id);
-        setEditForm({ name: user.name, email: user.email, role: user.role });
+        setEditForm({ name: user.name, email: user.email, phone: user.phone || '', role: user.role });
         setRowError(user.id, '');
     };
 
@@ -80,13 +83,18 @@ const UserListPanel = () => {
             return;
         }
 
+        if (!PHONE_PATTERN.test(editForm.phone.trim())) {
+            setRowError(id, 'Phone must be 7-15 digits, with an optional leading +.');
+            return;
+        }
+
         setBusyId(id);
         setRowError(id, '');
         try {
             const response = await fetch(`${USERS_URL}/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(editForm),
+                body: JSON.stringify({ ...editForm, phone: editForm.phone.trim() }),
             });
             const data = await response.json().catch(() => ({}));
 
@@ -158,6 +166,7 @@ const UserListPanel = () => {
                                     <th className="user-table__id">ID</th>
                                     <th className="user-table__name">Name</th>
                                     <th className="user-table__email">Email</th>
+                                    <th className="user-table__phone">Phone</th>
                                     <th>Role</th>
                                     <th>Status</th>
                                     <th />
@@ -189,6 +198,16 @@ const UserListPanel = () => {
                                                         onChange={(event) => setEditForm((form) => ({ ...form, email: event.target.value }))}
                                                     />
                                                 ) : user.email}
+                                            </td>
+                                            <td className="user-table__phone">
+                                                {isEditing ? (
+                                                    <input
+                                                        className="input"
+                                                        type="tel"
+                                                        value={editForm.phone}
+                                                        onChange={(event) => setEditForm((form) => ({ ...form, phone: event.target.value }))}
+                                                    />
+                                                ) : (user.phone || '—')}
                                             </td>
                                             <td>
                                                 {isEditing ? (

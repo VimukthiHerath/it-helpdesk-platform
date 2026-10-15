@@ -39,6 +39,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email = $"no-token-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             password = "Password123!",
             role = 1,
         });
@@ -57,6 +58,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email = $"wrong-role-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             password = "Password123!",
             role = 1,
         });
@@ -76,6 +78,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email,
+            phone = "0771234567",
             password = "Password123!",
             role = 2,
         });
@@ -102,6 +105,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "First Attempt",
             email,
+            phone = "0771234567",
             password = "Password123!",
             role = 1,
         };
@@ -128,6 +132,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email,
+            phone = "0771234567",
             password,
             role = 1,
         });
@@ -154,6 +159,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email,
+            phone = "0771234567",
             password = "Password123!",
             role = 2,
         });
@@ -179,6 +185,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "Self Signup",
             email,
+            phone = "0771234567",
             password = "Password123!",
             role = 1,
         });
@@ -205,6 +212,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         {
             name = "New User",
             email,
+            phone = "0771234567",
             password,
             role = 1,
         });
@@ -218,6 +226,90 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         Assert.True(BCrypt.Net.BCrypt.Verify(password, stored.Password));
     }
 
+    [Fact]
+    public async Task CreateUser_StoresPhone_AndReturnsIt()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
+
+        var email = $"phone-check-{Guid.NewGuid():N}@example.com";
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email,
+            phone = "+94771234567",
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CreatedUserResponse>();
+        Assert.Equal("+94771234567", body!.Phone);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var stored = await db.Users.FirstAsync(u => u.Email == email);
+        Assert.Equal("+94771234567", stored.Phone);
+    }
+
+    [Fact]
+    public async Task CreateUser_WithoutPhone_Returns400()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
+
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email = $"no-phone-{Guid.NewGuid():N}@example.com",
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("12345")]
+    [InlineData("077 123 4567")]
+    [InlineData("+1234567890123456")]
+    public async Task CreateUser_WithMalformedPhone_Returns400(string phone)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", await TokenAsync(userId: 1, role: "Administrator"));
+
+        var response = await client.PostAsJsonAsync("/api/auth/users", new
+        {
+            name = "New User",
+            email = $"bad-phone-{Guid.NewGuid():N}@example.com",
+            phone,
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_WithoutPhone_Returns400()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            name = "Dev Signup",
+            email = $"dev-no-phone-{Guid.NewGuid():N}@example.com",
+            password = "Password123!",
+            role = 1,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private sealed class LoginResponse
     {
         public string? Token { get; set; }
@@ -228,6 +320,7 @@ public class AdminCreateUserTests : IClassFixture<WebApplicationFactory<Program>
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? Phone { get; set; }
         public int Role { get; set; }
         public int? CreatedBy { get; set; }
     }

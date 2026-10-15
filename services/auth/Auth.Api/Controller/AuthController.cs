@@ -17,6 +17,8 @@ namespace Auth.Api.Controller
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private const string UserNotFoundMessage = "User not found.";
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
@@ -50,7 +52,7 @@ namespace Auth.Api.Controller
 
             try
             {
-                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role);
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Phone, request.Password, request.Role);
                 if (error is not null)
                 {
                     return error;
@@ -60,6 +62,7 @@ namespace Auth.Api.Controller
                 {
                     Name = user!.Name,
                     Email = user.Email,
+                    Phone = user.Phone ?? string.Empty,
                     Role = user.Role,
                     CreatedAt = user.CreatedAt
                 };
@@ -73,7 +76,7 @@ namespace Auth.Api.Controller
             }
         }
 
-        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string password, UserRole role, int? createdBy = null)
+        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string phone, string password, UserRole role, int? createdBy = null)
         {
             var userExists = await _context.Users
                 .AnyAsync(u => u.Email == email);
@@ -87,6 +90,7 @@ namespace Auth.Api.Controller
             {
                 Name = name,
                 Email = email,
+                Phone = phone,
                 Password = BCrypt.Net.BCrypt.HashPassword(password),
                 Role = role,
                 IsActive = true,
@@ -117,7 +121,7 @@ namespace Auth.Api.Controller
                     ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var adminId = int.Parse(adminIdClaim!);
 
-                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role, adminId);
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Phone, request.Password, request.Role, adminId);
                 if (error is not null)
                 {
                     return error;
@@ -128,6 +132,7 @@ namespace Auth.Api.Controller
                     Id = user!.Id,
                     Name = user.Name,
                     Email = user.Email,
+                    Phone = user.Phone,
                     Role = user.Role,
                     CreatedAt = user.CreatedAt,
                     CreatedBy = user.CreatedBy
@@ -212,11 +217,36 @@ namespace Auth.Api.Controller
             Id = user.Id,
             Name = user.Name,
             Email = user.Email,
+            Phone = user.Phone,
             Role = user.Role,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
             CreatedBy = user.CreatedBy,
         };
+
+        // Agents need a requester's email and phone to follow up on a ticket
+        // assigned to them, so reading one user is open to Agent as well as
+        // Administrator. Listing every user stays Administrator-only.
+        [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUser(int id)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = UserNotFoundMessage });
+                }
+
+                return Ok(ToUserListItemDto(user));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user {UserId}", id);
+                return Problem("Unable to load the user. Please try again later.");
+            }
+        }
 
         [Authorize(Roles = Roles.Administrator)]
         [HttpPut("users/{id}")]
@@ -232,7 +262,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 var callerId = GetAuthenticatedUserId();
@@ -266,6 +296,7 @@ namespace Auth.Api.Controller
 
                 user.Name = request.Name;
                 user.Email = request.Email;
+                user.Phone = request.Phone;
                 user.Role = request.Role;
                 user.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
@@ -288,7 +319,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 var callerId = GetAuthenticatedUserId();
@@ -471,7 +502,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 return Ok(new { email = user.Email, name = user.Name });
