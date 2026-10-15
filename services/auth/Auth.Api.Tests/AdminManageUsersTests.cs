@@ -84,6 +84,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Nobody",
             email = $"nobody-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             role = 1,
         });
 
@@ -106,6 +107,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Target",
             email = takenEmail,
+            phone = "0771234567",
             role = 1,
         });
 
@@ -126,6 +128,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Self Admin",
             email = $"self-admin-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             role = 1,
         });
 
@@ -146,6 +149,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Agent In Rotation",
             email = $"in-rotation-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             role = 1,
         });
 
@@ -169,6 +173,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Promoted",
             email = newEmail,
+            phone = "0771234567",
             role = 1,
         });
 
@@ -192,6 +197,7 @@ public class AdminManageUsersTests : IClassFixture<WebApplicationFactory<Program
         {
             name = "Agent",
             email = $"unreachable-{Guid.NewGuid():N}@example.com",
+            phone = "0771234567",
             role = 1,
         });
 

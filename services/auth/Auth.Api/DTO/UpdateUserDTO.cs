@@ -15,5 +15,9 @@ public class UpdateUserDTO
     public string Email { get; set; } = string.Empty;
 
     [Required]
+    [RegularExpression(PhoneNumber.Pattern, ErrorMessage = PhoneNumber.ErrorMessage)]
+    public string Phone { get; set; } = string.Empty;
+
+    [Required]
     public UserRole Role { get; set; }
 }

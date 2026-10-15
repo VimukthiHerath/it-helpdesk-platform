@@ -50,7 +50,7 @@ namespace Auth.Api.Controller
 
             try
             {
-                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role);
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Phone, request.Password, request.Role);
                 if (error is not null)
                 {
                     return error;
@@ -60,6 +60,7 @@ namespace Auth.Api.Controller
                 {
                     Name = user!.Name,
                     Email = user.Email,
+                    Phone = user.Phone ?? string.Empty,
                     Role = user.Role,
                     CreatedAt = user.CreatedAt
                 };
@@ -73,7 +74,7 @@ namespace Auth.Api.Controller
             }
         }
 
-        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string password, UserRole role, int? createdBy = null)
+        private async Task<(User? User, ActionResult? Error)> CreateUserAsync(string name, string email, string phone, string password, UserRole role, int? createdBy = null)
         {
             var userExists = await _context.Users
                 .AnyAsync(u => u.Email == email);
@@ -87,6 +88,7 @@ namespace Auth.Api.Controller
             {
                 Name = name,
                 Email = email,
+                Phone = phone,
                 Password = BCrypt.Net.BCrypt.HashPassword(password),
                 Role = role,
                 IsActive = true,
@@ -117,7 +119,7 @@ namespace Auth.Api.Controller
                     ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var adminId = int.Parse(adminIdClaim!);
 
-                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Password, request.Role, adminId);
+                var (user, error) = await CreateUserAsync(request.Name, request.Email, request.Phone, request.Password, request.Role, adminId);
                 if (error is not null)
                 {
                     return error;
@@ -128,6 +130,7 @@ namespace Auth.Api.Controller
                     Id = user!.Id,
                     Name = user.Name,
                     Email = user.Email,
+                    Phone = user.Phone,
                     Role = user.Role,
                     CreatedAt = user.CreatedAt,
                     CreatedBy = user.CreatedBy
@@ -212,6 +215,7 @@ namespace Auth.Api.Controller
             Id = user.Id,
             Name = user.Name,
             Email = user.Email,
+            Phone = user.Phone,
             Role = user.Role,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
@@ -266,6 +270,7 @@ namespace Auth.Api.Controller
 
                 user.Name = request.Name;
                 user.Email = request.Email;
+                user.Phone = request.Phone;
                 user.Role = request.Role;
                 user.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
