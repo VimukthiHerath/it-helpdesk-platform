@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -101,6 +102,13 @@ var app = builder.Build();
 var kafkaProducer = app.Services.GetRequiredService<IProducer<string, string>>();
 app.Lifetime.ApplicationStopping.Register(() => kafkaProducer.Flush(TimeSpan.FromSeconds(10)));
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
+app.UseHttpMetrics();
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -117,6 +125,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Assi
 // the service root instead.
 app.MapGet("/api/Assignments/health", () => Results.Ok(new { status = "healthy", service = "Assignment" }));
 app.MapControllers();
+app.MapMetrics();
 app.Run();
 
 public partial class Program { }

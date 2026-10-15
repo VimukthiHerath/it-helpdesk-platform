@@ -1,0 +1,139 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "expr": "sum(up{job=~\"$service\"})", "refId": "A" }],
+      "title": "Healthy scrape targets",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "hidden" } },
+      "targets": [{ "expr": "sum(rate(http_requests_received_total{job=~\"$service\"}[5m]))", "refId": "A" }],
+      "title": "Requests per second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "hidden" } },
+      "targets": [{ "expr": "100 * (1 - sum(rate(http_requests_received_total{job=~\"$service\",code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_received_total{job=~\"$service\"}[5m])), 0.001))", "refId": "A" }],
+      "title": "Success rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "hidden" } },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))", "refId": "A" }],
+      "title": "p95 request latency",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_received_total{job=~\"$service\"}[5m]))", "legendFormat": "{{service}}", "refId": "A" }],
+      "title": "Request rate by service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (service, le) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))", "legendFormat": "{{service}} p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (service, le) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))", "legendFormat": "{{service}} p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (service, le) (rate(http_request_duration_seconds_bucket{job=~\"$service\"}[5m])))", "legendFormat": "{{service}} p99", "refId": "C" }
+      ],
+      "title": "Latency percentiles by service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [
+        { "expr": "sum by (service, code) (rate(http_requests_received_total{job=~\"$service\"}[5m]))", "legendFormat": "{{service}} {{code}}", "refId": "A" }
+      ],
+      "title": "HTTP response codes",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "id": 8,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [
+        { "expr": "100 * sum by (service) (rate(http_requests_received_total{job=~\"$service\",code=~\"5..\"}[5m])) / clamp_min(sum by (service) (rate(http_requests_received_total{job=~\"$service\"}[5m])), 0.001)", "legendFormat": "{{service}}", "refId": "A" }
+      ],
+      "title": "5xx error percentage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
+      "id": 9,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [{ "expr": "up{job=~\"$service\"}", "legendFormat": "{{job}} / {{instance}}", "refId": "A" }],
+      "title": "Target availability",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [
+        { "expr": "sum by (job) (process_resident_memory_bytes{job=~\"$service\"})", "legendFormat": "{{job}}", "refId": "A" }
+      ],
+      "title": "Process memory by service",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["it-helpdesk", "microservices", "sre"],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "query",
+        "query": "label_values(up, job)",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "refresh": 1,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "IT Helpdesk Overview",
+  "uid": "it-helpdesk-overview",
+  "version": 2
+}

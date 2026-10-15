@@ -2,6 +2,7 @@ using Sla.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Sla.Api.Services;
 using Confluent.Kafka;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -28,6 +29,8 @@ builder.Services.AddHostedService<SlaBreachMonitorService>();
 
 var app = builder.Build();
 
+app.UseHttpMetrics();
+
 // Automatically apply migrations on startup
 if (app.Environment.IsDevelopment())
 {
@@ -35,4 +38,5 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "SLA" }));
+app.MapMetrics();
 app.Run();
