@@ -37,7 +37,11 @@
 }
 
 .user-table__email {
-    width: 28%;
+    width: 25%;
+}
+
+.user-table__phone {
+    width: 15%;
 }
 
 .user-table td.user-table__id {
@@ -73,7 +77,8 @@
 }
 
 .user-table td.user-table__name,
-.user-table td.user-table__email {
+.user-table td.user-table__email,
+.user-table td.user-table__phone {
     /* Generated test emails run long - wrapping them here is what lets the
        table fit its container instead of forcing the whole row wider (and
        the page into a horizontal scrollbar) to keep one long email on a

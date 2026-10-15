@@ -87,6 +87,29 @@
     font-size: 0.85rem;
 }
 
+.queue-list-item__description {
+    margin: 0;
+    font-family: var(--font-body);
+    line-height: 1.4;
+    overflow-wrap: break-word;
+}
+
+.queue-list-item__requester {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.queue-list-item__requester-label {
+    min-width: 90px;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+}
+
 .queue-list-item__actions {
     display: flex;
     gap: 8px;

@@ -389,10 +389,11 @@ The URLs below use `<gateway>` for the gateway address.
 
 ### 4.0 Before anyone logs in: how the accounts exist
 
-Ana (or a script) creates accounts. The UI has no sign-up screen: a `RegisterPage` file
-exists but is an unrouted placeholder, so nobody can reach it.
+Ana (or a script) creates accounts. The UI has no sign-up screen. Every account needs a
+phone number as well as an email, so an agent can contact whoever raised a ticket; an agent
+reads a requester's contact details with `GET /auth/v1/users/{id}`.
 
-* **Admin creates a user:** `POST /auth/v1/users` with name, email, password and role. Auth
+* **Admin creates a user:** `POST /auth/v1/users` with name, email, phone, password and role. Auth
   checks the caller is an Administrator, makes sure the email is unused, stores a **BCrypt
   hash** of the password (the plain password is never stored), and records which admin
   created the account (`CreatedBy`).

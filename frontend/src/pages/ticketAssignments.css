@@ -69,22 +69,32 @@
    (last-child) needs its own room on top of that for the select + button. */
 .assignments-table:not(.assignments-table--admin) th,
 .assignments-table:not(.assignments-table--admin) td {
-    width: 13%;
+    width: 10%;
 }
 
 .assignments-table--admin th,
 .assignments-table--admin td {
-    width: 11%;
+    width: 9%;
 }
 
 .assignments-table:not(.assignments-table--admin) th.assignments-table__description,
 .assignments-table:not(.assignments-table--admin) td.assignments-table__description {
-    width: 35%;
+    width: 28%;
 }
 
 .assignments-table--admin th.assignments-table__description,
 .assignments-table--admin td.assignments-table__description {
-    width: 25%;
+    width: 20%;
+}
+
+.assignments-table:not(.assignments-table--admin) th.assignments-table__requester,
+.assignments-table:not(.assignments-table--admin) td.assignments-table__requester {
+    width: 22%;
+}
+
+.assignments-table--admin th.assignments-table__requester,
+.assignments-table--admin td.assignments-table__requester {
+    width: 20%;
 }
 
 .assignments-table td.assignments-table__description {
@@ -96,7 +106,7 @@
 
 .assignments-table--admin th:last-child,
 .assignments-table--admin td:last-child {
-    width: 20%;
+    width: 15%;
 }
 
 .assignments-table th {
@@ -174,10 +184,10 @@
 
 @media (max-width: 700px) {
     .assignments-table {
-        min-width: 720px;
+        min-width: 860px;
     }
 
     .assignments-table--admin {
-        min-width: 900px;
+        min-width: 1040px;
     }
 }

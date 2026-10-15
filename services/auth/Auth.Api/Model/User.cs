@@ -23,6 +23,12 @@ public class User
     [MaxLength(255)]
     public string Password { get; set; } = string.Empty;
     
+    // Nullable in the database only because accounts created before this column
+    // existed have no number; every new account must supply one (see the DTOs).
+    [MaxLength(20)]
+    [Column("phone")]
+    public string? Phone { get; set; }
+
     [Required]
     [Column(TypeName = "varchar(50)")]
     public UserRole Role { get; set; } = UserRole.Employee;

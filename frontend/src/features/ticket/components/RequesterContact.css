@@ -1,0 +1,25 @@
+.requester-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.requester-contact__name {
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.requester-contact__link {
+    color: var(--color-ink-muted);
+    /* Long emails have no space to wrap at; without this they push the cell
+       wider than its column. */
+    overflow-wrap: anywhere;
+}
+
+.requester-contact__missing {
+    color: var(--color-ink-muted);
+    font-size: 0.85rem;
+}

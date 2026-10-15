@@ -15,6 +15,10 @@ public class UserRegisterDTO
     public string Email { get; set; } = string.Empty;
 
     [Required]
+    [RegularExpression(PhoneNumber.Pattern, ErrorMessage = PhoneNumber.ErrorMessage)]
+    public string Phone { get; set; } = string.Empty;
+
+    [Required]
     [MinLength(6)]
     [MaxLength(255)]
     public string Password { get; set; } = string.Empty;

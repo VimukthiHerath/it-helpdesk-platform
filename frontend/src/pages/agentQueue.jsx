@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { getStoredToken } from '../shared/authToken';
+import RequesterContact from '../features/ticket/components/RequesterContact';
+import { loadRequesterContacts } from '../shared/requesterContacts';
 import './agentQueue.css';
 
 const ASSIGNMENT_QUEUE_URL = `${process.env.REACT_APP_ASSIGNMENT_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/assignment/v1/queue`;
@@ -29,6 +31,8 @@ const formatDate = (value) => {
 
 const AgentQueue = () => {
     const [tickets, setTickets] = useState([]);
+    const [details, setDetails] = useState({});
+    const [contacts, setContacts] = useState({});
     const [state, setState] = useState({ loading: true, error: '' });
     const [rowErrors, setRowErrors] = useState({});
     const [busyTicketId, setBusyTicketId] = useState(null);
@@ -43,9 +47,11 @@ const AgentQueue = () => {
             }
 
             try {
-                const response = await fetch(ASSIGNMENT_QUEUE_URL, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const headers = { Authorization: `Bearer ${token}` };
+                const [response, ticketsResponse] = await Promise.all([
+                    fetch(ASSIGNMENT_QUEUE_URL, { headers }),
+                    fetch(TICKETS_URL, { headers }).catch(() => ({ ok: false })),
+                ]);
                 const data = await response.json().catch(() => ([]));
 
                 if (response.status === 401) {
@@ -56,12 +62,19 @@ const AgentQueue = () => {
                 if (!response.ok) throw new Error(data?.message || 'Unable to load your queue.');
 
                 setTickets(Array.isArray(data) ? data : []);
+
+                // Enrichment only: the queue is usable without it, so a failure
+                // here leaves the rows showing "unavailable" instead of failing the page.
+                const ticketsData = ticketsResponse.ok ? await ticketsResponse.json().catch(() => ([])) : [];
+                const byId = Object.fromEntries((Array.isArray(ticketsData) ? ticketsData : []).map((ticket) => [ticket.id, ticket]));
+                setDetails(byId);
+                setState({ loading: false, error: '' });
+
+                const queueIds = (Array.isArray(data) ? data : []).map((item) => item.ticketId);
+                setContacts(await loadRequesterContacts(queueIds.map((id) => byId[id]?.createdBy), token));
             } catch (error) {
                 setState({ loading: false, error: error.message || 'Unable to load your queue.' });
-                return;
             }
-
-            setState({ loading: false, error: '' });
         };
 
         loadQueue();
@@ -157,6 +170,15 @@ const AgentQueue = () => {
                                         Closed
                                     </button>
                                 </div>
+                            </div>
+                            {details[ticket.ticketId] && (
+                                <p className="queue-list-item__description">
+                                    <strong>{details[ticket.ticketId].issueType || 'General request'}:</strong> {details[ticket.ticketId].description || '—'}
+                                </p>
+                            )}
+                            <div className="queue-list-item__requester">
+                                <span className="queue-list-item__requester-label">Requester</span>
+                                <RequesterContact contact={contacts[details[ticket.ticketId]?.createdBy]} />
                             </div>
                             {rowErrors[ticket.ticketId] && <span className="error-text">{rowErrors[ticket.ticketId]}</span>}
                         </div>

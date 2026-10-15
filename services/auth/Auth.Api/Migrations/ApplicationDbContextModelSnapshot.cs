@@ -60,6 +60,11 @@ namespace Auth.Api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("phone");
+
                     b.Property<int>("ResetRequestCountInWindow")
                         .HasColumnType("int")
                         .HasColumnName("reset_request_count_in_window");

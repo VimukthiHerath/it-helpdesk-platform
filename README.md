@@ -200,22 +200,24 @@ Opens at **http://localhost:3000**, already pointed at the local gateway via
 
 ### 4. Create your first account
 
-The public `/api/auth/register` endpoint always creates an **Employee**
-account through the frontend's sign-up form — there's no self-service way
-to become an Agent or Administrator, and creating those roles normally
-requires an *existing* Administrator (a chicken-and-egg problem on a brand
-new database).
+The frontend has no sign-up screen: every account is created by an
+Administrator on the admin **Create user** page, and every account needs a
+phone number as well as an email (agents use both to contact the person who
+raised a ticket). That normally requires an *existing* Administrator — a
+chicken-and-egg problem on a brand new database.
 
-To bootstrap your very first admin account, register directly against the
-API instead of the frontend, passing a role explicitly:
+The `/api/auth/register` endpoint stays open as a development convenience
+for exactly that case. To bootstrap your very first admin account, call it
+directly, passing a role explicitly:
 
 ```
 curl -X POST http://localhost:5121/api/auth/register \
   -H "Content-Type: application/json" \
-  -d "{\"name\":\"Admin\",\"email\":\"admin@local.test\",\"password\":\"Passw0rd!\",\"role\":3}"
+  -d "{\"name\":\"Admin\",\"email\":\"admin@local.test\",\"phone\":\"0771234567\",\"password\":\"Passw0rd!\",\"role\":3}"
 ```
 
-(`role`: `1` = Employee, `2` = Agent, `3` = Administrator.) Log in with
+(`role`: `1` = Employee, `2` = Agent, `3` = Administrator; `phone` is 7-15
+digits with an optional leading `+`.) Log in with
 that account, and use the admin **Create user** page for every account
 after this one — this manual step is only needed once, for the first
 admin on a fresh database.
