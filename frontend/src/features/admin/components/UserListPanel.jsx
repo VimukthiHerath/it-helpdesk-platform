@@ -6,7 +6,7 @@ import './UserListPanel.css';
 const USERS_URL = `${process.env.REACT_APP_AUTH_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/auth/v1/users`;
 
 // Mirrors Auth.Api's PhoneNumber rule: optional +, then 7-15 digits.
-const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
+const PHONE_PATTERN = /^\+?\d{7,15}$/;
 
 const roleOptions = [
     { value: 1, label: 'Employee' },

@@ -14,7 +14,7 @@ const roleOptions = [
 const initialForm = { name: '', email: '', phone: '', password: '', role: 1 };
 
 // Mirrors Auth.Api's PhoneNumber rule: optional +, then 7-15 digits.
-const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
+const PHONE_PATTERN = /^\+?\d{7,15}$/;
 
 const CreateUserForm = () => {
     const [formData, setFormData] = useState(initialForm);
