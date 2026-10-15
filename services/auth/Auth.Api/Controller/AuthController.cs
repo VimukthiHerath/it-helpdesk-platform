@@ -222,6 +222,30 @@ namespace Auth.Api.Controller
             CreatedBy = user.CreatedBy,
         };
 
+        // Agents need a requester's email and phone to follow up on a ticket
+        // assigned to them, so reading one user is open to Agent as well as
+        // Administrator. Listing every user stays Administrator-only.
+        [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUser(int id)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user is null)
+                {
+                    return NotFound(new { message = "User not found." });
+                }
+
+                return Ok(ToUserListItemDto(user));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user {UserId}", id);
+                return Problem("Unable to load the user. Please try again later.");
+            }
+        }
+
         [Authorize(Roles = Roles.Administrator)]
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDTO request)
