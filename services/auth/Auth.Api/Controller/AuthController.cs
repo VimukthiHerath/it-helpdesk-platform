@@ -17,6 +17,8 @@ namespace Auth.Api.Controller
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private const string UserNotFoundMessage = "User not found.";
+
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
@@ -234,7 +236,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 return Ok(ToUserListItemDto(user));
@@ -260,7 +262,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 var callerId = GetAuthenticatedUserId();
@@ -317,7 +319,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 var callerId = GetAuthenticatedUserId();
@@ -500,7 +502,7 @@ namespace Auth.Api.Controller
                 var user = await _context.Users.FindAsync(id);
                 if (user is null)
                 {
-                    return NotFound(new { message = "User not found." });
+                    return NotFound(new { message = UserNotFoundMessage });
                 }
 
                 return Ok(new { email = user.Email, name = user.Name });
