@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStoredToken, isAdmin } from '../shared/authToken';
 import Navbar from '../components/layout/Navbar';
+import RequesterContact from '../features/ticket/components/RequesterContact';
+import { loadRequesterContacts } from '../shared/requesterContacts';
 import './ticketAssignments.css';
 
 const TICKETS_URL = `${process.env.REACT_APP_TICKET_API_URL || process.env.REACT_APP_API_GATEWAY_URL}/ticket/v1`;
@@ -28,6 +30,7 @@ const TicketAssignments = () => {
     const [tickets, setTickets] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [agents, setAgents] = useState([]);
+    const [contacts, setContacts] = useState({});
     const [state, setState] = useState({ loading: true, error: '' });
     const [selectedAgent, setSelectedAgent] = useState({});
     const [rowErrors, setRowErrors] = useState({});
@@ -70,6 +73,11 @@ const TicketAssignments = () => {
             setAssignments(Array.isArray(assignmentsData) ? assignmentsData : []);
             if (admin) setAgents(Array.isArray(agentsData) ? agentsData : []);
             setState({ loading: false, error: '' });
+
+            // Enrichment only - the table is usable without it, so it loads
+            // after the page is already showing and never blocks or fails it.
+            const requesterIds = (Array.isArray(ticketsData) ? ticketsData : []).map((ticket) => ticket.createdBy);
+            setContacts(await loadRequesterContacts(requesterIds, token));
         } catch (error) {
             setState({ loading: false, error: error.message || 'Unable to load tickets.' });
         }
@@ -153,6 +161,7 @@ const TicketAssignments = () => {
                                     <th>Urgency</th>
                                     <th>Status</th>
                                     <th>Assigned to</th>
+                                    <th className="assignments-table__requester">Requester</th>
                                     {admin && <th>Reassign</th>}
                                 </tr>
                             </thead>
@@ -169,6 +178,9 @@ const TicketAssignments = () => {
                                             <td>{formatLabel(ticket.urgency, urgencyLabels)}</td>
                                             <td>{formatLabel(ticket.status, statusLabels)}</td>
                                             <td>{assignment ? `User ID ${assignment.agentUserId}` : 'Unassigned'}</td>
+                                            <td className="assignments-table__requester">
+                                                <RequesterContact contact={contacts[ticket.createdBy]} />
+                                            </td>
                                             {admin && (
                                                 <td>
                                                     {assignment ? (
