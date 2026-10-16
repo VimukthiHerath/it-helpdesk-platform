@@ -86,8 +86,9 @@ in every app.
    **frontend:** sets each to "minimum replicas 1". An app already set that way is left alone.
 4. **WSO2 gateway:** activates **exactly one** revision (see the safety rules below).
 5. **Waits and checks** (up to 15 minutes) until these all return HTTP 200: the gateway itself, the
-   health route of every service **through the gateway** (so the gateway's routes are tested too), and
-   the frontend.
+   health route of every service **through the gateway** (so the gateway's routes are tested too), the
+   frontend, and the **Swagger UI** of the three services that are reachable from the internet (Auth,
+   Ticket and Assignment, at `https://<app>.<domain>/swagger`). The summary prints those three links.
 
 ### stop-all
 
@@ -98,6 +99,11 @@ in every app.
    after a scale-to-zero request (Kafka is the slowest, up to about 5 minutes after the services
    disconnect). If an app has not gone down after 4 minutes, the script deactivates its
    revision, and it only reports success after it has *seen* zero replicas.
+
+Swagger needs no step of its own in stop-all: it is served by the same apps, so scaling them to zero takes it
+down too. stop-all deliberately does **not** open the Swagger links to check, because any request to a stopped
+app starts it again. The same goes for browser tabs left open on the site or on a Swagger page: close them
+after stopping, or an app can wake up again (run stop-all a second time if it does).
 5. **MySQL:** the stop is requested at the very start (Azure needs a few minutes for it, so it runs while the
    apps drain) and confirmed `Stopped` at the end.
 
