@@ -169,7 +169,9 @@ app.UseCors("FrontendPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
+// The API documentation is a deliverable, so Swagger UI is on in every environment.
+// Set Swagger:Enabled=false to switch it off.
+if (app.Configuration.GetValue("Swagger:Enabled", true))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
