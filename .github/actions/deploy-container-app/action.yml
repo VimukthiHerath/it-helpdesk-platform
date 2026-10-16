@@ -1,0 +1,104 @@
+name: Deploy to Container Apps
+description: >
+  Points a Container App at a new image, waits for the new revision to report healthy,
+  and puts the previous image back if it does not. The caller must already be logged in to Azure.
+
+inputs:
+  container-app:
+    description: Name of the Container App to update.
+    required: true
+  image:
+    description: Full image reference to deploy, including the tag.
+    required: true
+  resource-group:
+    description: Resource group that holds the Container App.
+    required: false
+    default: it-helpdesk-rg
+  timeout-seconds:
+    description: How long to wait for the new revision to become healthy.
+    required: false
+    default: '300'
+
+runs:
+  using: composite
+  steps:
+    - name: Remember the image that is running now
+      id: previous
+      shell: bash
+      env:
+        APP: ${{ inputs.container-app }}
+        RG: ${{ inputs.resource-group }}
+      run: |
+        previous=$(az containerapp show --name "$APP" --resource-group "$RG" \
+          --query "properties.template.containers[0].image" --output tsv)
+        echo "image=$previous" >> "$GITHUB_OUTPUT"
+        echo "Currently running: $previous"
+
+    - name: Deploy the new image
+      shell: bash
+      env:
+        APP: ${{ inputs.container-app }}
+        RG: ${{ inputs.resource-group }}
+        IMAGE: ${{ inputs.image }}
+      run: |
+        az containerapp update --name "$APP" --resource-group "$RG" --image "$IMAGE" --output none
+
+    # An app that has been scaled to zero on purpose (scripts/stop-all) has no replica to check, and
+    # waking it up only to test it would cost money, so the check is skipped for that case.
+    - name: Wait for the new revision to be healthy
+      id: verify
+      shell: bash
+      env:
+        APP: ${{ inputs.container-app }}
+        RG: ${{ inputs.resource-group }}
+        TIMEOUT: ${{ inputs.timeout-seconds }}
+      run: |
+        min_replicas=$(az containerapp show --name "$APP" --resource-group "$RG" \
+          --query "properties.template.scale.minReplicas" --output tsv)
+        if [ -z "$min_replicas" ] || [ "$min_replicas" = "None" ] || [ "$min_replicas" = "0" ]; then
+          echo "::notice title=Health check skipped::$APP is scaled to zero, so there is no running replica to check."
+          exit 0
+        fi
+
+        revision=$(az containerapp show --name "$APP" --resource-group "$RG" \
+          --query "properties.latestRevisionName" --output tsv)
+        echo "Checking revision $revision"
+
+        deadline=$((SECONDS + TIMEOUT))
+        while [ "$SECONDS" -lt "$deadline" ]; do
+          # The three values come back as ONE line. (A plain list with tsv output puts each value on
+          # its own line, which a single read would only half consume.) A missing value reads "null".
+          state=$(az containerapp revision show \
+            --name "$APP" --resource-group "$RG" --revision "$revision" \
+            --query "join(' ', [to_string(properties.runningState), to_string(properties.healthState), to_string(properties.provisioningState)])" \
+            --output tsv 2>/dev/null || true)
+          read -r running health provisioning <<< "${state:-null null null}"
+          echo "  running=$running health=$health provisioning=$provisioning"
+
+          case "$running" in
+            *Failed*) echo "::error title=Deployment failed::$APP revision $revision is $running"; exit 1 ;;
+          esac
+          if [ "$provisioning" = "Failed" ] || [ "$health" = "Unhealthy" ]; then
+            echo "::error title=Deployment unhealthy::$APP revision $revision: health=$health provisioning=$provisioning"
+            exit 1
+          fi
+          if [ "$provisioning" = "Provisioned" ] && [ "$health" = "Healthy" ]; then
+            echo "$APP is healthy on revision $revision."
+            exit 0
+          fi
+          sleep 10
+        done
+
+        echo "::error title=Deployment timed out::$APP revision $revision was not healthy after ${TIMEOUT}s"
+        exit 1
+
+    - name: Roll back to the previous image
+      if: failure() && steps.verify.conclusion == 'failure'
+      shell: bash
+      env:
+        APP: ${{ inputs.container-app }}
+        RG: ${{ inputs.resource-group }}
+        PREVIOUS: ${{ steps.previous.outputs.image }}
+      run: |
+        echo "::warning title=Rolling back::putting $APP back on $PREVIOUS"
+        az containerapp update --name "$APP" --resource-group "$RG" --image "$PREVIOUS" --output none
