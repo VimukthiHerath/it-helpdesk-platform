@@ -1,22 +1,44 @@
 name: Frontend CI/CD
 
+#   test   install, run the unit tests with coverage, check the production build compiles
+#   image  build the Docker image and report vulnerabilities; on a push to develop push it to ACR
+#   deploy (push to develop only) update the Container App, wait for it to be healthy, roll back if not
+#
+# Deploying never uses a GitHub "environment": the Azure federated credential trusts the branch
+# (refs/heads/develop), and an environment would change the token's subject and break login.
+
 on:
   push:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+      - '.github/actions/deploy-container-app/**'
   pull_request:
     branches: [main, develop]
     paths:
       - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+      - '.github/actions/deploy-container-app/**'
 
 permissions:
   id-token: write
   contents: read
 
+# A newer push to a pull request replaces the older run; runs on develop are never cancelled.
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY: ithelpdeskacr02.azurecr.io
+
 jobs:
-  build-and-test:
+  test:
+    name: Build and test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: frontend
@@ -28,18 +50,81 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run unit tests
+        env:
+          CI: 'true'
         run: npm test -- --watchAll=false --coverage
 
+      # CI=true makes the build treat lint warnings as errors, so this is also the lint check.
       - name: Build React app
+        env:
+          CI: 'true'
         run: npm run build
 
+      - name: Summarise coverage
+        if: always()
+        run: |
+          {
+            echo '### frontend: tests and coverage'
+            echo
+            if [ -f coverage/lcov.info ]; then
+              awk -F: '/^LF:/{f+=$2} /^LH:/{h+=$2} END{ if (f>0) printf "Line coverage **%.1f%%** (%d of %d lines).\n", 100*h/f, h, f }' coverage/lcov.info
+            else
+              echo 'No coverage report was produced.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+  image:
+    name: Build and scan image
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Work out the image name
+        id: ref
+        run: echo "image=${REGISTRY}/frontend:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
       - name: Build Docker image
-        run: docker build --build-arg REACT_APP_APPINSIGHTS_CONNECTION_STRING="${{ secrets.APPINSIGHTS_CONNECTION_STRING }}" -t ithelpdeskacr02.azurecr.io/frontend:${{ github.sha }} .
+        env:
+          APPINSIGHTS_CONNECTION_STRING: ${{ secrets.APPINSIGHTS_CONNECTION_STRING }}
+        run: |
+          docker build \
+            --build-arg REACT_APP_APPINSIGHTS_CONNECTION_STRING="$APPINSIGHTS_CONNECTION_STRING" \
+            -t "${{ steps.ref.outputs.image }}" frontend
+
+      # Report only. The final image is nginx on an operating-system base we do not control, and the
+      # JavaScript dependencies are bundled at build time, so there is nothing of ours for a gate to
+      # act on that npm audit in security.yml does not already cover.
+      - name: Report vulnerabilities in the image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+          vuln-type: os
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
@@ -52,9 +137,34 @@ jobs:
       - name: Push image to ACR
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
-          az acr login --name ithelpdeskacr02
-          docker push ithelpdeskacr02.azurecr.io/frontend:${{ github.sha }}
+          az acr login --name "${REGISTRY%%.*}"
+          docker push "${{ steps.ref.outputs.image }}"
 
-      - name: Deploy to Container Apps
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: az containerapp update --name it-helpdesk-frontend --resource-group it-helpdesk-rg --image ithelpdeskacr02.azurecr.io/frontend:${{ github.sha }}
+  deploy:
+    name: Deploy to Azure
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    # One deploy at a time, and a deploy that has started is never cancelled halfway.
+    concurrency:
+      group: deploy-it-helpdesk-frontend
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
+
+      - name: Deploy and verify
+        uses: ./.github/actions/deploy-container-app
+        with:
+          container-app: it-helpdesk-frontend
+          image: ${{ needs.image.outputs.image }}
