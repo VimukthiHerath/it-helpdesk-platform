@@ -254,30 +254,29 @@ jobs:
       - name: Build Docker image
         run: docker build -t "${{ steps.ref.outputs.image }}" ${{ inputs.project-dir }}
 
+      # Trivy runs from its own container image rather than through aquasecurity/trivy-action: that
+      # action pulls in aquasecurity/setup-trivy, whose tags no longer resolve, so every pinned
+      # version of it fails at "Set up job". The command below is the one run locally against the
+      # Auth image.
+      #
       # Gate: fails the run on a CRITICAL vulnerability, with a fix available, in the packages our own
       # code depends on (the NuGet libraries). Those are ours to fix. Unfixed ones are ignored,
       # because nothing can be done about them yet and they would block every build.
       - name: Scan the app's libraries for critical vulnerabilities
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
-        with:
-          image-ref: ${{ steps.ref.outputs.image }}
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
-          vuln-type: library
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 image \
+            --no-progress --scanners vuln --pkg-types library --severity CRITICAL --ignore-unfixed --exit-code 1 \
+            "${{ steps.ref.outputs.image }}"
 
       # Report only: the operating-system packages come from Microsoft's aspnet base image. Checked
       # on 2026-10-16, that image carried CRITICAL perl-base findings that had a fix in Debian but not
       # yet in the image, so a gate here would fail every build until Microsoft rebuilds it. The
       # findings stay visible in this log, and rebuilding the image picks up the fix when it ships.
       - name: Report operating-system vulnerabilities in the base image
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
-        with:
-          image-ref: ${{ steps.ref.outputs.image }}
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: '0'
-          vuln-type: os
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 image \
+            --no-progress --scanners vuln --pkg-types os --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 \
+            "${{ steps.ref.outputs.image }}"
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'

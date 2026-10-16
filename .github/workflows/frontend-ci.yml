@@ -118,13 +118,10 @@ jobs:
       # JavaScript dependencies are bundled at build time, so there is nothing of ours for a gate to
       # act on that npm audit in security.yml does not already cover.
       - name: Report vulnerabilities in the image
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
-        with:
-          image-ref: ${{ steps.ref.outputs.image }}
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: '0'
-          vuln-type: os
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 image \
+            --no-progress --scanners vuln --pkg-types os --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 \
+            "${{ steps.ref.outputs.image }}"
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
