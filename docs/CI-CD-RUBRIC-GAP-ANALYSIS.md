@@ -82,9 +82,9 @@ merge after a deploy-path change should be watched, with the previous image tag 
 
 | # | Gap | Status | How it was checked |
 |---|---|---|---|
-| 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), a dependency vulnerability report, gitleaks, and a Trivy scan of each image | `security.yml` ran green on GitHub. Trivy checked locally against the Auth image |
-| 2 | Job separation | **Done.** `test`, `image`, `deploy` for every service and the frontend | Workflow lint clean. The test and image jobs' commands were run locally. The `deploy` job is unproven until the first push to `develop` |
-| 3 | Integration tests | **Partly.** A job runs the 3 Ticket tests against a Kafka container. The 7 Assignment integration tests are still excluded | The job could not be run locally (no Kafka image on the machine). It reports without gating the deploy until it has run green |
+| 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), a dependency vulnerability report, gitleaks, and a Trivy scan of each image | `security.yml` and the Trivy steps in every pipeline ran green on the pull request |
+| 2 | Job separation | **Done.** `test`, `image`, `deploy` for every service and the frontend | The test and image jobs ran green on the pull request for all six pipelines. The `deploy` job is skipped on pull requests by design and is unproven until the first push to `develop` |
+| 3 | Integration tests | **Partly.** A job runs the 3 Ticket tests against a Kafka container, and ran green on the pull request. The 7 Assignment integration tests are still excluded | It reports without gating the deploy; add it to the `needs` of the image job after a few green runs |
 | 4 | Post-deploy check and rollback | **Done.** Both paths exercised against the live `sla-service` on 2026-10-16 | Redeploying its current image: healthy, rollback skipped, exit 0. Deploying a missing image tag: the new revision stayed `Activating` for the full 240 s timeout, the action rolled back to the previous image and exited 1, and `sla-service` ended healthy on the original image with 100% traffic. The test ran the action's own steps from a local script, not on a GitHub runner |
 | 5 | Test results and coverage kept | **Done.** Artifacts plus a results table in each job summary | Coverage command and summary script run locally (Auth: 52 passed, 47.5% line coverage) |
 | 6 | Reusable workflow | **Done.** One `backend-service.yml`, five callers of about 40 lines | Workflow lint clean |
@@ -105,6 +105,16 @@ merge after a deploy-path change should be watched, with the previous image tag 
   CRITICAL `perl-base` findings that have a fix in Debian but not yet in Microsoft's `aspnet:8.0`
   base image. The gate therefore covers only the libraries our code depends on, which passed. The
   operating-system findings are reported but do not block.
+* **The first pull-request run found two more problems that local checks could not.**
+  1. The Trivy action failed at "Set up job". `aquasecurity/trivy-action` pulls in
+     `aquasecurity/setup-trivy`, whose tags no longer resolve, so every pinned version of the action
+     is broken. The pipeline now runs the Trivy container directly, with the command that had already
+     passed locally.
+  2. The EF tools failed to prepare the test database. They start the app to read its configuration,
+     and the app reads its connection string from a service-specific key; without it the app fell back
+     to `appsettings.json` (a MySQL on port 3307 that does not exist on a runner). The same flaw in the
+     deploy job would have failed the migration step on the first real deploy, so the connection key is
+     now set there too.
 * **A revision that cannot pull its image never reports `Failed`.** It stays `Activating` with no
   health state, so the timeout, not a failure signal, is what triggers the rollback. A bad deploy
   therefore takes the full five minutes to be reported.

@@ -87,7 +87,7 @@ the one before it with `needs:`:
 |---|---|---|
 | `test` | every run | Restore, build, apply the migrations to a throwaway MySQL service container, run the unit tests with coverage, write a results table to the job summary, upload the `.trx` and coverage files as an artifact |
 | `integration` | every run, Ticket only | Runs the tests tagged `Integration` against a real Kafka broker (a service container). Reports alongside the image job; it does not yet gate the deploy |
-| `image` | every run | Build the Docker image. **Gate:** Trivy fails the run on a CRITICAL vulnerability with a fix in the libraries our code depends on. **Report only:** operating-system findings in the base image. On a push to `develop`, push the image to ACR |
+| `image` | every run | Build the Docker image. **Gate:** Trivy (run from its own container, because `aquasecurity/trivy-action` is broken upstream) fails the run on a CRITICAL vulnerability with a fix in the libraries our code depends on. **Report only:** operating-system findings in the base image. On a push to `develop`, push the image to ACR |
 | `deploy` | push to `develop` only | Log in to Azure, apply the migrations to the real database, then update the Container App, wait for the new revision to be healthy and roll back if it is not |
 
 Splitting build, test and deploy into jobs is what makes the stages visible
@@ -445,10 +445,9 @@ Checked against the final-evaluation rubric in
 [CI-CD-RUBRIC-GAP-ANALYSIS.md](CI-CD-RUBRIC-GAP-ANALYSIS.md), which also says
 what has already been fixed. What is still open:
 
-1. **The integration job has not run on GitHub yet.** It was written from the
-   repository's own configuration but could not be run locally, so it reports
-   without gating the deploy. After a few green runs, add it to the `needs` of
-   the `image` job. Seven Assignment tests tagged `Integration` are still not run
+1. **The integration job does not gate the deploy yet.** It runs the three Ticket
+   tests against a Kafka container and has run green on a pull request. After a few
+   more green runs, add it to the `needs` of the `image` job. Seven Assignment tests tagged `Integration` are still not run
    in CI: they need a running Auth service and agents with user IDs 3 and 26 in
    the database, and a later migration removed that seed data.
 
