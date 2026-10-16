@@ -1,91 +1,46 @@
 name: Notification Service CI/CD
 
+# The steps live in backend-service.yml; this file only says what is specific to this service.
+
 on:
   push:
     branches: [main, develop]
     paths:
       - 'services/notification/**'
+      - '.github/workflows/notification-ci.yml'
+      - '.github/workflows/backend-service.yml'
+      - '.github/actions/deploy-container-app/**'
+      - '.github/scripts/test-summary.py'
   pull_request:
     branches: [main, develop]
     paths:
       - 'services/notification/**'
+      - '.github/workflows/notification-ci.yml'
+      - '.github/workflows/backend-service.yml'
+      - '.github/actions/deploy-container-app/**'
+      - '.github/scripts/test-summary.py'
 
 permissions:
   id-token: write
   contents: read
 
+# A newer push to a pull request replaces the older run; runs on develop are never cancelled.
+concurrency:
+  group: notification-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    env:
-      ConnectionStrings__DefaultConnection: Server=127.0.0.1;Port=3306;Database=notification_db;Uid=root;Pwd=root;
-    defaults:
-      run:
-        working-directory: services/notification/Notification.Api
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore ../Notification.Api.Tests/Notification.Api.Tests.csproj
-
-      - name: Build
-        run: dotnet build ../Notification.Api.Tests/Notification.Api.Tests.csproj --no-restore --configuration Release
-
-      - name: Prepare test database
-        run: |
-          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
-          dotnet ef database update --project Notification.Api.csproj --startup-project Notification.Api.csproj --connection "$ConnectionStrings__DefaultConnection"
-
-      - name: Run unit tests
-        run: dotnet test ../Notification.Api.Tests/Notification.Api.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=notification-tests.trx"
-
-      - name: Build Docker image
-        run: docker build -t ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }} .
-
-      - name: Log in to Azure
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
-
-      - name: Install EF Core CLI
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: dotnet tool install --global dotnet-ef --version 8.0.8
-
-      - name: Apply database migrations
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        env:
-          NOTIFICATION_DB_CONNECTION_STRING: ${{ secrets.NOTIFICATION_DB_CONNECTION_STRING }}
-        run: |
-          test -n "$NOTIFICATION_DB_CONNECTION_STRING"
-          dotnet ef database update --project Notification.Api.csproj --startup-project Notification.Api.csproj --connection "$NOTIFICATION_DB_CONNECTION_STRING"
-
-      - name: Push image to ACR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: |
-          az acr login --name ithelpdeskacr02
-          docker push ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }}
-
-      - name: Deploy to Container Apps
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        run: az containerapp update --name notification-service --resource-group it-helpdesk-rg --image ithelpdeskacr02.azurecr.io/notification-service:${{ github.sha }}
+  pipeline:
+    uses: ./.github/workflows/backend-service.yml
+    with:
+      service: notification
+      project-dir: services/notification/Notification.Api
+      project-name: Notification.Api
+      container-app: notification-service
+      db-name: notification_db
+      db-env-var: ConnectionStrings__DefaultConnection
+    secrets:
+      AZURE_NEW_CLIENT_ID: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+      AZURE_NEW_TENANT_ID: ${{ secrets.AZURE_NEW_TENANT_ID }}
+      AZURE_NEW_SUBSCRIPTION_ID: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
+      DB_CONNECTION_STRING: ${{ secrets.NOTIFICATION_DB_CONNECTION_STRING }}

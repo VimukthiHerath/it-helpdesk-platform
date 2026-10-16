@@ -11,138 +11,144 @@ should come next.
 ## 1. The big picture
 
 This is a **monorepo** containing five independent .NET 8 microservices
-(Auth, Ticket, Assignment, Notification, SLA) and one React frontend, each
-with its **own CI/CD pipeline**. There is no single "build everything"
-pipeline — instead, seven separate GitHub Actions workflows live in
-`.github/workflows/`, one per service plus the repository-level quality gate:
+(Auth, Ticket, Assignment, Notification, SLA) and one React frontend. Each
+has its own pipeline, and the repository has three more workflows for
+quality and security. Everything lives in `.github/`:
 
 ```
-.github/workflows/
-├── auth-ci.yml
-├── ticket-ci.yml
-├── assignment-ci.yml
-├── notification-ci.yml
-├── sla-ci.yml
-├── frontend-ci.yml
-└── sonarcloud.yml
+.github/
+├── workflows/
+│   ├── backend-service.yml      reusable pipeline shared by the five services
+│   ├── backend-integration.yml  Ticket-only: integration tests against Kafka
+│   ├── auth-ci.yml              ┐
+│   ├── ticket-ci.yml            │ five thin callers: they pass in the names
+│   ├── assignment-ci.yml        │ that differ and nothing else
+│   ├── sla-ci.yml               │
+│   ├── notification-ci.yml      ┘
+│   ├── frontend-ci.yml          frontend pipeline (same stages, Node instead of .NET)
+│   ├── sonarcloud.yml           one SonarCloud analysis for the whole monorepo
+│   ├── security.yml             CodeQL, dependency report, secret scan
+│   └── wso2-gateway-ci.yml      validates the API definitions, boots a WSO2 container
+├── actions/deploy-container-app/action.yml
+│                                deploy, wait for health, roll back on failure
+├── scripts/test-summary.py      turns test and coverage output into a job summary
+└── dependabot.yml               weekly dependency pull requests
 ```
 
-Each workflow is **path-filtered** — it only runs when files under its own
-service's folder change (e.g. `auth-ci.yml` triggers only on changes under
-`services/auth/**`). This is the core architectural decision of the whole
-CI/CD setup:
+Each service workflow is **path-filtered**: it only runs when files under its
+own service folder, or the shared pipeline files, change. This is the core
+decision of the setup:
 
 > **Changing the Ticket service should not rebuild, retest, or redeploy
 > Auth, SLA, Notification, Assignment, or the frontend.**
 
-That's the main benefit of splitting pipelines per-service in a monorepo:
-faster feedback (only what changed gets built) and independent deployability
-(one service's bad build doesn't block another's release).
+That is the main benefit of per-service pipelines in a monorepo: faster
+feedback (only what changed gets built) and independent deployability (one
+service's bad build does not block another's release).
 
 ---
 
-## 2. Anatomy of one pipeline (they're all the same shape)
+## 2. Anatomy of a service pipeline
 
-Every backend workflow (`auth-ci.yml`, `ticket-ci.yml`, `assignment-ci.yml`,
-`notification-ci.yml`, `sla-ci.yml`) follows an identical template — only
-the service name, folder path, and image name differ. Using `auth-ci.yml`
-as the reference:
+A caller such as `auth-ci.yml` is about 40 lines. It declares the triggers and
+the service's own values, then calls the shared pipeline:
 
 ```yaml
-on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'services/auth/**'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'services/auth/**'
-```
-
-**Triggers:** runs on a `push` *or* a `pull_request` targeting `main` or
-`develop`, but only if the diff touches `services/auth/**`. This means:
-- Opening a PR into `develop` runs the build/test steps (a status check),
-  but **does not deploy anything** — good, you don't want a PR to touch
-  production/shared infra before it's even reviewed.
-- Pushing directly to `develop` (which is what merging a PR does) runs the
-  same steps **and** deploys.
-
-### The job itself
-
-```yaml
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/auth/Auth.Api
+  pipeline:
+    uses: ./.github/workflows/backend-service.yml
+    with:
+      service: auth
+      project-dir: services/auth/Auth.Api
+      project-name: Auth.Api
+      container-app: auth-service
+      db-name: auth_db
+      db-env-var: ConnectionStrings__AuthDb
+    secrets:
+      DB_CONNECTION_STRING: ${{ secrets.AUTH_DB_CONNECTION_STRING }}
+      # plus the three Azure OIDC secrets
 ```
 
-`id-token: write` is required for **OIDC federated login to Azure** (see
-step 5) — GitHub issues a short-lived OIDC token that Azure trusts, instead
-of the pipeline holding a long-lived Azure password/secret. This is the
-modern, more secure way to authenticate CI to a cloud provider.
+Before this, the five workflows were about 95% identical and every change had
+to be copied by hand five times. The values that genuinely differ are the
+inputs above; Ticket also sets `ef-context` (it has two EF contexts),
+and `test-filter`.
 
-The job then runs these steps, in order:
+**Triggers.** A `push` or `pull_request` to `main` or `develop`, but only if
+the diff touches that service's folder or the shared pipeline files. A pull
+request runs the checks and **never deploys**. A push to `develop` (which is
+what merging a pull request does) runs the checks and deploys.
 
-| # | Step | What it does | Always runs? |
-|---|---|---|---|
-| 1 | Checkout code | `actions/checkout@v4` — clones the repo into the runner | Yes |
-| 2 | Setup .NET 8 | `actions/setup-dotnet@v4` pins the SDK to `8.0.x` | Yes |
-| 3 | Restore | `dotnet restore` — pulls NuGet packages | Yes |
-| 4 | Build | `dotnet build --no-restore --configuration Release` | Yes |
-| 5 | Build Docker image | `docker build -t ithelpdeskacr01.azurecr.io/auth-service:${{ github.sha }} .` | Yes |
-| 6 | Azure login | `azure/login@v2`, OIDC via `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_SUBSCRIPTION_ID` secrets | **Only** on push to `develop` |
-| 7 | Push image to ACR | `az acr login` + `docker push` | **Only** on push to `develop` |
-| 8 | Deploy | `az containerapp update --image ...` | **Only** on push to `develop` |
+### The jobs
 
-Steps 6–8 are gated by:
+The shared pipeline has three jobs. They run in this order, each waiting for
+the one before it with `needs:`:
 
-```yaml
-if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-```
+| Job | Runs on | What it does |
+|---|---|---|
+| `test` | every run | Restore, build, apply the migrations to a throwaway MySQL service container, run the unit tests with coverage, write a results table to the job summary, upload the `.trx` and coverage files as an artifact |
+| `image` | every run | Build the Docker image. **Gate:** Trivy (run from its own container, because `aquasecurity/trivy-action` is broken upstream) fails the run on a CRITICAL vulnerability with a fix in the libraries our code depends on. **Report only:** operating-system findings in the base image. On a push to `develop`, push the image to ACR |
+| `deploy` | push to `develop` only | Log in to Azure, apply the migrations to the real database, then update the Container App, wait for the new revision to be healthy and roll back if it is not |
 
-So a PR build proves the code compiles and the image builds — it never
-touches Azure. Only a push straight to `develop` (i.e. a merged PR) goes
-all the way to deployment. **`main` never auto-deploys** — see the gaps
-section below, this is a real limitation, not an intentional production
-gate.
+**Ticket also has an integration job.** `backend-integration.yml` runs the tests tagged
+`Integration` against a real Kafka broker (a service container). Only `ticket-ci.yml` calls it,
+so the other services carry no empty placeholder for it. It runs alongside the shared pipeline
+and does not yet gate the deploy.
+
+Splitting build, test and deploy into jobs is what makes the stages visible
+in the GitHub UI, lets `deploy` be skipped on a pull request without a string
+of `if:` conditions, and means a failed test job never reaches an Azure login.
+
+### The deploy action
+
+`.github/actions/deploy-container-app` is used by every service and the
+frontend. It does four things:
+
+1. Reads the image the app is running now.
+2. Runs `az containerapp update` with the new image.
+3. Polls the new revision until it reports `Healthy` and `Provisioned`, or fails
+   after five minutes (or straight away on `Failed` or `Unhealthy`).
+4. If step 3 fails, runs `az containerapp update` again with the image from step 1.
+
+If the app has been scaled to zero on purpose (`scripts/stop-all`), step 3 is
+skipped with a notice, because there is no replica to check and waking one
+would cost money. Both paths were exercised against the live `sla-service`: redeploying
+its current image passes, and deploying a missing image tag makes the new revision sit in
+`Activating` until the timeout, after which the action rolls back and exits 1. A revision
+that cannot pull its image never reports `Failed`, so a bad deploy takes the full timeout
+(five minutes by default) to be reported.
+
+### Concurrency
+
+Pull-request runs are cancelled when a newer commit is pushed. Runs on
+`develop` are never cancelled, and each Container App has its own deploy group
+(`deploy-<app>`), so two quick merges deploy one after the other and not
+simultaneously.
+
+### Authentication to Azure
+
+`id-token: write` lets GitHub issue a short-lived OIDC token that Azure trusts,
+so the pipeline holds no long-lived Azure password. The federated credential
+trusts the **branch** (`refs/heads/develop`). For that reason the deploy jobs
+deliberately do **not** use a GitHub "environment": an environment changes the
+token's subject and would break the login.
 
 ### Image tagging: `github.sha`, not `latest`
 
-Every image is tagged with the **commit SHA** that built it
-(`auth-service:a40ddbe...`), never `latest`. This matters for a viva
-answer:
-- **Traceability** — you can always look at a running container's image
-  tag and know exactly which commit is live.
-- **Immutability** — the same tag always refers to the same build; nothing
-  can silently change under you.
-- **Rollback** — you can `az containerapp update --image ...` back to any
-  previous commit's tag directly, no rebuild needed.
+Every image is tagged with the **commit SHA** that built it, never `latest`:
+- **Traceability.** A running container's image tag says exactly which commit is live.
+- **Immutability.** The same tag always refers to the same build.
+- **Rollback.** `az containerapp update --image ...` returns to any earlier tag
+  with no rebuild. The deploy action does exactly this on a failed health check.
 
 ### The frontend pipeline
 
-`frontend-ci.yml` follows the exact same shape, swapping the .NET steps for
-Node:
-
-```yaml
-- uses: actions/setup-node@v4
-  with:
-    node-version: '20'
-- run: npm ci
-- run: npm run build
-```
-
-Then it builds/pushes/deploys the same way, to a container app named
-`it-helpdesk-frontend` (note: the *image* is called `frontend`, but the
-*Container App* is `it-helpdesk-frontend` — a naming inconsistency worth
-knowing about, not a bug, just a detail if you get asked "why don't the
-names match").
+`frontend-ci.yml` has the same three stages. `test` runs `npm ci`, the unit
+tests with coverage and the production build (with `CI=true` the build treats
+lint warnings as errors, so it doubles as the lint check). `image` builds and
+pushes the image, and `deploy` uses the same deploy action on the Container
+App `it-helpdesk-frontend`. The *image* is called `frontend` but the *Container
+App* is `it-helpdesk-frontend`, a naming inconsistency rather than a bug.
 
 ---
 
@@ -169,16 +175,19 @@ check:
 | `SONAR_ORGANIZATION` | Actions variable | SonarCloud organization key |
 | `SONAR_TOKEN` | Actions secret | SonarCloud authentication token |
 
-The quality gate is configured with `sonar.qualitygate.wait=true`, so a
-failed SonarCloud gate fails CI. Pull requests only receive read access to
-repository contents and never receive Azure or database credentials.
+The workflow does **not** wait for the quality gate (`sonar.qualitygate.wait` is
+not set): the free SonarCloud plan refuses gate data for any branch except the
+main one, which failed the step even though the analysis uploaded fine. The gate
+result is read on sonarcloud.io and shown on the pull request. Pull requests only
+receive read access to repository contents and never receive Azure or database
+credentials.
 
 ## 4. Automated database migrations
 
 Each backend service has checked-in EF Core migrations. Services do not apply
-schema changes during application startup; the relevant service workflow runs
+schema changes during application startup; the `deploy` job of the relevant service pipeline runs
 `dotnet ef database update` after Azure OIDC login and before
-pushing/updating the Container App. This explicit release step avoids
+updating the Container App. This explicit release step avoids
 multiple application replicas racing to migrate and keeps test hosts isolated.
 
 The migration step is gated to pushes on `develop`, exactly like image push
@@ -352,9 +361,9 @@ change).
 | Piece | Name / detail |
 |---|---|
 | Resource group | `it-helpdesk-rg` |
-| Container registry | `ithelpdeskacr01.azurecr.io` (Azure Container Registry) |
+| Container registry | `ithelpdeskacr02.azurecr.io` (Azure Container Registry) |
 | Compute platform | **Azure Container Apps** (serverless containers, not raw VMs/AKS) |
-| Region | Southeast Asia |
+| Region | Central India |
 | Container Apps | `auth-service`, `ticket-service`, `assignment-service`, `sla-service`, `notification-service`, `it-helpdesk-frontend`, plus `kafka-broker` (a **cloud** Kafka broker, separate from the local docker-compose one) |
 | Auth to Azure | OIDC federated identity (`azure/login@v2`) — no stored client secret |
 | ACR pull auth | A user-assigned managed identity (`acr-pull-identity`) attached to each Container App — the app itself authenticates to ACR via Azure identity, not a username/password |
@@ -437,53 +446,50 @@ deploy automatically via the path-filtered CD steps.
 
 ## 9. Gaps and future improvements (honest assessment)
 
-These are real, current limitations — good to know for a viva since
-"what would you improve" is a near-guaranteed question.
+Checked against the final-evaluation rubric in
+[CI-CD-RUBRIC-GAP-ANALYSIS.md](CI-CD-RUBRIC-GAP-ANALYSIS.md), which also says
+what has already been fixed. What is still open:
 
-1. **No automated tests run in CI.** `dotnet build` runs, but never
-   `dotnet test` — even though `Auth.Api.Tests` and `Ticket.Api.Tests`
-   projects already exist with real integration tests (401/403/200
-   authorization checks, etc.). This is the single highest-value fix:
-   add a `dotnet test` step before the Docker build, so a broken test
-   blocks the deploy.
+1. **The integration job does not gate the deploy yet.** It runs the three Ticket
+   tests against a Kafka container and has run green on a pull request. After a few
+   more green runs, add it to the `needs` of the `image` job. Seven Assignment tests tagged `Integration` are still not run
+   in CI: they need a running Auth service and agents with user IDs 3 and 26 in
+   the database, and a later migration removed that seed data.
 
-2. **`main` never deploys anywhere.** Only `develop` has a live CD
-   target. There's no defined promotion path from `develop` → `main` →
-   a production environment. Either `main` needs its own deploy target,
-   or the branching strategy needs to be made explicit (e.g. `develop`
-   *is* the only environment for now).
+2. **`main` never deploys anywhere.** Only `develop` has a live deploy target.
+   There is no promotion path from `develop` to `main` to a separate production
+   environment. Either `main` needs its own target, or the branching strategy
+   should state that `develop` is the only environment.
 
-3. **Heavy duplication across the six workflow files.** They're
-   ~95% identical, differing only in service name/path/image. This
-   could be collapsed into a single **reusable workflow**
-   (`workflow_call`) parameterized by service name, cutting six files
-   down to one template + six thin callers — much easier to maintain
-   (a CI change currently has to be hand-copied six times).
+3. **WSO2 API definitions are validated but never published.** Changing
+   `infra/wso2/apis/*.json` does not update the gateway; someone has to run
+   `scripts/publish-wso2-apis.sh azure` by hand, and the gateway must be running.
 
-4. **No canary/blue-green rollout.** `Single` revision mode means a bad
-   deploy goes to 100% of traffic immediately. Container Apps supports
-   multi-revision mode with traffic splitting — a small-percentage
-   canary before full cutover would catch problems like the Kafka
-   incident before they hit every user.
+4. **Vulnerable packages.** `dotnet list package --vulnerable` reports High
+   advisories in transitive packages such as `System.Text.Json 8.0.0`. The
+   dependency check in `security.yml` is report-only for now; once patched
+   versions are pinned it can become a gate.
 
-5. **Code duplication across services isn't just in workflows.** The
-   `Roles.cs` constants, `TicketCreatedEvent` DTO, and the (now-fixed)
-   `TicketCreatedConsumer` are byte-for-byte copy-pasted into
-   Assignment, Notification, and SLA. A shared internal NuGet package
-   would remove the risk of fixing a bug (like the crash-loop one) in
-   one copy and forgetting the other two.
+5. **No canary or blue-green rollout.** `Single` revision mode sends a new
+   revision 100% of traffic at once. The deploy action limits the damage with a
+   health check and rollback, but does not test a revision before it takes traffic.
 
-6. **No image vulnerability scanning** (e.g. Trivy, Grype, or ACR's own
-   scanning) wired into the pipeline before push.
+6. **Code duplication across services.** `Roles.cs`, `TicketCreatedEvent` and
+   the Kafka consumers are copied between services. A shared internal NuGet
+   package would remove the risk of fixing a bug in one copy and forgetting the
+   others.
 
-7. **No branch protection enforcement visible in-repo** — nothing stops
-   someone pushing straight to `develop` without a PR/review, even
-   though the pipeline is clearly designed around a PR-first workflow
-   (PRs get checks but not deploys).
+7. **The SonarCloud gate is not enforced by the pipeline.** The free plan
+   refuses quality-gate data for any branch except the main one, so the workflow
+   cannot wait for it. The result is read on sonarcloud.io and shown on the pull
+   request. See `SONARQUBE_ADJUSTMENTS.md`.
 
-8. **Secrets are OIDC-based (good)**, but there's no secret scanning
-   step (e.g. gitleaks) to catch an accidentally-committed credential
-   before it ships.
+8. **Branch protection is not visible in the repository.** Nothing in the code
+   stops a direct push to `develop`. Requiring status checks is a repository
+   setting.
+
+9. **Actions are pinned by tag, not commit SHA.** Dependabot now proposes
+   updates, but SHA pinning would harden the supply chain further.
 
 ## Ticket database: which context and the one-time baseline
 

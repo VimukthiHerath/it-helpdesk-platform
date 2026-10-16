@@ -1,0 +1,116 @@
+name: Backend integration tests (reusable)
+
+# Runs the tests tagged Integration, which the shared pipeline's test job filters out because they
+# need a real Kafka broker. Only the Ticket service has such tests, so only ticket-ci.yml calls this.
+# It runs alongside the shared pipeline, not before the deploy, so it reports without gating it.
+# Once it has been green for a few runs, make the deploy depend on it.
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Short service name, used for the artifact names.
+        type: string
+        required: true
+      project-dir:
+        description: Folder that holds the API project.
+        type: string
+        required: true
+      project-name:
+        description: Name of the API project, without the .csproj extension.
+        type: string
+        required: true
+      db-name:
+        description: Database name on the throwaway test MySQL.
+        type: string
+        required: true
+      db-env-var:
+        description: Name of the configuration key the service reads its connection string from.
+        type: string
+        required: true
+      ef-context:
+        description: DbContext to migrate, only needed when the project has more than one.
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      # The apache/kafka image starts a single node that advertises localhost:9092 with no settings,
+      # which is what the service's default Kafka:BootstrapServers expects on a runner.
+      kafka:
+        image: apache/kafka:3.8.0
+        ports:
+          - 9092:9092
+        options: >-
+          --health-cmd="/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=12
+    env:
+      TEST_DB: Server=127.0.0.1;Port=3306;Database=${{ inputs.db-name }};Uid=root;Pwd=root;
+      TZ: UTC
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj
+
+      - name: Build
+        run: dotnet build ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare test database
+        env:
+          EF_CONTEXT: ${{ inputs.ef-context }}
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
+        run: |
+          # The EF tools start the app to read its configuration, and the app reads its connection
+          # string from this service's own key. Without it the app falls back to appsettings.json
+          # (a MySQL on port 3307 that does not exist on a runner) and the tool cannot connect.
+          export "$DB_ENV_VAR=$TEST_DB"
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          context_args=()
+          if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
+          dotnet ef database update "${context_args[@]}"             --project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj             --startup-project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj             --connection "$TEST_DB"
+
+      - name: Run integration tests
+        env:
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
+        run: |
+          export "$DB_ENV_VAR=$TEST_DB"
+          dotnet test ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj             --no-build --configuration Release --filter "Category=Integration"             --logger "trx;LogFileName=${{ inputs.service }}-integration.trx"             --results-directory TestResults
+
+      - name: Summarise results
+        if: always()
+        run: python3 .github/scripts/test-summary.py "${{ inputs.service }} integration" TestResults >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.service }}-integration-results
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 14

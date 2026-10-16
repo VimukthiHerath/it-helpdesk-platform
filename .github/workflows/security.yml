@@ -1,0 +1,98 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Weekly, because new advisories appear for code that has not changed.
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Static analysis of the C# and JavaScript source (SQL injection, XSS, unsafe
+  # deserialization and similar). Findings show up under the repo's Security tab.
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp, javascript-typescript]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # No build needed: the source is analysed directly, which avoids
+          # building five services just to scan them.
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # Known-vulnerable NuGet and npm packages. Report-only for now: the services
+  # currently carry High advisories in transitive packages (see
+  # docs/CI-CD-RUBRIC-GAP-ANALYSIS.md section 4), so a blocking check would fail
+  # on day one. The report is written to the run summary so it stays visible.
+  dependency-audit:
+    name: Dependency vulnerability report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: NuGet packages
+        run: |
+          echo '## NuGet vulnerable packages' >> "$GITHUB_STEP_SUMMARY"
+          for proj in services/*/*.Api/*.Api.csproj; do
+            echo "### $proj" >> "$GITHUB_STEP_SUMMARY"
+            dotnet restore "$proj" > /dev/null
+            dotnet list "$proj" package --vulnerable --include-transitive 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: npm packages (production dependencies)
+        working-directory: frontend
+        run: |
+          echo '## npm audit (production dependencies)' >> "$GITHUB_STEP_SUMMARY"
+          npm ci --ignore-scripts > /dev/null
+          npm audit --omit=dev --audit-level=high 2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
+
+  # Fails the run if a credential is committed. Scans the commits of the push or
+  # pull request, not the whole history.
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
