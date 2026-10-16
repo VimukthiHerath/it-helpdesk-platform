@@ -1,0 +1,45 @@
+version: 2
+
+# Weekly pull requests for out-of-date or vulnerable dependencies. Security fixes arrive as their
+# own pull requests as soon as an advisory is published, regardless of this schedule.
+updates:
+  - package-ecosystem: nuget
+    directories:
+      - /services/auth/Auth.Api
+      - /services/ticket/Ticket.Api
+      - /services/assignment/Assignment.Api
+      - /services/sla/Sla.Api
+      - /services/notification/Notification.Api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for the minor and patch bumps of a service, so a week of updates is
+      # one review instead of a dozen.
+      nuget-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directories:
+      - /services/auth/Auth.Api
+      - /services/ticket/Ticket.Api
+      - /services/assignment/Assignment.Api
+      - /services/sla/Sla.Api
+      - /services/notification/Notification.Api
+      - /frontend
+    schedule:
+      interval: weekly
