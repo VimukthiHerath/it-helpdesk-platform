@@ -74,3 +74,35 @@ cloud passwords, and the database migrations are applied by the pipeline.
 
 Anything that only runs on a push to `develop` cannot be proven from a pull request. The first
 merge after a deploy-path change should be watched, with the previous image tag noted for rollback.
+
+## 6. Status after the first round of fixes
+
+"Verified" says what was actually run, not just written. Anything that only runs on a push to
+`develop` is not proven until that push happens.
+
+| # | Gap | Status | How it was checked |
+|---|---|---|---|
+| 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), a dependency vulnerability report, gitleaks, and a Trivy scan of each image | `security.yml` ran green on GitHub. Trivy checked locally against the Auth image |
+| 2 | Job separation | **Done.** `test`, `image`, `deploy` for every service and the frontend | Workflow lint clean. The test and image jobs' commands were run locally. The `deploy` job is unproven until the first push to `develop` |
+| 3 | Integration tests | **Partly.** A job runs the 3 Ticket tests against a Kafka container. The 7 Assignment integration tests are still excluded | The job could not be run locally (no Kafka image on the machine). It reports without gating the deploy until it has run green |
+| 4 | Post-deploy check and rollback | **Done** | Health check run against the live Auth app: exits 0 when healthy and 1 for a bad revision. The rollback step itself has not been exercised |
+| 5 | Test results and coverage kept | **Done.** Artifacts plus a results table in each job summary | Coverage command and summary script run locally (Auth: 52 passed, 47.5% line coverage) |
+| 6 | Reusable workflow | **Done.** One `backend-service.yml`, five callers of about 40 lines | Workflow lint clean |
+| 7 | Environments and promotion | Open | Depends on the environment strategy |
+| 8 | Publish WSO2 definitions from CI | Open | Needs `az containerapp exec` against a running gateway; not attempted without a way to test it |
+| 9 | SonarCloud gate enforced | Not possible on the free plan | |
+| 10 | Concurrency | **Done.** PR runs cancel superseded runs; each Container App deploys one at a time | |
+| 11 | Dependency updates, SHA pinning | **Partly.** Dependabot added for NuGet, npm, Actions and Docker. Actions are still pinned by tag | |
+| 12 | Caching and lint | **Partly.** npm cache added; the production build runs with `CI=true`, so lint warnings fail it. No Docker layer cache | |
+
+### What the local checks found
+
+* **The first version of the health check was wrong.** `az ... --output tsv` prints each value of a
+  list on its own line, so the script read the first value and saw the other two as empty. Against a
+  healthy app it would have timed out and rolled back a good deploy. It was caught by running the
+  script against the live app, and fixed to read one line.
+* **A blocking Trivy scan of the whole image would fail every build.** The Auth image carries three
+  CRITICAL `perl-base` findings that have a fix in Debian but not yet in Microsoft's `aspnet:8.0`
+  base image. The gate therefore covers only the libraries our code depends on, which passed. The
+  operating-system findings are reported but do not block.
+
