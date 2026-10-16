@@ -19,6 +19,7 @@ quality and security. Everything lives in `.github/`:
 .github/
 ├── workflows/
 │   ├── backend-service.yml      reusable pipeline shared by the five services
+│   ├── backend-integration.yml  Ticket-only: integration tests against Kafka
 │   ├── auth-ci.yml              ┐
 │   ├── ticket-ci.yml            │ five thin callers: they pass in the names
 │   ├── assignment-ci.yml        │ that differ and nothing else
@@ -71,7 +72,7 @@ jobs:
 Before this, the five workflows were about 95% identical and every change had
 to be copied by hand five times. The values that genuinely differ are the
 inputs above; Ticket also sets `ef-context` (it has two EF contexts),
-`test-filter` and `integration-tests`.
+and `test-filter`.
 
 **Triggers.** A `push` or `pull_request` to `main` or `develop`, but only if
 the diff touches that service's folder or the shared pipeline files. A pull
@@ -80,15 +81,19 @@ what merging a pull request does) runs the checks and deploys.
 
 ### The jobs
 
-The shared pipeline has four jobs. They run in this order, each waiting for
+The shared pipeline has three jobs. They run in this order, each waiting for
 the one before it with `needs:`:
 
 | Job | Runs on | What it does |
 |---|---|---|
 | `test` | every run | Restore, build, apply the migrations to a throwaway MySQL service container, run the unit tests with coverage, write a results table to the job summary, upload the `.trx` and coverage files as an artifact |
-| `integration` | every run, Ticket only | Runs the tests tagged `Integration` against a real Kafka broker (a service container). Reports alongside the image job; it does not yet gate the deploy |
 | `image` | every run | Build the Docker image. **Gate:** Trivy (run from its own container, because `aquasecurity/trivy-action` is broken upstream) fails the run on a CRITICAL vulnerability with a fix in the libraries our code depends on. **Report only:** operating-system findings in the base image. On a push to `develop`, push the image to ACR |
 | `deploy` | push to `develop` only | Log in to Azure, apply the migrations to the real database, then update the Container App, wait for the new revision to be healthy and roll back if it is not |
+
+**Ticket also has an integration job.** `backend-integration.yml` runs the tests tagged
+`Integration` against a real Kafka broker (a service container). Only `ticket-ci.yml` calls it,
+so the other services carry no empty placeholder for it. It runs alongside the shared pipeline
+and does not yet gate the deploy.
 
 Splitting build, test and deploy into jobs is what makes the stages visible
 in the GitHub UI, lets `deploy` be skipped on a pull request without a string

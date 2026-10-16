@@ -9,6 +9,7 @@ on:
       - 'services/ticket/**'
       - '.github/workflows/ticket-ci.yml'
       - '.github/workflows/backend-service.yml'
+      - '.github/workflows/backend-integration.yml'
       - '.github/actions/deploy-container-app/**'
       - '.github/scripts/test-summary.py'
   pull_request:
@@ -17,6 +18,7 @@ on:
       - 'services/ticket/**'
       - '.github/workflows/ticket-ci.yml'
       - '.github/workflows/backend-service.yml'
+      - '.github/workflows/backend-integration.yml'
       - '.github/actions/deploy-container-app/**'
       - '.github/scripts/test-summary.py'
 
@@ -41,9 +43,18 @@ jobs:
       db-env-var: ConnectionStrings__TicketDb
       ef-context: ApplicationDbContext
       test-filter: 'Category!=Integration'
-      integration-tests: true
     secrets:
       AZURE_NEW_CLIENT_ID: ${{ secrets.AZURE_NEW_CLIENT_ID }}
       AZURE_NEW_TENANT_ID: ${{ secrets.AZURE_NEW_TENANT_ID }}
       AZURE_NEW_SUBSCRIPTION_ID: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
       DB_CONNECTION_STRING: ${{ secrets.TICKET_DB_CONNECTION_STRING }}
+
+  integration:
+    uses: ./.github/workflows/backend-integration.yml
+    with:
+      service: ticket
+      project-dir: services/ticket/Ticket.Api
+      project-name: Ticket.Api
+      db-name: ticket_db
+      db-env-var: ConnectionStrings__TicketDb
+      ef-context: ApplicationDbContext
