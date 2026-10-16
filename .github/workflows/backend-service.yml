@@ -107,7 +107,12 @@ jobs:
       - name: Prepare test database
         env:
           EF_CONTEXT: ${{ inputs.ef-context }}
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
         run: |
+          # The EF tools start the app to read its configuration, and the app reads its connection
+          # string from this service's own key. Without it the app falls back to appsettings.json
+          # (a MySQL on port 3307 that does not exist on a runner) and the tool cannot connect.
+          export "$DB_ENV_VAR=$TEST_DB"
           dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
           context_args=()
           if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
@@ -198,7 +203,12 @@ jobs:
       - name: Prepare test database
         env:
           EF_CONTEXT: ${{ inputs.ef-context }}
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
         run: |
+          # The EF tools start the app to read its configuration, and the app reads its connection
+          # string from this service's own key. Without it the app falls back to appsettings.json
+          # (a MySQL on port 3307 that does not exist on a runner) and the tool cannot connect.
+          export "$DB_ENV_VAR=$TEST_DB"
           dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
           context_args=()
           if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
@@ -248,7 +258,7 @@ jobs:
       # code depends on (the NuGet libraries). Those are ours to fix. Unfixed ones are ignored,
       # because nothing can be done about them yet and they would block every build.
       - name: Scan the app's libraries for critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           image-ref: ${{ steps.ref.outputs.image }}
           severity: CRITICAL
@@ -261,7 +271,7 @@ jobs:
       # yet in the image, so a gate here would fail every build until Microsoft rebuilds it. The
       # findings stay visible in this log, and rebuilding the image picks up the fix when it ships.
       - name: Report operating-system vulnerabilities in the base image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           image-ref: ${{ steps.ref.outputs.image }}
           severity: CRITICAL,HIGH
@@ -315,8 +325,12 @@ jobs:
         env:
           DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
           EF_CONTEXT: ${{ inputs.ef-context }}
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
         run: |
           test -n "$DB_CONNECTION_STRING"
+          # Same reason as the test database step: the EF tools start the app, which must find the
+          # real database under its own configuration key.
+          export "$DB_ENV_VAR=$DB_CONNECTION_STRING"
           dotnet tool install --global dotnet-ef --version 8.0.8
           context_args=()
           if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
