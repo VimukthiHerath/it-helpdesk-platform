@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -47,5 +48,32 @@ public class SwaggerDocumentationTests : IClassFixture<WebApplicationFactory<Pro
         var json = await response.Content.ReadAsStringAsync();
         Assert.Contains("/health", json);
         Assert.Contains("/api/Ticket", json);
+    }
+
+    // The documentation is a deliverable, so it must be served in a deployed (Production)
+    // environment too, and it must be possible to switch it off.
+    [Fact]
+    public async Task SwaggerJson_IsServed_InProduction()
+    {
+        var client = _factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production")).CreateClient();
+
+        var response = await client.GetAsync("/swagger/v1/swagger.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("/api/Ticket", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Swagger_CanBeSwitchedOff()
+    {
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Swagger:Enabled", "false");
+        }).CreateClient();
+
+        var response = await client.GetAsync("/swagger/v1/swagger.json");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
