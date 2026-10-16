@@ -107,8 +107,11 @@ frontend. It does four things:
 
 If the app has been scaled to zero on purpose (`scripts/stop-all`), step 3 is
 skipped with a notice, because there is no replica to check and waking one
-would cost money. The health logic was run against the live Auth app: it
-exits 0 when healthy and 1 for a bad revision.
+would cost money. Both paths were exercised against the live `sla-service`: redeploying
+its current image passes, and deploying a missing image tag makes the new revision sit in
+`Activating` until the timeout, after which the action rolls back and exits 1. A revision
+that cannot pull its image never reports `Failed`, so a bad deploy takes the full timeout
+(five minutes by default) to be reported.
 
 ### Concurrency
 

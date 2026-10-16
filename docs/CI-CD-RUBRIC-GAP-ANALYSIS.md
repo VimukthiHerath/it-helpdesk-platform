@@ -85,7 +85,7 @@ merge after a deploy-path change should be watched, with the previous image tag 
 | 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), a dependency vulnerability report, gitleaks, and a Trivy scan of each image | `security.yml` ran green on GitHub. Trivy checked locally against the Auth image |
 | 2 | Job separation | **Done.** `test`, `image`, `deploy` for every service and the frontend | Workflow lint clean. The test and image jobs' commands were run locally. The `deploy` job is unproven until the first push to `develop` |
 | 3 | Integration tests | **Partly.** A job runs the 3 Ticket tests against a Kafka container. The 7 Assignment integration tests are still excluded | The job could not be run locally (no Kafka image on the machine). It reports without gating the deploy until it has run green |
-| 4 | Post-deploy check and rollback | **Done** | Health check run against the live Auth app: exits 0 when healthy and 1 for a bad revision. The rollback step itself has not been exercised |
+| 4 | Post-deploy check and rollback | **Done.** Both paths exercised against the live `sla-service` on 2026-10-16 | Redeploying its current image: healthy, rollback skipped, exit 0. Deploying a missing image tag: the new revision stayed `Activating` for the full 240 s timeout, the action rolled back to the previous image and exited 1, and `sla-service` ended healthy on the original image with 100% traffic. The test ran the action's own steps from a local script, not on a GitHub runner |
 | 5 | Test results and coverage kept | **Done.** Artifacts plus a results table in each job summary | Coverage command and summary script run locally (Auth: 52 passed, 47.5% line coverage) |
 | 6 | Reusable workflow | **Done.** One `backend-service.yml`, five callers of about 40 lines | Workflow lint clean |
 | 7 | Environments and promotion | Open | Depends on the environment strategy |
@@ -105,4 +105,7 @@ merge after a deploy-path change should be watched, with the previous image tag 
   CRITICAL `perl-base` findings that have a fix in Debian but not yet in Microsoft's `aspnet:8.0`
   base image. The gate therefore covers only the libraries our code depends on, which passed. The
   operating-system findings are reported but do not block.
+* **A revision that cannot pull its image never reports `Failed`.** It stays `Activating` with no
+  health state, so the timeout, not a failure signal, is what triggers the rollback. A bad deploy
+  therefore takes the full five minutes to be reported.
 
