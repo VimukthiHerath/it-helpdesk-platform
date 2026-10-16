@@ -1,0 +1,247 @@
+name: Backend service pipeline (reusable)
+
+# One pipeline shared by the five .NET services. Each service has a short caller workflow
+# (auth-ci.yml, ticket-ci.yml, ...) that passes in the names that differ.
+#
+#   test   build, apply migrations to a throwaway MySQL, run the tests, publish results
+#   image  build the Docker image and scan it; on a push to develop also push it to ACR
+#   deploy (push to develop only) apply migrations to Azure, update the Container App,
+#          wait for the new revision to be healthy, roll back if it is not
+#
+# Deploying never uses a GitHub "environment": the Azure federated credential trusts the
+# branch (refs/heads/develop), and an environment would change the token's subject and break login.
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Short service name, used for the image and the artifact names (for example auth).
+        type: string
+        required: true
+      project-dir:
+        description: Folder that holds the API project and its Dockerfile.
+        type: string
+        required: true
+      project-name:
+        description: Name of the API project, without the .csproj extension (for example Auth.Api).
+        type: string
+        required: true
+      container-app:
+        description: Azure Container App to deploy to.
+        type: string
+        required: true
+      db-name:
+        description: Database name on the throwaway test MySQL.
+        type: string
+        required: true
+      db-env-var:
+        description: Name of the configuration key the service reads its connection string from.
+        type: string
+        required: true
+      ef-context:
+        description: DbContext to migrate, only needed when the project has more than one.
+        type: string
+        required: false
+        default: ''
+      test-filter:
+        description: Optional dotnet test filter, for example "Category!=Integration".
+        type: string
+        required: false
+        default: ''
+    secrets:
+      AZURE_NEW_CLIENT_ID:
+        required: false
+      AZURE_NEW_TENANT_ID:
+        required: false
+      AZURE_NEW_SUBSCRIPTION_ID:
+        required: false
+      DB_CONNECTION_STRING:
+        description: Connection string of the real database, used to apply migrations on deploy.
+        required: false
+
+env:
+  REGISTRY: ithelpdeskacr02.azurecr.io
+  RESOURCE_GROUP: it-helpdesk-rg
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      TEST_DB: Server=127.0.0.1;Port=3306;Database=${{ inputs.db-name }};Uid=root;Pwd=root;
+      TZ: UTC
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj
+
+      - name: Build
+        run: dotnet build ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare test database
+        env:
+          EF_CONTEXT: ${{ inputs.ef-context }}
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          context_args=()
+          if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
+          dotnet ef database update "${context_args[@]}" \
+            --project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj \
+            --startup-project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj \
+            --connection "$TEST_DB"
+
+      - name: Run tests with coverage
+        env:
+          TEST_FILTER: ${{ inputs.test-filter }}
+          DB_ENV_VAR: ${{ inputs.db-env-var }}
+        run: |
+          # Each service reads its connection string from its own key, so the key name is an input.
+          export "$DB_ENV_VAR=$TEST_DB"
+          filter_args=()
+          if [ -n "$TEST_FILTER" ]; then filter_args=(--filter "$TEST_FILTER"); fi
+          dotnet test ${{ inputs.project-dir }}/../${{ inputs.project-name }}.Tests/${{ inputs.project-name }}.Tests.csproj \
+            --no-build --configuration Release "${filter_args[@]}" \
+            --logger "trx;LogFileName=${{ inputs.service }}-tests.trx" \
+            --results-directory TestResults \
+            -p:CollectCoverage=true -p:CoverletOutputFormat=opencover -p:CoverletOutput=../../../TestResults/${{ inputs.service }}-coverage
+
+      - name: Summarise results
+        if: always()
+        run: python3 .github/scripts/test-summary.py "${{ inputs.service }}" TestResults >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.service }}-test-results
+          path: TestResults/
+          if-no-files-found: warn
+          retention-days: 14
+
+  image:
+    name: Build and scan image
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Work out the image name
+        id: ref
+        run: echo "image=${REGISTRY}/${{ inputs.service }}-service:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        run: docker build -t "${{ steps.ref.outputs.image }}" ${{ inputs.project-dir }}
+
+      # Gate: fails the run on a CRITICAL vulnerability, with a fix available, in the packages our own
+      # code depends on (the NuGet libraries). Those are ours to fix. Unfixed ones are ignored,
+      # because nothing can be done about them yet and they would block every build.
+      - name: Scan the app's libraries for critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          vuln-type: library
+
+      # Report only: the operating-system packages come from Microsoft's aspnet base image. Checked
+      # on 2026-10-16, that image carried CRITICAL perl-base findings that had a fix in Debian but not
+      # yet in the image, so a gate here would fail every build until Microsoft rebuilds it. The
+      # findings stay visible in this log, and rebuilding the image picks up the fix when it ships.
+      - name: Report operating-system vulnerabilities in the base image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.ref.outputs.image }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+          vuln-type: os
+
+      - name: Log in to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
+
+      - name: Push image to ACR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: |
+          az acr login --name "${REGISTRY%%.*}"
+          docker push "${{ steps.ref.outputs.image }}"
+
+  deploy:
+    name: Deploy to Azure
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    # One deploy per app at a time, and a deploy that has started is never cancelled halfway.
+    concurrency:
+      group: deploy-${{ inputs.container-app }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_NEW_SUBSCRIPTION_ID }}
+
+      - name: Apply database migrations
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          EF_CONTEXT: ${{ inputs.ef-context }}
+        run: |
+          test -n "$DB_CONNECTION_STRING"
+          dotnet tool install --global dotnet-ef --version 8.0.8
+          context_args=()
+          if [ -n "$EF_CONTEXT" ]; then context_args=(--context "$EF_CONTEXT"); fi
+          dotnet ef database update "${context_args[@]}" \
+            --project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj \
+            --startup-project ${{ inputs.project-dir }}/${{ inputs.project-name }}.csproj \
+            --connection "$DB_CONNECTION_STRING"
+
+      - name: Deploy and verify
+        uses: ./.github/actions/deploy-container-app
+        with:
+          container-app: ${{ inputs.container-app }}
+          image: ${{ needs.image.outputs.image }}
