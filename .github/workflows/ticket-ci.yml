@@ -41,6 +41,7 @@ jobs:
       db-env-var: ConnectionStrings__TicketDb
       ef-context: ApplicationDbContext
       test-filter: 'Category!=Integration'
+      integration-tests: true
     secrets:
       AZURE_NEW_CLIENT_ID: ${{ secrets.AZURE_NEW_CLIENT_ID }}
       AZURE_NEW_TENANT_ID: ${{ secrets.AZURE_NEW_TENANT_ID }}
