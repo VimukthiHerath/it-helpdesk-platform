@@ -92,7 +92,7 @@ merge after a deploy-path change should be watched, with the previous image tag 
 | 8 | Publish WSO2 definitions from CI | Open | Needs `az containerapp exec` against a running gateway; not attempted without a way to test it |
 | 9 | SonarCloud gate enforced | Not possible on the free plan | |
 | 10 | Concurrency | **Done.** PR runs cancel superseded runs; each Container App deploys one at a time | |
-| 11 | Dependency updates, SHA pinning | **Partly.** Dependabot added for NuGet, npm, Actions and Docker. Actions are still pinned by tag | |
+| 11 | Dependency updates, SHA pinning | **Mostly done.** Dependabot added for NuGet, npm, Actions and Docker. The third-party actions (`azure/login`, `gitleaks`) are pinned to commit SHAs; GitHub-owned actions use version tags | |
 | 12 | Caching and lint | **Partly.** npm cache added; the production build runs with `CI=true`, so lint warnings fail it. No Docker layer cache | |
 
 ### What the local checks found

@@ -488,8 +488,9 @@ what has already been fixed. What is still open:
    stops a direct push to `develop`. Requiring status checks is a repository
    setting.
 
-9. **Actions are pinned by tag, not commit SHA.** Dependabot now proposes
-   updates, but SHA pinning would harden the supply chain further.
+9. **Only some actions are pinned to a commit SHA.** The third-party ones (`azure/login`, `gitleaks/gitleaks-action`)
+   are pinned to the exact commit, with the tag in a comment, and Dependabot proposes updates. Actions owned by GitHub
+   (`actions/*`, `github/codeql-action`) still use version tags.
 
 ## Ticket database: which context and the one-time baseline
 
