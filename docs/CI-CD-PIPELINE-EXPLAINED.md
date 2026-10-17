@@ -27,7 +27,7 @@ quality and security. Everything lives in `.github/`:
 │   ├── notification-ci.yml      ┘
 │   ├── frontend-ci.yml          frontend pipeline (same stages, Node instead of .NET)
 │   ├── sonarcloud.yml           one SonarCloud analysis for the whole monorepo
-│   ├── security.yml             CodeQL, dependency report, secret scan
+│   ├── security.yml             CodeQL and secret scan
 │   └── wso2-gateway-ci.yml      validates the API definitions, boots a WSO2 container
 ├── actions/deploy-container-app/action.yml
 │                                deploy, wait for health, roll back on failure
@@ -465,9 +465,9 @@ what has already been fixed. What is still open:
    `scripts/publish-wso2-apis.sh azure` by hand, and the gateway must be running.
 
 4. **Vulnerable packages.** `dotnet list package --vulnerable` reports High
-   advisories in transitive packages such as `System.Text.Json 8.0.0`. The
-   dependency check in `security.yml` is report-only for now; once patched
-   versions are pinned it can become a gate.
+   advisories in transitive packages such as `System.Text.Json 8.0.0`. Nothing in
+   the pipeline checks for this automatically (a report-only check was tried and
+   removed because it only listed problems). Pinning patched versions would fix it.
 
 5. **No canary or blue-green rollout.** `Single` revision mode sends a new
    revision 100% of traffic at once. The deploy action limits the damage with a

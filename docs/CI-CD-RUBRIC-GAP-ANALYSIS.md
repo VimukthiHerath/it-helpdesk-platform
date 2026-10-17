@@ -82,7 +82,7 @@ merge after a deploy-path change should be watched, with the previous image tag 
 
 | # | Gap | Status | How it was checked |
 |---|---|---|---|
-| 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), a dependency vulnerability report, gitleaks, and a Trivy scan of each image | `security.yml` and the Trivy steps in every pipeline ran green on the pull request |
+| 1 | Security scanning | **Done.** CodeQL (C# and JavaScript), gitleaks, and a Trivy scan of each image. A report-only dependency check was added and then removed, because it only listed problems | `security.yml` and the Trivy steps in every pipeline ran green on the pull request |
 | 2 | Job separation | **Done.** `test`, `image`, `deploy` for every service and the frontend | The test and image jobs ran green on the pull request for all six pipelines. The `deploy` job is skipped on pull requests by design and is unproven until the first push to `develop` |
 | 3 | Integration tests | **Partly.** A job runs the 3 Ticket tests against a Kafka container, and ran green on the pull request. The 7 Assignment integration tests are still excluded | It reports without gating the deploy; add it to the `needs` of the image job after a few green runs |
 | 4 | Post-deploy check and rollback | **Done.** Both paths exercised against the live `sla-service` on 2026-10-16 | Redeploying its current image: healthy, rollback skipped, exit 0. Deploying a missing image tag: the new revision stayed `Activating` for the full 240 s timeout, the action rolled back to the previous image and exited 1, and `sla-service` ended healthy on the original image with 100% traffic. The test ran the action's own steps from a local script, not on a GitHub runner |
