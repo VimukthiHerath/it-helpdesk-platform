@@ -101,4 +101,50 @@ public class UpdateStatusTests
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
+
+    [Fact]
+    public async Task UpdateStatus_WhenAdministratorActsOnAnotherUsersTicket_Succeeds()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        context.Tickets.Add(new Tickets
+        {
+            Id = 7, Description = "Issue", IssueType = "Software",
+            CreatedBy = 1, AssignedTo = 99, Status = TicketStatus.assigned
+        });
+        await context.SaveChangesAsync();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService,
+            userId: 42, roles: new[] { "Administrator" });
+
+        var result = await controller.UpdateStatus(
+            7, new UpdateTicketStatusDTO { NewStatus = TicketStatus.resolved });
+
+        var response = Assert.IsType<OkObjectResult>(result);
+        var body = Assert.IsType<TicketStatusResponseDTO>(response.Value);
+        Assert.Equal(7, body.TicketId);
+        Assert.Equal(TicketStatus.resolved, body.Status);
+        Assert.Equal(42, Assert.Single(context.StatusHistory).ChangedBy);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenDatabaseFails_ReturnsInternalServerError()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        context.Dispose();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService,
+            userId: 42, roles: new[] { "Agent" });
+
+        var result = await controller.UpdateStatus(
+            7, new UpdateTicketStatusDTO { NewStatus = TicketStatus.resolved });
+
+        Assert.Equal(StatusCodes.Status500InternalServerError,
+            Assert.IsType<ObjectResult>(result).StatusCode);
+        logger.Verify(x => x.Log(
+            LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
 }
