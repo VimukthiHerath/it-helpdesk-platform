@@ -22,7 +22,6 @@ on:
       - '.github/actions/deploy-container-app/**'
 
 permissions:
-  id-token: write
   contents: read
 
 # A newer push to a pull request replaces the older run; runs on develop are never cancelled.
@@ -125,7 +124,7 @@ jobs:
 
       - name: Log in to Azure
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
           client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
@@ -154,7 +153,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Log in to Azure
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
           client-id: ${{ secrets.AZURE_NEW_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_NEW_TENANT_ID }}
