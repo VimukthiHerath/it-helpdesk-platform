@@ -9,6 +9,9 @@ public sealed class TicketAssignedConsumer : BackgroundService
 {
     private const string ConsumerGroupId = "ticket-workers";
 
+    // One shared instance: creating options on every call defeats System.Text.Json's caching.
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketAssignedConsumer> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -80,8 +83,7 @@ public sealed class TicketAssignedConsumer : BackgroundService
                     var assignedEvent =
                         JsonSerializer.Deserialize<TicketAssignedEvent>(
                             result.Message.Value,
-                            new JsonSerializerOptions(
-                                JsonSerializerDefaults.Web));
+                            JsonOptions);
 
                     if (assignedEvent is null)
                     {
@@ -136,11 +138,12 @@ public sealed class TicketAssignedConsumer : BackgroundService
         catch (OperationCanceledException)
             when (stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation(
-                "Ticket Kafka consumer is shutting down.");
+            // Normal shutdown: the message is logged below, there is no error to report.
         }
         finally
         {
+            _logger.LogInformation(
+                "Ticket Kafka consumer is shutting down.");
             consumer.Close();
         }
     }

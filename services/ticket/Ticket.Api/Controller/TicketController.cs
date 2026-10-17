@@ -22,6 +22,9 @@ namespace Ticket.Api.Controller;
 public class TicketController : ControllerBase
 {
 
+    // One shared instance: creating options on every call defeats System.Text.Json's caching.
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TicketController> _logger;
     private readonly IProducer<string, string> _kafkaProducer;
@@ -46,6 +49,7 @@ public class TicketController : ControllerBase
     // every user's tickets, not the employees who file them.
     [Authorize(Roles = $"{Roles.Agent},{Roles.Administrator}")]
     [HttpGet]
+    [ProducesResponseType(typeof(List<Tickets>), StatusCodes.Status200OK)]
     public IActionResult GetTickets()
     {
         try
@@ -110,7 +114,7 @@ public class TicketController : ControllerBase
             };
 
             var topicName = _configuration["Kafka:TicketCreatedTopic"] ?? "ticket-created";
-            var eventPayload = JsonSerializer.Serialize(ticketCreatedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var eventPayload = JsonSerializer.Serialize(ticketCreatedEvent, JsonOptions);
 
             await _kafkaProducer.ProduceAsync(topicName, new Message<string, string>
             { Headers = KafkaTracing.CurrentHeaders(),
@@ -152,6 +156,7 @@ public class TicketController : ControllerBase
 
     [Authorize(Roles = Roles.Employee)]
     [HttpGet("mine")]
+    [ProducesResponseType(typeof(List<Tickets>), StatusCodes.Status200OK)]
     public IActionResult GetMyTickets()
     {
         try
@@ -208,7 +213,7 @@ public class TicketController : ControllerBase
                 };
 
                 var topicName = _configuration["Kafka:TicketResolvedTopic"] ?? "ticket-resolved";
-                var eventPayload = JsonSerializer.Serialize(resolvedEvent, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                var eventPayload = JsonSerializer.Serialize(resolvedEvent, JsonOptions);
 
                 await _kafkaProducer.ProduceAsync(topicName, new Message<string, string>
                 { Headers = KafkaTracing.CurrentHeaders(),

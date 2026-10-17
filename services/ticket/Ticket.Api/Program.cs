@@ -183,6 +183,10 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Tick
 // and has no way to special-case a resource onto the service root instead.
 app.MapGet("/api/Ticket/health", () => Results.Ok(new { status = "healthy", service = "Ticket" }));
 app.MapControllers();
-app.Run();
+await app.RunAsync();
 
-public partial class Program { }
+public partial class Program
+{
+    // Only here so the class is not a bare utility class; WebApplicationFactory<Program> in the tests never constructs it.
+    protected Program() { }
+}
