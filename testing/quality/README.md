@@ -41,7 +41,7 @@ The fixes made on this branch and what each one resolves:
 | `docker:S6471` Dockerfile runs as root (the vulnerability) | The container now runs as the image's non-root user |
 | `csharpsquid:S6966` use `RunAsync` | `await app.RunAsync()` |
 | `csharpsquid:S1118` utility class needs a protected constructor | Added one to `Program` |
-| `csharpsquid:S6667` log the caught exception | The exception is now passed to the logger |
+| `csharpsquid:S6667` logging inside a catch without the exception | The normal-shutdown message is logged in `finally` instead, so there is no catch-block log (passing the cancellation exception would only add a noisy stack trace) |
 | `CA1869` new `JsonSerializerOptions` on every call (3) | One shared static instance |
 | `csharpsquid:S6968` missing `ProducesResponseType` (2) | Added, which also improves the Swagger documentation |
 
