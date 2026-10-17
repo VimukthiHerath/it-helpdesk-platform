@@ -5,7 +5,7 @@ COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
 # Stage 2: run the app using only the lightweight runtime (no build tools)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 8080
