@@ -42,4 +42,22 @@ public class GetTicketsTests
             LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
             It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
+
+    [Fact]
+    public void GetTickets_WhenContextFails_ReturnsExactProblemAndLogsExpectedError()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        context.Dispose();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService);
+
+        var result = Assert.IsType<ObjectResult>(controller.GetTickets());
+
+        Assert.Equal("Unable to load tickets. Please try again later.",
+            Assert.IsType<ProblemDetails>(result.Value).Detail);
+        logger.Verify(x => x.Log(LogLevel.Error, It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((state, _) => state.ToString()!.StartsWith("Error retrieving tickets")),
+            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+    }
 }
