@@ -59,6 +59,9 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
 });
 
 builder.Services.AddScoped<TicketAssignmentSyncService>();
+builder.Services.AddScoped<ITicketAssignmentSyncService>(sp =>
+    sp.GetRequiredService<TicketAssignmentSyncService>());
+builder.Services.AddSingleton<ITicketConsumerFactory, TicketConsumerFactory>();
 builder.Services.AddHostedService<TicketAssignedConsumer>();
 builder.Services.AddScoped<TicketStatusService>();
 

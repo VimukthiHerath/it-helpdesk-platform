@@ -17,7 +17,12 @@ namespace Ticket.Api.Services;
 // Kept separate from the Kafka-consuming BackgroundService so it can be
 // unit-tested with EF Core's InMemory provider, no broker needed - same
 // split as RoundRobinAssignmentService/TicketCreatedConsumer in Assignment.Api.
-public class TicketAssignmentSyncService
+public interface ITicketAssignmentSyncService
+{
+    Task ApplyAsync(TicketAssignedEvent assignedEvent, CancellationToken cancellationToken);
+}
+
+public class TicketAssignmentSyncService : ITicketAssignmentSyncService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<TicketAssignmentSyncService> _logger;

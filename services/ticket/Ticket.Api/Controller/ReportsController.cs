@@ -41,8 +41,6 @@ public class ReportsController : ControllerBase
         var ticketsRef = await _context.Tickets
             .Where(t => t.AssignedAgentId != null)
             .Where(t => t.Status == "Resolved" || t.Status == "Closed")
-            // Strict exclusion just in case "Duplicate", "Spam", "Cancelled" have "Closed" overlap behavior mapped externally
-            .Where(t => t.Status != "Duplicate" && t.Status != "Spam" && t.Status != "Cancelled")
             .Where(t => t.ResolvedAtUtc != null && t.ResolvedAtUtc.Value >= startUtc && t.ResolvedAtUtc.Value <= endUtc)
             .ToListAsync(cancellationToken);
 
@@ -53,19 +51,6 @@ public class ReportsController : ControllerBase
                 var totalResolved = g.Count();
                 var slaEligibleCount = g.Count(t => t.SlaDeadlineUtc.HasValue);
                 var missingSlaCount = totalResolved - slaEligibleCount;
-
-                if (totalResolved == 0)
-                {
-                    return new AgentPerformanceReportDto
-                    {
-                        AgentId = g.Key,
-                        TotalResolvedTickets = 0,
-                        SlaEligibleTickets = 0,
-                        TicketsMissingSla = 0,
-                        AverageTtrMinutes = null,
-                        SlaBreachRate = 0.00
-                    };
-                }
 
                 var totalTtrMinutes = g.Sum(t => (t.ResolvedAtUtc!.Value - t.CreatedAtUtc).TotalMinutes);
                 var avgTtr = totalTtrMinutes / totalResolved;
