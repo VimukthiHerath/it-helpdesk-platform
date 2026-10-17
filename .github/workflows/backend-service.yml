@@ -86,7 +86,7 @@ jobs:
       TZ: UTC
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -155,7 +155,7 @@ jobs:
       image: ${{ steps.ref.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Work out the image name
         id: ref
@@ -216,7 +216,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
