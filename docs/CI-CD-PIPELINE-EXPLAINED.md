@@ -31,8 +31,7 @@ quality and security. Everything lives in `.github/`:
 │   └── wso2-gateway-ci.yml      validates the API definitions, boots a WSO2 container
 ├── actions/deploy-container-app/action.yml
 │                                deploy, wait for health, roll back on failure
-├── scripts/test-summary.py      turns test and coverage output into a job summary
-└── dependabot.yml               weekly dependency pull requests
+└── scripts/test-summary.py      turns test and coverage output into a job summary
 ```
 
 Each service workflow is **path-filtered**: it only runs when files under its
@@ -489,7 +488,7 @@ what has already been fixed. What is still open:
    setting.
 
 9. **Only some actions are pinned to a commit SHA.** The third-party ones (`azure/login`, `gitleaks/gitleaks-action`)
-   are pinned to the exact commit, with the tag in a comment, and Dependabot proposes updates. Actions owned by GitHub
+   are pinned to the exact commit, with the tag in a comment. Actions owned by GitHub
    (`actions/*`, `github/codeql-action`) still use version tags.
 
 ## Ticket database: which context and the one-time baseline

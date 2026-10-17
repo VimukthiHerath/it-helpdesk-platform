@@ -45,7 +45,7 @@ cloud passwords, and the database migrations are applied by the pipeline.
 | 8 | **WSO2 API definitions are validated but never published.** Changing `infra/wso2/apis/*.json` does not update the gateway; it needs `scripts/publish-wso2-apis.sh azure` run by hand. | This is a real manual deployment step that caused a live gap during the phone-number change. | Medium; needs the gateway to be running |
 | 9 | **The SonarCloud quality gate is not enforced.** The free plan refuses gate data for non-main branches, so the pipeline cannot fail on it. | The PR check shows the result, but the pipeline itself does not block. Known limit, documented in `SONARQUBE_ADJUSTMENTS.md`. | None available on the free plan |
 | 10 | **No concurrency control.** Two quick pushes to `develop` can deploy out of order. | Reliability. | Small |
-| 11 | **Actions pinned by tag, not commit SHA; no automatic dependency updates.** | Supply-chain hardening, flagged by Sonar. | Small |
+| 11 | **Third-party actions pinned by tag, not commit SHA.** | Supply-chain hardening, flagged by Sonar. | Small |
 | 12 | **No Docker layer caching, no lint step for the frontend.** | Speed and quality. | Small |
 
 ## 4. Concrete findings from checking the code
@@ -92,7 +92,7 @@ merge after a deploy-path change should be watched, with the previous image tag 
 | 8 | Publish WSO2 definitions from CI | Open | Needs `az containerapp exec` against a running gateway; not attempted without a way to test it |
 | 9 | SonarCloud gate enforced | Not possible on the free plan | |
 | 10 | Concurrency | **Done.** PR runs cancel superseded runs; each Container App deploys one at a time | |
-| 11 | Dependency updates, SHA pinning | **Mostly done.** Dependabot added for NuGet, npm, Actions and Docker. The third-party actions (`azure/login`, `gitleaks`) are pinned to commit SHAs; GitHub-owned actions use version tags | |
+| 11 | SHA pinning | **Done** for the third-party actions (`azure/login`, `gitleaks`); GitHub-owned actions use version tags. Automatic dependency updates (Dependabot) were tried and removed: the rubric does not ask for them, and they opened about 30 pull requests, many of them major-version bumps that would break the .NET 8 services | |
 | 12 | Caching and lint | **Partly.** npm cache added; the production build runs with `CI=true`, so lint warnings fail it. No Docker layer cache | |
 
 ### What the local checks found
