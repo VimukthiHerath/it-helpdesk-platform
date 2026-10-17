@@ -3,10 +3,12 @@ name: Testing - code quality (reusable)
 # Static analysis and quality metrics for the Ticket service. Owner: Vimukthi (Code Quality and Metrics).
 # Edit this file and testing/quality/ only.
 #
-# STARTING POINT: the job calls testing/quality/run.sh, which is a placeholder that passes.
-# SonarCloud already analyses the whole repository in sonarcloud.yml; this job is where the quality
-# indicators for the Ticket service (coverage, code smells, technical debt, duplication) are collected
-# and reported.
+# The job runs testing/quality/run.sh, the same command as `./scripts/run-tests.sh quality`:
+#   1. coverage by file, from the unit tests (it runs them itself, so it needs the same MySQL as the unit job)
+#   2. the Ticket service's quality indicators and open issues from SonarCloud, which already analyses
+#      the repository in sonarcloud.yml
+# It fails if the quality gate is not OK, if coverage is below MIN_COVERAGE, or if a blocker or critical
+# issue is open.
 
 on:
   workflow_call:
@@ -18,6 +20,22 @@ jobs:
   quality:
     name: Ticket code quality
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      ConnectionStrings__TicketDb: Server=127.0.0.1;Port=3306;Database=ticket_db;Uid=root;Pwd=root;
+      TZ: UTC
+      MIN_COVERAGE: '40'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,10 +45,18 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Prepare the test database
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          dotnet ef database update --context ApplicationDbContext \
+            --project services/ticket/Ticket.Api/Ticket.Api.csproj \
+            --startup-project services/ticket/Ticket.Api/Ticket.Api.csproj \
+            --connection "$ConnectionStrings__TicketDb"
+
       - name: Run the quality checks
         run: bash testing/quality/run.sh
 
-      - name: Upload the quality report
+      - name: Upload the quality reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
