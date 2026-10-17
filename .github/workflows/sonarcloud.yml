@@ -97,10 +97,12 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info" \
-            /d:sonar.coverage.exclusions="frontend/src/**,**/Migrations/**"
+            /d:sonar.coverage.exclusions="frontend/src/**,**/Migrations/**,**/Program.cs"
           # sonar.coverage.exclusions: most frontend pages have no tests yet, and the free plan cannot edit the quality gate's
           # "80% coverage on new code" rule, so frontend files are left out of the coverage figure. Backend services are still measured.
           # **/Migrations/** is generated EF code (schema snapshots) that tests never execute, so it is left out too.
+          # **/Program.cs is each service's start-up wiring (registering services, middleware, the Swagger switch), not logic;
+          # the services that have integration tests exercise it anyway, and SLA and Notification have no host-level tests.
           # Remove the frontend entry once the frontend pages have tests.
           # No sonar.qualitygate.wait: the free SonarCloud plan refuses gate data for any branch except the main one (HTTP 403),
           # which failed this step even though the analysis uploaded fine. Read the gate result on sonarcloud.io instead.
