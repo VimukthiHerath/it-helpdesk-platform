@@ -193,7 +193,10 @@ ticket (via gateway)|$gw/ticket/v1/health
 assignment (via gateway)|$gw/assignment/v1/health
 sla (via gateway)|$gw/sla/v1/health
 notification (via gateway)|$gw/notification/v1/health
-frontend|$fe/"
+frontend|$fe/
+auth swagger|https://auth-service.$DOMAIN/swagger/index.html
+ticket swagger|https://ticket-service.$DOMAIN/swagger/index.html
+assignment swagger|https://assignment-service.$DOMAIN/swagger/index.html"
   local pending line name url code
   while : ; do
     pending=""
@@ -221,6 +224,10 @@ summary() {
   echo
   say "  Frontend:  https://$FRONTEND_APP.$DOMAIN"
   say "  Gateway:   https://$GATEWAY_APP.$DOMAIN"
+  say "  Swagger UI (the services' own API docs):"
+  say "    Auth:       https://auth-service.$DOMAIN/swagger"
+  say "    Ticket:     https://ticket-service.$DOMAIN/swagger"
+  say "    Assignment: https://assignment-service.$DOMAIN/swagger"
   echo
   say "  Everything is now running and costing money. When you are done run:  ./scripts/stop-all.sh"
 }

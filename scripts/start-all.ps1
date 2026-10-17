@@ -230,6 +230,9 @@ function Wait-UntilUp {
         'sla (via gateway)'         = "$gw/sla/v1/health"
         'notification (via gateway)'= "$gw/notification/v1/health"
         'frontend'                  = "$fe/"
+        'auth swagger'              = "https://auth-service.$($script:Domain)/swagger/index.html"
+        'ticket swagger'            = "https://ticket-service.$($script:Domain)/swagger/index.html"
+        'assignment swagger'        = "https://assignment-service.$($script:Domain)/swagger/index.html"
     }
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     while ($true) {
@@ -255,6 +258,10 @@ function Show-Summary {
     Say ''
     Say "  Frontend:  https://$FrontendApp.$($script:Domain)"
     Say "  Gateway:   https://$GatewayApp.$($script:Domain)"
+    Say "  Swagger UI (the services' own API docs):"
+    Say "    Auth:       https://auth-service.$($script:Domain)/swagger"
+    Say "    Ticket:     https://ticket-service.$($script:Domain)/swagger"
+    Say "    Assignment: https://assignment-service.$($script:Domain)/swagger"
     Say ''
     Say '  Everything is now running and costing money. When you are done run:  .\scripts\stop-all.ps1'
 }
