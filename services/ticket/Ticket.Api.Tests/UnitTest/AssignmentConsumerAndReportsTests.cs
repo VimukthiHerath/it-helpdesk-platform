@@ -329,6 +329,25 @@ public class TicketAssignedConsumerTests
     }
 
     [Fact]
+    public async Task Consumer_WhenConsumeIsCanceled_LogsShutdownMessage()
+    {
+        var cancellation = new CancellationTokenSource();
+        var consumer = new Mock<IConsumer<string, string>>();
+        consumer.Setup(x => x.Consume(It.IsAny<CancellationToken>()))
+            .Callback<CancellationToken>(_ => cancellation.Cancel())
+            .Throws<OperationCanceledException>();
+        var scopeProvider = CreateScopeProvider(
+            new Mock<ITicketAssignmentSyncService>(MockBehavior.Strict).Object);
+        var logger = new Mock<ILogger<TicketAssignedConsumer>>();
+        var service = CreateService(consumer.Object, scopeProvider.Object, logger);
+
+        await service.Run(cancellation.Token);
+
+        VerifyLog(logger, LogLevel.Information, "Ticket Kafka consumer is shutting down.");
+        consumer.Verify(x => x.Close(), Times.Once);
+    }
+
+    [Fact]
     public async Task Consumer_LogsSyncFailuresAndConsumeFailures()
     {
         var sync = new Mock<ITicketAssignmentSyncService>();
