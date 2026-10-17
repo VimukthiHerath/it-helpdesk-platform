@@ -32,4 +32,30 @@ public class GetAdminEmailsEndpointTests
 
         Assert.Equal(new[] { "active-admin@example.com" }, emails);
     }
+
+    [Fact]
+    public async Task GetAdminEmails_WhenNoActiveAdministrators_ReturnsEmptyList()
+    {
+        await using var context = AuthControllerTestHelpers.CreateContext();
+        context.Users.AddRange(
+            new User
+            {
+                Id = 1, Name = "Inactive", Email = "inactive@example.com",
+                Password = "password", Role = UserRole.Administrator, IsActive = false
+            },
+            new User
+            {
+                Id = 2, Name = "Agent", Email = "agent@example.com",
+                Password = "password", Role = UserRole.Agent, IsActive = true
+            });
+        await context.SaveChangesAsync();
+        var controller = AuthControllerTestHelpers.CreateController(
+            context, AuthControllerTestHelpers.CreateRotationClient().Object);
+
+        var result = Assert.IsType<OkObjectResult>(await controller.GetAdminEmails());
+
+        var emails = (IEnumerable<string>)result.Value!.GetType()
+            .GetProperty("emails")!.GetValue(result.Value)!;
+        Assert.Empty(emails);
+    }
 }

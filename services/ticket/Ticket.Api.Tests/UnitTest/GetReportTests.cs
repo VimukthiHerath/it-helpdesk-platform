@@ -60,6 +60,62 @@ public class GetReportTests
     }
 
     [Fact]
+    public async Task GetReport_DateRangeIncludesStartAndEndOfDayBoundaries()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        var day = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
+        context.Tickets.AddRange(
+            new Tickets
+            {
+                Id = 1, Description = "At start", IssueType = "Network", CreatedBy = 1,
+                CreatedAt = day
+            },
+            new Tickets
+            {
+                Id = 2, Description = "At end", IssueType = "Network", CreatedBy = 1,
+                CreatedAt = day.AddDays(1).AddTicks(-1)
+            },
+            new Tickets
+            {
+                Id = 3, Description = "Outside", IssueType = "Network", CreatedBy = 1,
+                CreatedAt = day.AddDays(1)
+            });
+        await context.SaveChangesAsync();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService,
+            userId: 42, roles: new[] { "Administrator" });
+
+        var result = Assert.IsType<OkObjectResult>(await controller.GetReport(null, null, day, day));
+
+        var report = Assert.IsAssignableFrom<IEnumerable<TicketReportItemDTO>>(result.Value);
+        Assert.Equal(new[] { 2, 1 }, report.Select(item => item.TicketId));
+    }
+
+    [Fact]
+    public async Task GetReport_WhenDateRangeIsReversed_ReturnsEmptyResult()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        context.Tickets.Add(new Tickets
+        {
+            Id = 1, Description = "Ticket", IssueType = "Network", CreatedBy = 1,
+            CreatedAt = new DateTime(2026, 10, 17, 12, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService,
+            userId: 42, roles: new[] { "Administrator" });
+
+        var result = Assert.IsType<OkObjectResult>(await controller.GetReport(
+            null, null,
+            new DateTime(2026, 10, 18),
+            new DateTime(2026, 10, 17)));
+
+        Assert.Empty(Assert.IsAssignableFrom<IEnumerable<TicketReportItemDTO>>(result.Value));
+    }
+
+    [Fact]
     public async Task GetReport_WhenContextFails_ReturnsProblemAndLogsError()
     {
         var (context, logger, producer, configuration, statusService) =

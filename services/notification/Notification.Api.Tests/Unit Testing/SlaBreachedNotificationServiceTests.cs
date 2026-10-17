@@ -91,6 +91,30 @@ public class SlaBreachedNotificationServiceTests
         Assert.Empty(context.ProcessedEvents);
     }
 
+    [Fact]
+    public async Task ProcessAsync_WhenLaterAdministratorEmailFails_DoesNotPersistProcessedState()
+    {
+        await using var context = CreateContext();
+        var email = new Mock<IEmailService>();
+        email.Setup(x => x.SendAsync(
+                "admin2@example.com", It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP unavailable"));
+        var resolver = new Mock<IAdminEmailResolver>();
+        resolver.Setup(x => x.ResolveAdminEmailsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "admin1@example.com", "admin2@example.com" });
+        var service = CreateService(context, email, resolver);
+
+        var exception = await Record.ExceptionAsync(() =>
+            service.ProcessAsync(CreateEvent(), "SlaBreached-partial", CancellationToken.None));
+
+        Assert.Null(exception);
+        email.Verify(x => x.SendAsync(
+            "admin1@example.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        email.Verify(x => x.SendAsync(
+            "admin2@example.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        Assert.Empty(context.ProcessedEvents);
+    }
+
     private static SlaBreachedNotificationService CreateService(
         NotificationDbContext context,
         Mock<IEmailService> email,

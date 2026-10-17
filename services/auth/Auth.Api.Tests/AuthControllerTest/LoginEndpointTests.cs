@@ -68,6 +68,23 @@ public class LoginEndpointTests
     }
 
     [Fact]
+    public async Task Login_WhenEmailDoesNotExist_ReturnsUnauthorized()
+    {
+        await using var context = AuthControllerTestHelpers.CreateContext();
+        var controller = AuthControllerTestHelpers.CreateController(
+            context, AuthControllerTestHelpers.CreateRotationClient().Object);
+
+        var result = await controller.Login(new UserLoginDTO
+        {
+            Email = "missing@example.com",
+            Password = "password"
+        });
+
+        Assert.Equal(StatusCodes.Status401Unauthorized,
+            AuthControllerTestHelpers.GetStatusCode(result.Result!));
+    }
+
+    [Fact]
     public async Task Login_WhenModelStateIsInvalid_ReturnsValidationProblem()
     {
         await using var context = AuthControllerTestHelpers.CreateContext();

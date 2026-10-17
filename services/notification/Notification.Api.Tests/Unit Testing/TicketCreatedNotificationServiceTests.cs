@@ -98,6 +98,22 @@ public class TicketCreatedNotificationServiceTests
         Assert.Empty(context.ProcessedEvents);
     }
 
+    [Fact]
+    public async Task ProcessAsync_WhenCancellationIsRequested_DoesNotPersistProcessedState()
+    {
+        await using var context = CreateContext();
+        var email = new Mock<IEmailService>();
+        var resolver = new Mock<IUserEmailResolver>();
+        resolver.Setup(x => x.ResolveUserEmailAsync(42, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+        var service = CreateService(context, email, resolver);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ProcessAsync(CreateEvent(), "TicketCreated-canceled", CancellationToken.None));
+
+        Assert.Empty(context.ProcessedEvents);
+    }
+
     private static TicketCreatedNotificationService CreateService(
         NotificationDbContext context,
         Mock<IEmailService> email,
