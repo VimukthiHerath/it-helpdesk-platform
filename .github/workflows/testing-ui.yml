@@ -1,0 +1,39 @@
+name: Testing - UI and end-to-end (reusable)
+
+# UI / end-to-end tests of the ticket flow. Owner: Senul (UI / E2E Testing).
+# Edit this file and testing/ui/ only.
+#
+# STARTING POINT: the job calls testing/ui/run.sh, which is a placeholder that passes.
+# Replace it with the real browser tests. They need a running system: either the deployed Azure app
+# (start it with ./scripts/start-all.sh) or a local stack. Decide which and document it in testing/ui/README.md.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  ui:
+    name: Ticket UI and end-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run the UI tests
+        run: bash testing/ui/run.sh
+
+      - name: Upload the UI test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-ui-results
+          path: testing/ui/reports/
+          if-no-files-found: ignore
+          retention-days: 14

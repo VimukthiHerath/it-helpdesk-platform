@@ -1,0 +1,68 @@
+name: Testing - unit (reusable)
+
+# Unit tests for the Ticket service. Owner: Shamim (Unit Testing and Mocking).
+# Edit this file, testing/unit/ and services/ticket/Ticket.Api.Tests/ only.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Ticket unit tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      ConnectionStrings__TicketDb: Server=127.0.0.1;Port=3306;Database=ticket_db;Uid=root;Pwd=root;
+      TZ: UTC
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore and build
+        run: |
+          dotnet restore services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj
+          dotnet build services/ticket/Ticket.Api.Tests/Ticket.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Prepare the test database
+        run: |
+          dotnet tool update --global dotnet-ef --version 8.0.8 || dotnet tool install --global dotnet-ef --version 8.0.8
+          dotnet ef database update --context ApplicationDbContext \
+            --project services/ticket/Ticket.Api/Ticket.Api.csproj \
+            --startup-project services/ticket/Ticket.Api/Ticket.Api.csproj \
+            --connection "$ConnectionStrings__TicketDb"
+
+      # The same command as `./scripts/run-tests.sh unit`.
+      - name: Run the unit tests
+        run: bash testing/unit/run.sh
+
+      - name: Summarise results
+        if: always()
+        run: python3 .github/scripts/test-summary.py "ticket unit" TestResults/unit >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-unit-results
+          path: TestResults/unit/
+          if-no-files-found: warn
+          retention-days: 14

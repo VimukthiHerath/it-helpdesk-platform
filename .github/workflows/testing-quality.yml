@@ -1,0 +1,40 @@
+name: Testing - code quality (reusable)
+
+# Static analysis and quality metrics for the Ticket service. Owner: Vimukthi (Code Quality and Metrics).
+# Edit this file and testing/quality/ only.
+#
+# STARTING POINT: the job calls testing/quality/run.sh, which is a placeholder that passes.
+# SonarCloud already analyses the whole repository in sonarcloud.yml; this job is where the quality
+# indicators for the Ticket service (coverage, code smells, technical debt, duplication) are collected
+# and reported.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Ticket code quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run the quality checks
+        run: bash testing/quality/run.sh
+
+      - name: Upload the quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-quality-results
+          path: testing/quality/reports/
+          if-no-files-found: ignore
+          retention-days: 14

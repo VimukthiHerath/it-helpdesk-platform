@@ -1,0 +1,39 @@
+name: Testing - mutation (reusable)
+
+# Mutation testing of the Ticket service's unit tests. Owner: Rashaad (Mutation Testing).
+# Edit this file and testing/mutation/ only.
+#
+# STARTING POINT: the job calls testing/mutation/run.sh, which is a placeholder that passes.
+# Replace the placeholder with the real Stryker.NET run, and add any setup steps you need below
+# (for example installing the tool, or the MySQL service the Ticket tests use).
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Ticket mutation tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run mutation testing
+        run: bash testing/mutation/run.sh
+
+      - name: Upload the mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-mutation-results
+          path: testing/mutation/reports/
+          if-no-files-found: ignore
+          retention-days: 14

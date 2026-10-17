@@ -1,0 +1,82 @@
+name: Testing Pipeline
+
+# SE3112 take-home: one pipeline that links the test layers for the Ticket service.
+#
+# It only TESTS. It never builds an image, never touches Azure and never blocks a service's own
+# release pipeline, so every service stays independently deployable.
+#
+# One reusable workflow per area, so each person owns one file and nobody edits anyone else's:
+#   testing-unit.yml      unit tests with test doubles
+#   testing-mutation.yml  mutation testing of those unit tests
+#   testing-quality.yml   static analysis and quality metrics
+#   testing-ui.yml        UI / end-to-end tests
+# The same checks can be run on a laptop with:  ./scripts/run-tests.sh [unit|mutation|quality|ui|all]
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['testing/**']
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'testing/**'
+      - 'services/ticket/**'
+      - 'scripts/run-tests.sh'
+      - '.github/workflows/testing-*.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit tests
+    uses: ./.github/workflows/testing-unit.yml
+
+  mutation:
+    name: Mutation tests
+    uses: ./.github/workflows/testing-mutation.yml
+
+  quality:
+    name: Code quality
+    uses: ./.github/workflows/testing-quality.yml
+
+  ui:
+    name: UI / end-to-end
+    uses: ./.github/workflows/testing-ui.yml
+
+  # One summary of the whole run, even when a layer failed.
+  report:
+    name: Combined report
+    needs: [unit, mutation, quality, ui]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      UNIT: ${{ needs.unit.result }}
+      MUTATION: ${{ needs.mutation.result }}
+      QUALITY: ${{ needs.quality.result }}
+      UI: ${{ needs.ui.result }}
+    steps:
+      - name: Write the combined summary
+        run: |
+          {
+            echo '## Testing pipeline: combined report'
+            echo
+            echo '| Layer | Result |'
+            echo '|---|---|'
+            echo "| Unit tests and mocking | $UNIT |"
+            echo "| Mutation testing | $MUTATION |"
+            echo "| Code quality and metrics | $QUALITY |"
+            echo "| UI / end-to-end | $UI |"
+            echo
+            echo 'Each layer uploads its own report as a downloadable artifact on this run.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail the run if any layer failed
+        run: |
+          for r in "$UNIT" "$MUTATION" "$QUALITY" "$UI"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then echo "A layer did not pass."; exit 1; fi
+          done
