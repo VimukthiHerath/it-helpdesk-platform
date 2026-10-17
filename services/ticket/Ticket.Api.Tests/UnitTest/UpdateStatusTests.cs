@@ -1,7 +1,9 @@
+using Confluent.Kafka;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Ticket.Api.Controller;
 using Ticket.Api.DTO;
 using Ticket.Api.Model;
 using Xunit;
@@ -146,5 +148,138 @@ public class UpdateStatusTests
             LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
             It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenModelStateIsInvalid_ReturnsExactMessage()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService, userId: 42);
+        controller.ModelState.AddModelError("status", "required");
+
+        var result = Assert.IsType<BadRequestObjectResult>(
+            await controller.UpdateStatus(1, new UpdateTicketStatusDTO()));
+
+        Assert.Equal("A valid status is required.", GetProperty(result.Value!, "message"));
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenStatusIsNotSettable_ReturnsExactMessage()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService, userId: 42);
+
+        var result = Assert.IsType<BadRequestObjectResult>(
+            await controller.UpdateStatus(1, new UpdateTicketStatusDTO
+            {
+                NewStatus = TicketStatus.assigned
+            }));
+
+        Assert.Equal("Status must be In Progress, Resolved, or Closed.",
+            GetProperty(result.Value!, "message"));
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenClosed_UsesDefaultTopicAndPublishesCompleteEvent()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        producer.Setup(x => x.ProduceAsync(
+                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DeliveryResult<string, string>)null!);
+        context.Tickets.Add(new Tickets
+        {
+            Id = 7, Description = "Close me", CreatedBy = 1, AssignedTo = 42,
+            Status = TicketStatus.in_progress
+        });
+        context.SaveChanges();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService, userId: 42, roles: new[] { "Agent" });
+
+        var result = await controller.UpdateStatus(7, new UpdateTicketStatusDTO
+        {
+            NewStatus = TicketStatus.closed
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        producer.Verify(x => x.ProduceAsync("ticket-resolved",
+            It.Is<Message<string, string>>(message =>
+                message.Key == "7" &&
+                message.Value.Contains("\"ticketId\":7") &&
+                message.Value.Contains("\"resolvedByUserId\":\"42\"") &&
+                message.Value.Contains("\"status\":\"closed\"")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        VerifyLog(logger, LogLevel.Information, "Published TicketResolvedEvent for Ticket {TicketId}");
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenResolvedTopicIsConfigured_UsesConfiguredTopic()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        configuration.SetupGet(x => x["Kafka:TicketResolvedTopic"]).Returns("ticket-resolved-test");
+        producer.Setup(x => x.ProduceAsync(
+                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DeliveryResult<string, string>)null!);
+        context.Tickets.Add(new Tickets
+        {
+            Id = 8, Description = "Resolve me", CreatedBy = 1, AssignedTo = 42,
+            Status = TicketStatus.in_progress
+        });
+        context.SaveChanges();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService, userId: 42, roles: new[] { "Agent" });
+
+        await controller.UpdateStatus(8, new UpdateTicketStatusDTO
+        {
+            NewStatus = TicketStatus.resolved
+        });
+
+        producer.Verify(x => x.ProduceAsync("ticket-resolved-test",
+            It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_WhenPublishingFails_ReturnsExactErrorAndLogsExpectedMessage()
+    {
+        var (context, logger, producer, configuration, statusService) =
+            TicketControllerTestFixture.CreateDependencies();
+        producer.Setup(x => x.ProduceAsync(
+                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("broker unavailable"));
+        context.Tickets.Add(new Tickets
+        {
+            Id = 7, Description = "Publish failure", CreatedBy = 1, AssignedTo = 42,
+            Status = TicketStatus.assigned
+        });
+        context.SaveChanges();
+        var controller = TicketControllerTestFixture.CreateController(
+            context, logger, producer, configuration, statusService, userId: 42, roles: new[] { "Agent" });
+
+        var result = await controller.UpdateStatus(7, new UpdateTicketStatusDTO
+        {
+            NewStatus = TicketStatus.resolved
+        });
+
+        var error = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, error.StatusCode);
+        Assert.Equal("Something went wrong on our end. Please try again in a moment.",
+            GetProperty(error.Value!, "message"));
+        VerifyLog(logger, LogLevel.Error, "Error updating status for ticket {TicketId}");
+    }
+
+    private static object? GetProperty(object value, string name) =>
+        value.GetType().GetProperty(name)!.GetValue(value);
+
+    private static void VerifyLog(Mock<ILogger<TicketController>> logger, LogLevel level, string message)
+    {
+        var prefix = message.Split('{')[0].TrimEnd();
+        logger.Verify(x => x.Log(level, It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((state, _) => state.ToString()!.StartsWith(prefix)),
+            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 }
