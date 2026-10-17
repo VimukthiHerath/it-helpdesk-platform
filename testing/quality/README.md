@@ -45,6 +45,10 @@ The fixes made on this branch and what each one resolves:
 | `CA1869` new `JsonSerializerOptions` on every call (3) | One shared static instance |
 | `csharpsquid:S6968` missing `ProducesResponseType` (2) | Added, which also improves the Swagger documentation |
 
+**Checked locally for the Dockerfile fix:** the old deployed image reports `uid=0(root)`; the rebuilt image reports
+`uid=1654(app)`, starts normally, answers `GET /health` with 200 and logs no permission errors
+(`docker run --rm --entrypoint id <image>` shows the user).
+
 SonarCloud only re-analyses after the change reaches a pull request or `main`, so run
 `PR=<number> ./scripts/run-tests.sh quality` on the pull request, or the default on `main`
 once merged, to see the numbers move.
