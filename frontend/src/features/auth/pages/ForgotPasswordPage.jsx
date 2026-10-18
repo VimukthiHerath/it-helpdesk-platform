@@ -81,7 +81,7 @@ const ForgotPasswordPage = () => {
                     </form>
 
                     <div className="auth-footer-link">
-                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>back to login</a>
+                        <a href="/login" onClick={(e) => { e.preventDefault(); void navigate('/login'); }}>back to login</a>
                     </div>
                 </div>
             </div>

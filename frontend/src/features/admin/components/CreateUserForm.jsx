@@ -53,7 +53,7 @@ const CreateUserForm = () => {
 
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -78,7 +78,7 @@ const CreateUserForm = () => {
             });
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
 

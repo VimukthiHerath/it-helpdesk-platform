@@ -18,7 +18,7 @@ const AgentRotationPanel = () => {
     const loadAgents = async () => {
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -29,7 +29,7 @@ const AgentRotationPanel = () => {
             const data = await response.json().catch(() => ([]));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to load the agent rotation.');
@@ -50,7 +50,7 @@ const AgentRotationPanel = () => {
     };
 
     useEffect(() => {
-        loadAgents();
+        void loadAgents();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -66,7 +66,7 @@ const AgentRotationPanel = () => {
 
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -82,7 +82,7 @@ const AgentRotationPanel = () => {
             });
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (response.status === 403) {
@@ -113,7 +113,7 @@ const AgentRotationPanel = () => {
 
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -126,7 +126,7 @@ const AgentRotationPanel = () => {
             });
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (response.status === 403) {
