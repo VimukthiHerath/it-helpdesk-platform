@@ -1,0 +1,127 @@
+{
+  "directory": "services/ticket/Ticket.Api",
+  "gate": "OK",
+  "metrics": {
+    "coverage": "41.8",
+    "reliability_rating": "1.0",
+    "complexity": "240",
+    "duplicated_lines_density": "15.7",
+    "code_smells": "14",
+    "security_rating": "2.0",
+    "sqale_index": "60",
+    "sqale_rating": "1.0",
+    "bugs": "0",
+    "branch_coverage": "35.7",
+    "cognitive_complexity": "74",
+    "ncloc": "1169",
+    "vulnerabilities": "1",
+    "line_coverage": "42.9"
+  },
+  "open_issues": [
+    {
+      "rule": "external_roslyn:CA1869",
+      "severity": "INFO",
+      "file": "services/ticket/Ticket.Api/Controller/TicketController.cs",
+      "line": 211,
+      "message": "Avoid creating a new 'JsonSerializerOptions' instance for every serialization operation. Cache and reuse instances instead."
+    },
+    {
+      "rule": "csharpsquid:S101",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/DTO/TicketReportItemDTO.cs",
+      "line": 3,
+      "message": "Rename class 'TicketReportItemDTO' to match pascal case naming rules, consider using 'TicketReportItemDto'."
+    },
+    {
+      "rule": "csharpsquid:S101",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/DTO/TicketStatusHistoryItemDTO.cs",
+      "line": 5,
+      "message": "Rename class 'TicketStatusHistoryItemDTO' to match pascal case naming rules, consider using 'TicketStatusHistoryItemDto'."
+    },
+    {
+      "rule": "csharpsquid:S101",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/DTO/TicketStatusResponseDTO.cs",
+      "line": 5,
+      "message": "Rename class 'TicketStatusResponseDTO' to match pascal case naming rules, consider using 'TicketStatusResponseDto'."
+    },
+    {
+      "rule": "csharpsquid:S101",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/DTO/UpdateTicketStatusDTO.cs",
+      "line": 6,
+      "message": "Rename class 'UpdateTicketStatusDTO' to match pascal case naming rules, consider using 'UpdateTicketStatusDto'."
+    },
+    {
+      "rule": "csharpsquid:S6964",
+      "severity": "MAJOR",
+      "file": "services/ticket/Ticket.Api/DTO/UpdateTicketStatusDTO.cs",
+      "line": 9,
+      "message": "Value type property used as input in a controller action should be nullable, required or annotated with the JsonRequiredAttribute to avoid under-posting."
+    },
+    {
+      "rule": "external_roslyn:CA1869",
+      "severity": "INFO",
+      "file": "services/ticket/Ticket.Api/Services/TicketAssignedConsumer.cs",
+      "line": 83,
+      "message": "Avoid creating a new 'JsonSerializerOptions' instance for every serialization operation. Cache and reuse instances instead."
+    },
+    {
+      "rule": "csharpsquid:S6667",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/Services/TicketAssignedConsumer.cs",
+      "line": 139,
+      "message": "Logging in a catch clause should pass the caught exception as a parameter."
+    },
+    {
+      "rule": "csharpsquid:S1118",
+      "severity": "MAJOR",
+      "file": "services/ticket/Ticket.Api/Program.cs",
+      "line": 188,
+      "message": "Add a 'protected' constructor or the 'static' keyword to the class declaration."
+    },
+    {
+      "rule": "csharpsquid:S6968",
+      "severity": "MAJOR",
+      "file": "services/ticket/Ticket.Api/Controller/TicketController.cs",
+      "line": 155,
+      "message": "Annotate this method with ProducesResponseType containing the return type for successful responses."
+    },
+    {
+      "rule": "csharpsquid:S6968",
+      "severity": "MAJOR",
+      "file": "services/ticket/Ticket.Api/Controller/TicketController.cs",
+      "line": 49,
+      "message": "Annotate this method with ProducesResponseType containing the return type for successful responses."
+    },
+    {
+      "rule": "external_roslyn:CA1869",
+      "severity": "INFO",
+      "file": "services/ticket/Ticket.Api/Controller/TicketController.cs",
+      "line": 113,
+      "message": "Avoid creating a new 'JsonSerializerOptions' instance for every serialization operation. Cache and reuse instances instead."
+    },
+    {
+      "rule": "csharpsquid:S101",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/DTO/TicketCreateDTO.cs",
+      "line": 5,
+      "message": "Rename class 'TicketCreateDTO' to match pascal case naming rules, consider using 'TicketCreateDto'."
+    },
+    {
+      "rule": "docker:S6471",
+      "severity": "MINOR",
+      "file": "services/ticket/Ticket.Api/Dockerfile",
+      "line": 6,
+      "message": "This image runs with \"root\" or \"containerAdministrator\" as the default user. Make sure it is safe here."
+    },
+    {
+      "rule": "csharpsquid:S6966",
+      "severity": "MAJOR",
+      "file": "services/ticket/Ticket.Api/Program.cs",
+      "line": 186,
+      "message": "Await RunAsync instead."
+    }
+  ]
+}

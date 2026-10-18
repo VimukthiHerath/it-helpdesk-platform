@@ -512,3 +512,6 @@ docs/DEPLOYMENT_HANDOVER.md
 
 # Stray test project at the repo root, kept locally only
 /tests/
+
+# testing pipeline reports (regenerated on every run)
+testing/*/reports/
