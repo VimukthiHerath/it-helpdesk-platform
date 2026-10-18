@@ -5,7 +5,7 @@ using Confluent.Kafka;
 
 namespace Ticket.Api.Services;
 
-public sealed class TicketAssignedConsumer : BackgroundService
+public class TicketAssignedConsumer : BackgroundService
 {
     private const string ConsumerGroupId = "ticket-workers";
 
@@ -15,15 +15,18 @@ public sealed class TicketAssignedConsumer : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly ILogger<TicketAssignedConsumer> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ITicketConsumerFactory _consumerFactory;
 
     public TicketAssignedConsumer(
         IConfiguration configuration,
         ILogger<TicketAssignedConsumer> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        ITicketConsumerFactory consumerFactory)
     {
         _configuration = configuration;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _consumerFactory = consumerFactory;
     }
 
     // Same background-thread fix as Assignment.Api's TicketCreatedConsumer:
@@ -50,8 +53,7 @@ public sealed class TicketAssignedConsumer : BackgroundService
             EnableAutoCommit = true
         };
 
-        using var consumer = new ConsumerBuilder<string, string>(
-            consumerConfig).Build();
+        using var consumer = _consumerFactory.Create(consumerConfig);
 
         consumer.Subscribe(topic);
 
@@ -109,7 +111,7 @@ public sealed class TicketAssignedConsumer : BackgroundService
                     {
                         using var scope = _scopeFactory.CreateScope();
                         var syncService = scope.ServiceProvider
-                            .GetRequiredService<TicketAssignmentSyncService>();
+                            .GetRequiredService<ITicketAssignmentSyncService>();
                         await syncService.ApplyAsync(assignedEvent, stoppingToken);
                     }
                     catch (Exception exception) when (exception is not OperationCanceledException)
