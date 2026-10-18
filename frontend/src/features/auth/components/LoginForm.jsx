@@ -76,7 +76,7 @@ const LoginForm = () => {
                 autoClose: 1800,
             });
 
-            navigate('/', { replace: true });
+            void navigate('/', { replace: true });
 
         } catch (error) {
             console.error('Error logging in:', error);
@@ -131,7 +131,7 @@ const LoginForm = () => {
                         </div>
 
                         <div className="field forgot-password-field">
-                            <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="forgot-password-link">
+                            <a href="/forgot-password" onClick={(e) => { e.preventDefault(); void navigate('/forgot-password'); }} className="forgot-password-link">
                                 forgot password?
                             </a>
                         </div>

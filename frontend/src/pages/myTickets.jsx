@@ -34,7 +34,7 @@ const MyTickets = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -48,7 +48,7 @@ const MyTickets = () => {
 
                 if (response.status === 401) {
                     localStorage.removeItem('token');
-                    navigate('/login', { replace: true });
+                    void navigate('/login', { replace: true });
                     return;
                 }
 
@@ -67,7 +67,7 @@ const MyTickets = () => {
             }
         };
 
-        loadTickets();
+        void loadTickets();
     }, [navigate]);
 
     return (

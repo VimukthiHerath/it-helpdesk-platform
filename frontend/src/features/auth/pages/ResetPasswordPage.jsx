@@ -71,7 +71,7 @@ const ResetPasswordPage = () => {
             toast.success(data.message || 'Password successfully reset.', { position: 'top-right' });
 
             setTimeout(() => {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
             }, 2000);
 
         } catch (error) {
@@ -134,7 +134,7 @@ const ResetPasswordPage = () => {
                     </form>
 
                     <div className="auth-footer-link">
-                        <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>back to login</a>
+                        <a href="/login" onClick={(e) => { e.preventDefault(); void navigate('/login'); }}>back to login</a>
                     </div>
                 </div>
             </div>

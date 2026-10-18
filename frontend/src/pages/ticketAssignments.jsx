@@ -41,7 +41,7 @@ const TicketAssignments = () => {
     const loadAll = async () => {
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -58,7 +58,7 @@ const TicketAssignments = () => {
             const [ticketsRes, assignmentsRes, agentsRes] = responses;
 
             if (responses.some((res) => res.status === 401)) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
 
@@ -84,7 +84,7 @@ const TicketAssignments = () => {
     };
 
     useEffect(() => {
-        loadAll();
+        void loadAll();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -101,7 +101,7 @@ const TicketAssignments = () => {
 
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -116,7 +116,7 @@ const TicketAssignments = () => {
             const data = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to reassign this ticket.');

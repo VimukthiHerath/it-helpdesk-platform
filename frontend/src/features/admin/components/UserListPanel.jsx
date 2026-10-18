@@ -37,7 +37,7 @@ const UserListPanel = () => {
     const loadUsers = async () => {
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -46,7 +46,7 @@ const UserListPanel = () => {
             const data = await response.json().catch(() => ([]));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to load users.');
@@ -59,7 +59,7 @@ const UserListPanel = () => {
     };
 
     useEffect(() => {
-        loadUsers();
+        void loadUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -79,7 +79,7 @@ const UserListPanel = () => {
     const saveEdit = async (id) => {
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -99,7 +99,7 @@ const UserListPanel = () => {
             const data = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to update user.');
@@ -120,7 +120,7 @@ const UserListPanel = () => {
 
         const token = getStoredToken();
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -134,7 +134,7 @@ const UserListPanel = () => {
             const data = await response.json().catch(() => ({}));
 
             if (response.status === 401) {
-                navigate('/login', { replace: true });
+                void navigate('/login', { replace: true });
                 return;
             }
             if (!response.ok) throw new Error(data?.message || 'Unable to deactivate user.');

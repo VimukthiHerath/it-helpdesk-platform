@@ -54,7 +54,7 @@ const TicketCreateForm = () => {
 
         const token = localStorage.getItem('token');
         if (!token) {
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -90,7 +90,7 @@ const TicketCreateForm = () => {
 
         if (response.status === 401) {
             localStorage.removeItem('token');
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
         }
 
@@ -102,7 +102,7 @@ const TicketCreateForm = () => {
 
         toast.success('Ticket created successfully');
         // replace: the form is not left in the history, so Back cannot return to a submitted form
-        navigate('/my-tickets', { replace: true });
+        void navigate('/my-tickets', { replace: true });
     };
 
     return (
