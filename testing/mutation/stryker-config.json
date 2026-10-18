@@ -3,6 +3,8 @@
     "mutate": [
       "Controller/**/*.cs",
       "Services/**/*.cs"
-    ]
+    ],
+    "reporters": ["html", "progress"],
+    "thresholds": { "high": 90, "low": 80, "break": 70 }
   }
 }
