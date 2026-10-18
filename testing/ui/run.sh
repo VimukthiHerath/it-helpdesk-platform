@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# UI / end-to-end tests of the ticket flow. Owner: Senul.
-#
-# PLACEHOLDER: passes without doing anything, so the pipeline stays green until this is implemented.
-# Replace the body with the real browser tests (see testing/ui/README.md).
-set -u
-echo "NOT IMPLEMENTED YET - UI / end-to-end tests. Owner: Senul. See testing/ui/README.md."
-exit 0
+# Owner: Senul. Real browser tests; a failed assertion must fail this script.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+: "${UI_BASE_URL:?Set UI_BASE_URL to the running frontend address.}"
+
+npm ci --no-audit --no-fund
+if [[ "$(uname -s)" == "Linux" ]]; then
+  npx playwright install --with-deps chromium
+else
+  npx playwright install chromium
+fi
+
+npm test -- "$@"

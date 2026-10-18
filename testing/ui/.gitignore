@@ -1,0 +1,8 @@
+node_modules/
+reports/
+test-results/
+.env
+.env.*
+!.env.example
+
+reports-history/
