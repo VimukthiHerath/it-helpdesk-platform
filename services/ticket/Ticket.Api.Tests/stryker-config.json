@@ -1,0 +1,8 @@
+{
+    "stryker-config": {
+        "mutate": [
+            "Controller/**/*.cs",
+            "Services/**/*.cs"
+        ]
+    }
+}
