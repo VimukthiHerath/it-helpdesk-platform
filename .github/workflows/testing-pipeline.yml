@@ -47,6 +47,13 @@ jobs:
   ui:
     name: UI / end-to-end
     uses: ./.github/workflows/testing-ui.yml
+    secrets:
+      UI_EMPLOYEE_EMAIL: ${{ secrets.UI_EMPLOYEE_EMAIL }}
+      UI_EMPLOYEE_PASSWORD: ${{ secrets.UI_EMPLOYEE_PASSWORD }}
+      UI_AGENT_EMAIL: ${{ secrets.UI_AGENT_EMAIL }}
+      UI_AGENT_PASSWORD: ${{ secrets.UI_AGENT_PASSWORD }}
+      UI_ADMIN_EMAIL: ${{ secrets.UI_ADMIN_EMAIL }}
+      UI_ADMIN_PASSWORD: ${{ secrets.UI_ADMIN_PASSWORD }}
 
   # One summary of the whole run, even when a layer failed.
   report:

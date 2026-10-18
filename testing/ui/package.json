@@ -1,0 +1,24 @@
+{
+  "name": "ticket-ui-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright browser checks for the Ticket-service assignment",
+  "scripts": {
+    "test": "playwright test login-smoke.spec.js ticket-journey.spec.js ticket-guards.spec.js",
+    "test:headed": "node scripts/run-headed.js",
+    "test:list": "playwright test --list",
+    "report": "playwright show-report reports/html",
+    "test:employee": "node scripts/run-employee.js",
+    "test:smoke": "playwright test login-smoke.spec.js",
+    "report:history": "node scripts/show-history.js",
+    "test:agent": "node scripts/run-agent.js",
+    "test:journey": "node scripts/run-suite.js --journey-only",
+    "test:suite": "node scripts/run-suite.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

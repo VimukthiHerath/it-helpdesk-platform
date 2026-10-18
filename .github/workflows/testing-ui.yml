@@ -1,14 +1,21 @@
 name: Testing - UI and end-to-end (reusable)
 
-# UI / end-to-end tests of the ticket flow. Owner: Senul (UI / E2E Testing).
-# Edit this file and testing/ui/ only.
-#
-# STARTING POINT: the job calls testing/ui/run.sh, which is a placeholder that passes.
-# Replace it with the real browser tests. They need a running system: either the deployed Azure app
-# (start it with ./scripts/start-all.sh) or a local stack. Decide which and document it in testing/ui/README.md.
-
+# Owner: Senul. Tests an existing deployment; does not deploy.
 on:
   workflow_call:
+    secrets:
+      UI_EMPLOYEE_EMAIL:
+        required: false
+      UI_EMPLOYEE_PASSWORD:
+        required: false
+      UI_AGENT_EMAIL:
+        required: false
+      UI_AGENT_PASSWORD:
+        required: false
+      UI_ADMIN_EMAIL:
+        required: false
+      UI_ADMIN_PASSWORD:
+        required: false
 
 permissions:
   contents: read
@@ -17,23 +24,30 @@ jobs:
   ui:
     name: Ticket UI and end-to-end tests
     runs-on: ubuntu-latest
+    env:
+      UI_BASE_URL: ${{ vars.UI_BASE_URL }}
+      UI_EMPLOYEE_EMAIL: ${{ secrets.UI_EMPLOYEE_EMAIL }}
+      UI_EMPLOYEE_PASSWORD: ${{ secrets.UI_EMPLOYEE_PASSWORD }}
+      UI_AGENT_EMAIL: ${{ secrets.UI_AGENT_EMAIL }}
+      UI_AGENT_PASSWORD: ${{ secrets.UI_AGENT_PASSWORD }}
+      UI_ADMIN_EMAIL: ${{ secrets.UI_ADMIN_EMAIL }}
+      UI_ADMIN_PASSWORD: ${{ secrets.UI_ADMIN_PASSWORD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: testing/ui/package-lock.json
       - name: Run the UI tests
         run: bash testing/ui/run.sh
-
       - name: Upload the UI test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: testing-ui-results
           path: testing/ui/reports/
-          if-no-files-found: ignore
+          if-no-files-found: warn
           retention-days: 14
