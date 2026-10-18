@@ -1,0 +1,2 @@
+# Stryker.NET writes its working output here; the report that matters is copied to testing/mutation/reports/
+StrykerOutput/

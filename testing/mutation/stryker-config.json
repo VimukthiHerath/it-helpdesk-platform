@@ -1,12 +1,10 @@
 {
   "stryker-config": {
-    "project": "Ticket.Api.csproj",
-    "test-projects": ["../Ticket.Api.Tests/Ticket.Api.Tests.csproj"],
     "mutate": [
-      "**/Services/*.cs",
-      "!**/Services/*Consumer.cs"
+      "Controller/**/*.cs",
+      "Services/**/*.cs"
     ],
-    "reporters": ["html", "progress", "json"],
-    "thresholds": { "high": 80, "low": 60, "break": 0 }
+    "reporters": ["html", "progress"],
+    "thresholds": { "high": 90, "low": 80, "break": 70 }
   }
 }
