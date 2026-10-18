@@ -17,8 +17,10 @@ public class GetMyTicketsTests
             TicketControllerTestFixture.CreateDependencies();
         context.Tickets.AddRange(
             new Tickets { Id = 1, Description = "Mine", IssueType = "Software", CreatedBy = 42 },
-            new Tickets { Id = 2, Description = "Other", IssueType = "Hardware", CreatedBy = 99 });
+            new Tickets { Id = 2, Description = "Other", IssueType = "Hardware", CreatedBy = 99 }
+        );
         context.SaveChanges();
+        
         var controller = TicketControllerTestFixture.CreateController(
             context, logger, producer, configuration, statusService, userId: 42);
 
@@ -79,8 +81,14 @@ public class GetMyTicketsTests
 
         Assert.Equal("Unable to retrieve my tickets. Please try again later.",
             Assert.IsType<ProblemDetails>(result.Value).Detail);
-        logger.Verify(x => x.Log(LogLevel.Error, It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((state, _) => state.ToString()!.StartsWith("Error retrieving my tickets")),
-            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+
+        logger.Verify(x => x.Log(
+            LogLevel.Error, 
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((state, _) => state.ToString() == "Error retrieving my tickets"),
+            It.IsAny<Exception>(), 
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), 
+            Times.Once
+        );
     }
 }

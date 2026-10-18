@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Ticket.Api.Authorization;
+using Ticket.Api.Controller;
 using Ticket.Api.Model;
 using Xunit;
 
@@ -38,9 +41,15 @@ public class GetTicketsTests
         var result = Assert.IsType<ObjectResult>(controller.GetTickets());
 
         Assert.Equal(500, result.StatusCode);
+
         logger.Verify(x => x.Log(
-            LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
-            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once
+        );
     }
 
     [Fact]
@@ -56,8 +65,12 @@ public class GetTicketsTests
 
         Assert.Equal("Unable to load tickets. Please try again later.",
             Assert.IsType<ProblemDetails>(result.Value).Detail);
+
         logger.Verify(x => x.Log(LogLevel.Error, It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((state, _) => state.ToString()!.StartsWith("Error retrieving tickets")),
-            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.Is<It.IsAnyType>((state, _) => state.ToString() == "Error retrieving tickets"),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), 
+            Times.Once
+        );
     }
 }

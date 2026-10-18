@@ -32,9 +32,13 @@ public class CreateTicketTests
 
         var created = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
+
         var ticket = Assert.Single(context.Tickets);
         Assert.Equal(42, ticket.CreatedBy);
         Assert.Equal("Cannot connect", ticket.Description);
+        Assert.Equal("Network", ticket.IssueType);
+        Assert.Equal(TicketUrgency.six_hours, ticket.Urgency);
+
         producer.Verify(x => x.ProduceAsync(
             "ticket-created-test",
             It.Is<Message<string, string>>(message =>
@@ -57,34 +61,11 @@ public class CreateTicketTests
         Assert.IsType<BadRequestObjectResult>(result);
         Assert.Empty(context.Tickets);
         producer.Verify(x => x.ProduceAsync(
-            It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task CreateTicket_WhenPublishingFails_ReturnsServiceUnavailableWithCreatedTicketId()
-    {
-        var (context, logger, producer, configuration, statusService) =
-            TicketControllerTestFixture.CreateDependencies();
-        producer.Setup(x => x.ProduceAsync(
-                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ProduceException<string, string>(
-                new Error(ErrorCode.Local_TimedOut), null));
-        var controller = TicketControllerTestFixture.CreateController(
-            context, logger, producer, configuration, statusService, userId: 42);
-
-        var result = await controller.CreateTicket(new TicketCreateDTO
-        {
-            Description = "Printer issue",
-            IssueType = "Hardware",
-            Urgency = TicketUrgency.one_hour
-        });
-
-        var unavailable = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
-        Assert.Single(context.Tickets);
-        logger.Verify(x => x.Log(
-            LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(),
-            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<string>(), 
+            It.IsAny<Message<string, string>>(), 
+            It.IsAny<CancellationToken>()), 
+            Times.Never
+        );
     }
 
     [Fact]
@@ -125,22 +106,34 @@ public class CreateTicketTests
         var (context, logger, producer, configuration, statusService) =
             TicketControllerTestFixture.CreateDependencies();
         producer.Setup(x => x.ProduceAsync(
-                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((DeliveryResult<string, string>)null!);
+                It.IsAny<string>(), 
+                It.IsAny<Message<string, string>>(), 
+                It.IsAny<CancellationToken>()
+                )
+            ).ReturnsAsync((DeliveryResult<string, string>)null!);
+
         var controller = TicketControllerTestFixture.CreateController(
             context, logger, producer, configuration, statusService, userId: 42);
 
         var result = await controller.CreateTicket(new TicketCreateDTO
         {
-            Description = "Default topic", IssueType = "Network", Urgency = TicketUrgency.one_hour
+            Description = "Default topic", 
+            IssueType = "Network", 
+            Urgency = TicketUrgency.one_hour
         });
 
         var created = Assert.IsType<ObjectResult>(result);
+
         Assert.Equal(StatusCodes.Status201Created, created.StatusCode);
         Assert.Equal("Ticket created successfully", GetProperty(created.Value!, "message"));
+
         producer.Verify(x => x.ProduceAsync(
-            "ticket-created", It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+            "ticket-created", 
+            It.IsAny<Message<string, string>>(), 
+            It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+
         VerifyLog(logger, LogLevel.Information,
             "Published TicketCreated event for ticket {TicketId} to topic {Topic}");
     }
@@ -155,39 +148,60 @@ public class CreateTicketTests
 
         var result = await controller.CreateTicket(new TicketCreateDTO
         {
-            Description = "Invalid user", IssueType = "Network", Urgency = TicketUrgency.one_hour
+            Description = "Invalid user", 
+            IssueType = "Network", 
+            Urgency = TicketUrgency.one_hour
         });
 
         var error = Assert.IsType<ObjectResult>(result);
+
         Assert.Equal(StatusCodes.Status500InternalServerError, error.StatusCode);
         Assert.Equal("Something went wrong on our end. Please try again in a moment.",
             GetProperty(error.Value!, "message"));
+            
         VerifyLog(logger, LogLevel.Error, "Error creating ticket");
     }
 
     [Fact]
-    public async Task CreateTicket_WhenPublishingFails_ReturnsExactMessageAndLogsExpectedError()
+    public async Task CreateTicket_WhenPublishingFails_Returns503WithMessagePersistsTicketAndLogsError()
     {
         var (context, logger, producer, configuration, statusService) =
             TicketControllerTestFixture.CreateDependencies();
+
         producer.Setup(x => x.ProduceAsync(
-                It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string>(),
+                It.IsAny<Message<string, string>>(),
+                It.IsAny<CancellationToken>())
+            )
             .ThrowsAsync(new ProduceException<string, string>(
                 new Error(ErrorCode.Local_TimedOut), null));
+
         var controller = TicketControllerTestFixture.CreateController(
             context, logger, producer, configuration, statusService, userId: 42);
 
         var result = await controller.CreateTicket(new TicketCreateDTO
         {
-            Description = "Publish failure", IssueType = "Network", Urgency = TicketUrgency.one_hour
+            Description = "Publish failure",
+            IssueType = "Network",
+            Urgency = TicketUrgency.one_hour
         });
 
         var error = Assert.IsType<ObjectResult>(result);
+
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, error.StatusCode);
         Assert.Equal("Ticket created, but failed to publish TicketCreated event.",
             GetProperty(error.Value!, "message"));
-        VerifyLog(logger, LogLevel.Error,
-            "Ticket created in DB, but failed to publish TicketCreated event");
+        Assert.Single(context.Tickets);
+
+        VerifyLog(logger, LogLevel.Error, "Ticket created in DB, but failed to publish TicketCreated event");
+
+        logger.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     private static object? GetProperty(object value, string name) =>

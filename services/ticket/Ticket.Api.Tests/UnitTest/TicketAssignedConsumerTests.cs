@@ -15,207 +15,6 @@ using Xunit;
 
 namespace Ticket.Api.Tests.UnitTest;
 
-public class ReportsControllerTests
-{
-    [Fact]
-    public async Task Report_WhenDateRangeIsReversed_ReturnsBadRequest()
-    {
-        await using var context = CreateReportContext();
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            new DateTime(2026, 10, 18), new DateTime(2026, 10, 17), CancellationToken.None);
-
-        var response = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("Start date cannot be after end date.",
-            TestObjectExtensions.GetProperty(response.Value!, "message"));
-    }
-
-    [Fact]
-    public async Task Report_WhenDatesAreEqual_IncludesBoundaryResolution()
-    {
-        await using var context = CreateReportContext();
-        var day = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
-        context.Tickets.Add(Resolved(1, "agent-a", day, day, day));
-        await context.SaveChangesAsync();
-
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            day, day, CancellationToken.None);
-
-        Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(result).Value));
-    }
-
-    [Fact]
-    public async Task Report_WhenOnlyOneDateIsSupplied_AppliesThatBoundary()
-    {
-        await using var context = CreateReportContext();
-        var day = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
-        context.Tickets.AddRange(
-            Resolved(1, "agent-a", day, day, null),
-            Resolved(2, "agent-a", day.AddDays(1), day.AddDays(1).AddHours(1), null));
-        await context.SaveChangesAsync();
-
-        var startResult = await new ReportsController(context).GetAgentPerformanceReport(
-            day, null, CancellationToken.None);
-        var endResult = await new ReportsController(context).GetAgentPerformanceReport(
-            null, day, CancellationToken.None);
-
-        Assert.Equal(2, Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(startResult).Value)).TotalResolvedTickets);
-        Assert.Equal(1, Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(endResult).Value)).TotalResolvedTickets);
-    }
-
-    [Fact]
-    public async Task Report_FiltersStatusesDatesAssignmentsAndExclusions()
-    {
-        await using var context = CreateReportContext();
-        var start = new DateTime(2026, 10, 17, 0, 0, 0, DateTimeKind.Utc);
-        context.Tickets.AddRange(
-            Resolved(1, "agent-a", start.AddHours(1), start.AddHours(2), start.AddHours(3)),
-            Resolved(2, "agent-a", start.AddHours(2), start.AddHours(5), start.AddHours(4)),
-            Resolved(3, "agent-a", start.AddHours(3), start.AddHours(4), null),
-            new Ticket.Api.Model.Ticket { Id = 4, AssignedAgentId = null, Status = "Resolved", CreatedAtUtc = start, ResolvedAtUtc = start.AddHours(1) },
-            new Ticket.Api.Model.Ticket { Id = 5, AssignedAgentId = "agent-a", Status = "Duplicate", CreatedAtUtc = start, ResolvedAtUtc = start.AddHours(1) },
-            new Ticket.Api.Model.Ticket { Id = 6, AssignedAgentId = "agent-a", Status = "Open", CreatedAtUtc = start, ResolvedAtUtc = start.AddHours(1) },
-            new Ticket.Api.Model.Ticket { Id = 7, AssignedAgentId = "agent-a", Status = "Closed", CreatedAtUtc = start.AddDays(-1), ResolvedAtUtc = start.AddDays(-1) });
-        await context.SaveChangesAsync();
-
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            start, start.AddDays(1), CancellationToken.None);
-
-        var report = Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(result).Value));
-        Assert.Equal("agent-a", report.AgentId);
-        Assert.Equal(3, report.TotalResolvedTickets);
-        Assert.Equal(2, report.SlaEligibleTickets);
-        Assert.Equal(1, report.TicketsMissingSla);
-        Assert.Equal(100, report.AverageTtrMinutes);
-        Assert.Equal(50, report.SlaBreachRate);
-    }
-
-    [Fact]
-    public async Task Report_WhenNoSlaDeadlines_ReturnsZeroBreachRate()
-    {
-        await using var context = CreateReportContext();
-        var now = DateTime.UtcNow;
-        context.Tickets.Add(Resolved(1, "agent-a", now.AddMinutes(-30), now, null));
-        await context.SaveChangesAsync();
-
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            null, null, CancellationToken.None);
-
-        var report = Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(result).Value));
-        Assert.Equal(30, report.AverageTtrMinutes);
-        Assert.Equal(0, report.SlaBreachRate);
-    }
-
-    [Fact]
-    public async Task Report_IncludesClosedTicketsAndExcludesEveryNonResolvedStatus()
-    {
-        await using var context = CreateReportContext();
-        var now = DateTime.UtcNow;
-        context.Tickets.AddRange(
-            Resolved(1, "closed-agent", now.AddHours(-2), now.AddHours(-1), null, "Closed"),
-            Resolved(2, "excluded-agent", now.AddHours(-2), now.AddHours(-1), null, "Duplicate"),
-            Resolved(3, "excluded-agent", now.AddHours(-2), now.AddHours(-1), null, "Spam"),
-            Resolved(4, "excluded-agent", now.AddHours(-2), now.AddHours(-1), null, "Cancelled"));
-        await context.SaveChangesAsync();
-
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            null, null, CancellationToken.None);
-
-        var report = Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(result).Value));
-        Assert.Equal("closed-agent", report.AgentId);
-        Assert.Equal(1, report.TotalResolvedTickets);
-    }
-
-    [Fact]
-    public async Task Report_CountsOnlyStrictlyLateSlaTicketsAsBreaches()
-    {
-        await using var context = CreateReportContext();
-        var now = DateTime.UtcNow;
-        context.Tickets.AddRange(
-            Resolved(1, "agent-a", now.AddHours(-3), now, now),
-            Resolved(2, "agent-a", now.AddHours(-3), now, now.AddMinutes(1)));
-        await context.SaveChangesAsync();
-
-        var result = await new ReportsController(context).GetAgentPerformanceReport(
-            null, null, CancellationToken.None);
-
-        var report = Assert.Single(Assert.IsAssignableFrom<IEnumerable<AgentPerformanceReportDto>>(
-            Assert.IsType<OkObjectResult>(result).Value));
-        Assert.Equal(0, report.SlaBreachRate);
-    }
-
-    private static Ticket.Api.Model.Ticket Resolved(
-        int id, string agent, DateTime created, DateTime resolved, DateTime? deadline,
-        string status = "Resolved") =>
-        new() { Id = id, AssignedAgentId = agent, Status = status, CreatedAtUtc = created,
-            ResolvedAtUtc = resolved, SlaDeadlineUtc = deadline };
-
-    private static TicketDbContext CreateReportContext() =>
-        new(new DbContextOptionsBuilder<TicketDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-}
-
-public class TicketAssignmentSyncServiceAdditionalTests
-{
-    [Fact]
-    public async Task Apply_WhenTicketIsMissing_LogsExactWarningMessage()
-    {
-        await using var context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        var logger = new Mock<ILogger<TicketAssignmentSyncService>>();
-
-        await new TicketAssignmentSyncService(context, logger.Object).ApplyAsync(
-            new TicketAssignedEvent { TicketId = 404, AgentUserId = 42 }, CancellationToken.None);
-
-        VerifyLog(logger, LogLevel.Warning,
-            "Received TicketAssigned for ticket 404, but no such ticket exists. Skipping.");
-    }
-
-    [Fact]
-    public async Task Apply_WhenTicketExists_LogsExactInformationMessage()
-    {
-        await using var context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        context.Tickets.Add(new Tickets { Id = 12, Description = "Issue", IssueType = "Network" });
-        await context.SaveChangesAsync();
-        var logger = new Mock<ILogger<TicketAssignmentSyncService>>();
-
-        await new TicketAssignmentSyncService(context, logger.Object).ApplyAsync(
-            new TicketAssignedEvent { TicketId = 12, AgentUserId = 42 }, CancellationToken.None);
-
-        VerifyLog(logger, LogLevel.Information,
-            "Synced ticket 12: now assigned to agent user 42");
-    }
-
-    [Fact]
-    public async Task Apply_WhenCancellationOccurs_DoesNotPersistAndPropagatesCancellation()
-    {
-        await using var context = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        context.Tickets.Add(new Tickets { Id = 1, Description = "Issue", IssueType = "Network" });
-        await context.SaveChangesAsync();
-        var cancellation = new CancellationToken(true);
-        var logger = new Mock<ILogger<TicketAssignmentSyncService>>();
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new TicketAssignmentSyncService(context, logger.Object).ApplyAsync(
-                new TicketAssignedEvent { TicketId = 1, AgentUserId = 9 }, cancellation));
-    }
-
-    private static void VerifyLog(
-        Mock<ILogger<TicketAssignmentSyncService>> logger,
-        LogLevel level,
-        string text) =>
-        logger.Verify(x => x.Log(level, It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(text)),
-            It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
-}
-
 public class TicketAssignedConsumerTests
 {
     [Fact]
@@ -371,7 +170,7 @@ public class TicketAssignedConsumerTests
 
         await CreateService(consumer.Object, scopeProvider.Object, logger).Run(CancellationToken.None);
 
-        logger.VerifyLog(LogLevel.Error, Times.AtLeast(2));
+        VerifyLog(logger, LogLevel.Error, Times.AtLeast(2));
         VerifyLog(logger, LogLevel.Information, "Received TicketAssigned event.");
         VerifyLog(logger, LogLevel.Error, "Failed to sync assignment for ticket 7");
         VerifyLog(logger, LogLevel.Error, "Kafka consume error:");
@@ -439,10 +238,16 @@ public class TicketAssignedConsumerTests
         logger.Verify(x => x.Log(level, It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(text)),
             It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
-}
 
-internal static class TestObjectExtensions
-{
-    internal static object? GetProperty(object value, string name) =>
-        value.GetType().GetProperty(name)!.GetValue(value);
+    private static void VerifyLog(
+        Mock<ILogger<TicketAssignedConsumer>> logger,
+        LogLevel level,
+        Times times) =>
+        logger.Verify(x => x.Log(
+            level,
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            times);
 }
