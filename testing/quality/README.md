@@ -3,6 +3,9 @@
 **Goal:** automated static analysis and quality indicators for the Ticket service: coverage, code smells,
 vulnerabilities, technical debt, duplication and ratings, collected in one report that can fail the run.
 
+Everything about SonarCloud, the quality gate, the current numbers, a demo script and viva answers is in
+**[SONARCLOUD.md](SONARCLOUD.md)**.
+
 ## Run it
 ```bash
 ./scripts/run-tests.sh quality
